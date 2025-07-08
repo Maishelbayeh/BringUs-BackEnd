@@ -5,6 +5,7 @@ const {
   getAffiliateStats,
   getTopPerformers,
   getAffiliateById,
+  getAffiliatesByStoreId,
   createAffiliate,
   updateAffiliate,
   verifyAffiliate,
@@ -202,6 +203,43 @@ router.get('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, ge
  *         description: Access denied
  */
 router.get('/stats', protect, authorize('admin', 'superadmin'), verifyStoreAccess, getAffiliateStats);
+
+/**
+ * @swagger
+ * /api/affiliations/store/{storeId}:
+ *   get:
+ *     summary: Get affiliates by store ID
+ *     description: Retrieve all affiliates for a specific store (public endpoint)
+ *     tags: [Affiliation]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *         example: "507f1f77bcf86cd799439012"
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [Active, Inactive, Suspended, Pending]
+ *         description: Filter by status
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of affiliates to return
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Store not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/store/:storeId', getAffiliatesByStoreId);
 
 /**
  * @swagger

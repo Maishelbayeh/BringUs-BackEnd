@@ -33,8 +33,8 @@ const validateDeliveryMethod = [
   
   body('whatsappNumber')
     .trim()
-    .matches(/^[\+]?[1-9][\d]{0,15}$/)
-    .withMessage('Please enter a valid phone number'),
+    .notEmpty()
+    .withMessage('WhatsApp number is required'),
   
   body('isActive')
     .optional()

@@ -287,6 +287,95 @@ const getAffiliateStats = async (req, res) => {
 
 /**
  * @swagger
+ * /api/affiliations/store/{storeId}:
+ *   get:
+ *     summary: Get affiliates by store ID
+ *     description: Retrieve all affiliates for a specific store (public endpoint)
+ *     tags: [Affiliation]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *         example: "507f1f77bcf86cd799439012"
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [Active, Inactive, Suspended, Pending]
+ *         description: Filter by status
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of affiliates to return
+ *     responses:
+ *       200:
+ *         description: Affiliates retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Affiliation'
+ *       404:
+ *         description: Store not found
+ *       500:
+ *         description: Internal server error
+ */
+const getAffiliatesByStoreId = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { status, limit = 10 } = req.query;
+
+    // Verify store exists
+    const Store = require('../Models/Store');
+    const store = await Store.findById(storeId);
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found'
+      });
+    }
+
+    // Build filter
+    let filter = { store: storeId };
+    
+    // Add status filter if provided
+    if (status) filter.status = status;
+
+    // Get affiliates
+    const affiliates = await Affiliation.find(filter)
+      .populate('store', 'name domain')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .select('-password'); // Exclude password from response
+
+    res.status(200).json({
+      success: true,
+      data: affiliates
+    });
+  } catch (error) {
+    console.error('Get affiliates by store ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching affiliates',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
  * /api/affiliations/top-performers:
  *   get:
  *     summary: Get top performing affiliates
@@ -943,6 +1032,7 @@ module.exports = {
   getAffiliateStats,
   getTopPerformers,
   getAffiliateById,
+  getAffiliatesByStoreId,
   createAffiliate,
   updateAffiliate,
   verifyAffiliate,

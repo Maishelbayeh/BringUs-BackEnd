@@ -9,211 +9,205 @@ mongoose.connect(MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB Atlas'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
-// Advertisement data for TechStore
-const techStoreAdvertisements = [
-  {
-    title: 'New iPhone 15 Pro',
-    description: 'Get the latest iPhone 15 Pro with amazing features and performance',
-    imageUrl: 'https://example.com/iphone15-pro.jpg',
-    isActive: true,
-    startDate: new Date('2024-01-01'),
-    endDate: new Date('2024-12-31')
-  },
-  {
-    title: 'MacBook Air M2',
-    description: 'Lightning fast MacBook Air with M2 chip - Perfect for work and creativity',
-    imageUrl: 'https://example.com/macbook-air-m2.jpg',
-    isActive: true,
-    startDate: new Date('2024-01-15'),
-    endDate: new Date('2024-11-30')
-  },
-  {
-    title: 'iPad Pro 12.9"',
-    description: 'The most powerful iPad ever with stunning Liquid Retina XDR display',
-    imageUrl: 'https://example.com/ipad-pro-12.jpg',
-    isActive: false,
-    startDate: new Date('2024-02-01'),
-    endDate: new Date('2024-10-31')
-  }
-];
+const storeId = '686a719956a82bfcc93a2e2d';
 
-// Advertisement data for FashionStore
-const fashionStoreAdvertisements = [
+const advertisementData = [
   {
-    title: 'Summer Collection 2024',
-    description: 'Discover our latest summer collection with trendy styles and colors',
-    imageUrl: 'https://example.com/summer-collection.jpg',
+    title: 'عرض خاص رمضان',
+    description: 'خصومات تصل إلى 50% على جميع المنتجات',
+    htmlContent: `
+      <div style="
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        font-family: 'Arial', sans-serif;
+      ">
+        <h2 style="margin: 0 0 10px 0; font-size: 24px; font-weight: bold;">
+          🎉 عرض خاص رمضان 🎉
+        </h2>
+        <p style="margin: 0 0 15px 0; font-size: 16px;">
+          خصومات تصل إلى 50% على جميع المنتجات
+        </p>
+        <button style="
+          background: #ff6b6b;
+          color: white;
+          border: none;
+          padding: 12px 30px;
+          border-radius: 25px;
+          font-size: 16px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        " onmouseover="this.style.background='#ff5252'" onmouseout="this.style.background='#ff6b6b'">
+          تسوق الآن
+        </button>
+      </div>
+    `,
+    position: 'top',
     isActive: true,
-    startDate: new Date('2024-03-01'),
-    endDate: new Date('2024-08-31')
+    priority: 5,
+    startDate: new Date(),
+    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
   },
   {
-    title: 'Ramadan Special Offers',
-    description: 'Exclusive discounts and offers for the holy month of Ramadan',
-    imageUrl: 'https://example.com/ramadan-offers.jpg',
-    isActive: true,
-    startDate: new Date('2024-03-10'),
-    endDate: new Date('2024-04-10')
-  },
-  {
-    title: 'Eid Collection',
-    description: 'Beautiful traditional and modern outfits for Eid celebrations',
-    imageUrl: 'https://example.com/eid-collection.jpg',
-    isActive: true,
-    startDate: new Date('2024-04-01'),
-    endDate: new Date('2024-05-31')
-  },
-  {
-    title: 'Winter Fashion Preview',
-    description: 'Get ready for winter with our upcoming collection preview',
-    imageUrl: 'https://example.com/winter-preview.jpg',
+    title: 'عرض الصيف',
+    description: 'أفضل الأسعار على الأجهزة الإلكترونية',
+    htmlContent: `
+      <div style="
+        background: linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+        color: #333;
+        padding: 25px;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: 0 8px 25px rgba(255,154,158,0.3);
+        font-family: 'Arial', sans-serif;
+        border: 2px solid #ff9a9e;
+      ">
+        <div style="font-size: 32px; margin-bottom: 10px;">☀️</div>
+        <h3 style="margin: 0 0 15px 0; font-size: 22px; color: #d63384;">
+          عرض الصيف الحار
+        </h3>
+        <p style="margin: 0 0 20px 0; font-size: 18px; font-weight: 500;">
+          أفضل الأسعار على الأجهزة الإلكترونية
+        </p>
+        <div style="
+          background: rgba(255,255,255,0.9);
+          padding: 15px;
+          border-radius: 10px;
+          margin: 15px 0;
+        ">
+          <span style="font-size: 28px; font-weight: bold; color: #d63384;">30%</span>
+          <span style="font-size: 18px; margin-left: 10px;">خصم</span>
+        </div>
+        <button style="
+          background: #d63384;
+          color: white;
+          border: none;
+          padding: 15px 35px;
+          border-radius: 30px;
+          font-size: 18px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        " onmouseover="this.style.background='#b02a37'" onmouseout="this.style.background='#d63384'">
+          احصل على العرض
+        </button>
+      </div>
+    `,
+    position: 'banner',
     isActive: false,
-    startDate: new Date('2024-09-01'),
-    endDate: new Date('2024-12-31')
+    priority: 3,
+    startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+    endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // 60 days from now
+  },
+  {
+    title: 'عرض العودة للمدارس',
+    description: 'أقلام ودفاتر بأسعار منافسة',
+    htmlContent: `
+      <div style="
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+        font-family: 'Arial', sans-serif;
+        position: relative;
+        overflow: hidden;
+      ">
+        <div style="
+          position: absolute;
+          top: -10px;
+          right: -10px;
+          background: #ff6b6b;
+          color: white;
+          padding: 5px 15px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: bold;
+        ">
+          جديد
+        </div>
+        <div style="font-size: 36px; margin-bottom: 10px;">📚</div>
+        <h3 style="margin: 0 0 10px 0; font-size: 20px;">
+          عرض العودة للمدارس
+        </h3>
+        <p style="margin: 0 0 15px 0; font-size: 14px; opacity: 0.9;">
+          أقلام ودفاتر بأسعار منافسة
+        </p>
+        <div style="
+          background: rgba(255,255,255,0.2);
+          padding: 10px;
+          border-radius: 8px;
+          margin: 10px 0;
+        ">
+          <span style="font-size: 24px; font-weight: bold;">25%</span>
+          <span style="font-size: 14px; margin-left: 8px;">خصم</span>
+        </div>
+        <button style="
+          background: #ff6b6b;
+          color: white;
+          border: none;
+          padding: 12px 25px;
+          border-radius: 25px;
+          font-size: 14px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        " onmouseover="this.style.background='#ff5252'" onmouseout="this.style.background='#ff6b6b'">
+          تسوق الآن
+        </button>
+      </div>
+    `,
+    position: 'sidebar',
+    isActive: false,
+    priority: 2,
+    startDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+    endDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000) // 45 days from now
   }
 ];
 
 async function createAdvertisementData() {
   try {
-    console.log('🚀 Creating advertisement test data...\n');
-
-    // Get store IDs
-    const techStore = await Store.findOne({ name: 'TechStore' });
-    const fashionStore = await Store.findOne({ name: 'FashionStore' });
-
-    if (!techStore || !fashionStore) {
-      console.log('❌ Stores not found. Creating stores first...');
-      
-      // Create stores if they don't exist
-      const newTechStore = await Store.create({
-        name: 'TechStore',
-        domain: 'techstore.com',
-        description: 'Technology Store',
-        status: 'active',
-        contact: {
-          email: 'tech@techstore.com',
-          phone: '+970598516067'
-        }
-      });
-      
-      const newFashionStore = await Store.create({
-        name: 'FashionStore',
-        domain: 'fashionstore.com',
-        description: 'Fashion Store',
-        status: 'active',
-        contact: {
-          email: 'fashion@fashionstore.com',
-          phone: '+966501234567'
-        }
-      });
-      
-      console.log('✅ Created stores');
-      console.log(`   - TechStore: ${newTechStore._id}`);
-      console.log(`   - FashionStore: ${newFashionStore._id}\n`);
-    } else {
-      console.log(`📦 Found stores:`);
-      console.log(`   - TechStore: ${techStore._id}`);
-      console.log(`   - FashionStore: ${fashionStore._id}\n`);
+    // Check if store exists
+    const store = await Store.findById(storeId);
+    if (!store) {
+      console.error('Store not found');
+      return;
     }
 
-    const finalTechStore = techStore || await Store.findOne({ name: 'TechStore' });
-    const finalFashionStore = fashionStore || await Store.findOne({ name: 'FashionStore' });
+    // Clear existing advertisements for this store
+    await Advertisement.deleteMany({ store: storeId });
+    console.log('Cleared existing advertisements');
 
-    // Clear existing test data
-    await Advertisement.deleteMany({
-      store: { $in: [finalTechStore._id, finalFashionStore._id] }
-    });
-    console.log('🧹 Cleared existing advertisement test data\n');
-
-    // Create TechStore advertisements
-    console.log('🛠️ Creating TechStore advertisements...');
-    const techAdvertisements = [];
-    for (const adData of techStoreAdvertisements) {
-      const advertisement = await Advertisement.create({
+    // Create new advertisements
+    for (const adData of advertisementData) {
+      const advertisement = new Advertisement({
         ...adData,
-        store: finalTechStore._id
+        store: storeId
       });
-      techAdvertisements.push(advertisement);
-      console.log(`   ✅ Created: ${advertisement.title} - ${advertisement.isActive ? 'Active' : 'Inactive'}`);
+      
+      await advertisement.save();
+      console.log(`Created advertisement: ${adData.title}`);
     }
 
-    // Create FashionStore advertisements
-    console.log('\n👗 Creating FashionStore advertisements...');
-    const fashionAdvertisements = [];
-    for (const adData of fashionStoreAdvertisements) {
-      const advertisement = await Advertisement.create({
-        ...adData,
-        store: finalFashionStore._id
-      });
-      fashionAdvertisements.push(advertisement);
-      console.log(`   ✅ Created: ${advertisement.title} - ${advertisement.isActive ? 'Active' : 'Inactive'}`);
-    }
-
-    // Verify isolation
-    console.log('\n🔍 Verifying data isolation...');
+    console.log('Advertisement data created successfully!');
     
-    const techAdCount = await Advertisement.countDocuments({ store: finalTechStore._id });
-    const fashionAdCount = await Advertisement.countDocuments({ store: finalFashionStore._id });
-    
-    console.log(`   - TechStore advertisements: ${techAdCount}`);
-    console.log(`   - FashionStore advertisements: ${fashionAdCount}`);
-
-    // Test cross-store access
-    const techAdInFashion = await Advertisement.findOne({ 
-      store: finalFashionStore._id, 
-      title: { $in: techStoreAdvertisements.map(ad => ad.title) }
+    // Display created advertisements
+    const advertisements = await Advertisement.find({ store: storeId });
+    console.log('\nCreated advertisements:');
+    advertisements.forEach(ad => {
+      console.log(`- ${ad.title} (${ad.isActive ? 'Active' : 'Inactive'}) - Position: ${ad.position}`);
     });
-    
-    const fashionAdInTech = await Advertisement.findOne({ 
-      store: finalTechStore._id, 
-      title: { $in: fashionStoreAdvertisements.map(ad => ad.title) }
-    });
-
-    if (!techAdInFashion && !fashionAdInTech) {
-      console.log('   ✅ Advertisement isolation verified');
-    } else {
-      console.log('   ❌ Advertisement isolation failed');
-    }
-
-    console.log('\n🎉 Advertisement test data created successfully!');
-    console.log('\n📊 Summary:');
-    console.log(`- TechStore advertisements: ${techAdCount}`);
-    console.log(`- FashionStore advertisements: ${fashionAdCount}`);
-    console.log('- Total advertisements:', techAdCount + fashionAdCount);
-    console.log('- Data isolation: Verified ✅');
-    
-    console.log('\n📋 Data Details:');
-    console.log('\n🛠️ TechStore Advertisements:');
-    techStoreAdvertisements.forEach((ad, index) => {
-      console.log(`   ${index + 1}. ${ad.title}`);
-      console.log(`      📝 Description: ${ad.description}`);
-      console.log(`      🖼️ Image: ${ad.imageUrl}`);
-      console.log(`      📅 Start: ${ad.startDate.toISOString().split('T')[0]}`);
-      console.log(`      📅 End: ${ad.endDate.toISOString().split('T')[0]}`);
-      console.log(`      📍 Status: ${ad.isActive ? 'Active' : 'Inactive'}`);
-    });
-
-    console.log('\n👗 FashionStore Advertisements:');
-    fashionStoreAdvertisements.forEach((ad, index) => {
-      console.log(`   ${index + 1}. ${ad.title}`);
-      console.log(`      📝 Description: ${ad.description}`);
-      console.log(`      🖼️ Image: ${ad.imageUrl}`);
-      console.log(`      📅 Start: ${ad.startDate.toISOString().split('T')[0]}`);
-      console.log(`      📅 End: ${ad.endDate.toISOString().split('T')[0]}`);
-      console.log(`      📍 Status: ${ad.isActive ? 'Active' : 'Inactive'}`);
-    });
-
-    console.log('\n🔗 Store IDs for CURL Testing:');
-    console.log(`TechStore ID: ${finalTechStore._id}`);
-    console.log(`FashionStore ID: ${finalFashionStore._id}`);
 
   } catch (error) {
-    console.error('❌ Error creating advertisement data:', error);
+    console.error('Error creating advertisement data:', error);
   } finally {
     mongoose.connection.close();
-    console.log('\n🔌 Database connection closed');
   }
 }
 
-// Run the script
 createAdvertisementData(); 

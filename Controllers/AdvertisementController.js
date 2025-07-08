@@ -1,6 +1,5 @@
 const Advertisement = require('../Models/Advertisement');
-const { validationResult } = require('express-validator');
-const { addStoreFilter } = require('../middleware/storeIsolation');
+const { success, error } = require('../utils/response');
 
 /**
  * @swagger
@@ -10,6 +9,7 @@ const { addStoreFilter } = require('../middleware/storeIsolation');
  *       type: object
  *       required:
  *         - title
+ *         - htmlContent
  *         - store
  *       properties:
  *         title:
@@ -20,10 +20,19 @@ const { addStoreFilter } = require('../middleware/storeIsolation');
  *           type: string
  *           description: Advertisement description
  *           example: "Special discount for Ramadan"
- *         imageUrl:
+ *         htmlContent:
  *           type: string
- *           description: Image URL for the advertisement
- *           example: "https://example.com/ad.jpg"
+ *           description: HTML content with inline CSS
+ *           example: "<div style='background: red; color: white; padding: 20px;'>Special Offer!</div>"
+ *         backgroundImageUrl:
+ *           type: string
+ *           description: Background image URL
+ *           example: "https://example.com/bg.jpg"
+ *         position:
+ *           type: string
+ *           enum: [top, bottom, sidebar, popup, banner]
+ *           description: Position on page
+ *           example: "top"
  *         isActive:
  *           type: boolean
  *           description: Whether the advertisement is active
@@ -38,6 +47,10 @@ const { addStoreFilter } = require('../middleware/storeIsolation');
  *           format: date
  *           description: End date for the advertisement
  *           example: "2024-12-31"
+ *         priority:
+ *           type: number
+ *           description: Priority level (1-10)
+ *           example: 5
  */
 
 /**
@@ -109,46 +122,54 @@ const { addStoreFilter } = require('../middleware/storeIsolation');
  */
 const getAllAdvertisements = async (req, res) => {
   try {
-    const { page = 1, limit = 10, isActive, storeId } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const { storeId } = req.params;
+    const { page = 1, limit = 10, isActive, position } = req.query;
 
-    // Add store filter for isolation
-    let filter = addStoreFilter(req);
-    
-    // Override store filter if storeId is provided (for testing)
-    if (storeId && req.user.role === 'superadmin') {
-      filter = { store: storeId };
-    }
-    
-    // Add additional filters
-    if (isActive !== undefined) filter.isActive = isActive === 'true';
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+      position
+    };
 
-    const advertisements = await Advertisement.find(filter)
-      .populate('store', 'name domain')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
+    const advertisements = await Advertisement.getAdvertisementsByStore(storeId, options);
+    const total = await Advertisement.countDocuments({ store: storeId });
 
-    const total = await Advertisement.countDocuments(filter);
-    const totalPages = Math.ceil(total / parseInt(limit));
-
-    res.status(200).json({
-      success: true,
+    return success(res, {
       data: advertisements,
       pagination: {
-        currentPage: parseInt(page),
-        totalPages,
-        totalItems: total,
-        itemsPerPage: parseInt(limit)
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
       }
-    });
-  } catch (error) {
-    console.error('Get all advertisements error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching advertisements',
-      error: error.message
-    });
+    }, 'Advertisements retrieved successfully');
+
+  } catch (err) {
+    console.error('Get all advertisements error:', err);
+    return error(res, { message: 'Failed to fetch advertisements', statusCode: 500 });
+  }
+};
+
+// Get active advertisement for a store
+const getActiveAdvertisement = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    const advertisement = await Advertisement.getActiveAdvertisement(storeId);
+
+    if (!advertisement) {
+      return error(res, { message: 'No active advertisement found', statusCode: 404 });
+    }
+
+    // Increment view count
+    await advertisement.incrementView();
+
+    return success(res, { data: advertisement }, 'Active advertisement retrieved successfully');
+
+  } catch (err) {
+    console.error('Get active advertisement error:', err);
+    return error(res, { message: 'Failed to fetch active advertisement', statusCode: 500 });
   }
 };
 
@@ -193,37 +214,22 @@ const getAllAdvertisements = async (req, res) => {
  */
 const getAdvertisementById = async (req, res) => {
   try {
-    const { storeId } = req.query;
-    
-    // Add store filter for isolation
-    let filter = addStoreFilter(req, { _id: req.params.id });
-    
-    // Override store filter if storeId is provided (for testing)
-    if (storeId && req.user.role === 'superadmin') {
-      filter = { _id: req.params.id, store: storeId };
-    }
-    
-    const advertisement = await Advertisement.findOne(filter)
-      .populate('store', 'name domain');
+    const { storeId, advertisementId } = req.params;
+
+    const advertisement = await Advertisement.findOne({ 
+      _id: advertisementId, 
+      store: storeId 
+    }).populate('store', 'name domain');
 
     if (!advertisement) {
-      return res.status(404).json({
-        success: false,
-        message: 'Advertisement not found'
-      });
+      return error(res, { message: 'Advertisement not found', statusCode: 404 });
     }
 
-    res.status(200).json({
-      success: true,
-      data: advertisement
-    });
-  } catch (error) {
-    console.error('Get advertisement by ID error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching advertisement',
-      error: error.message
-    });
+    return success(res, { data: advertisement }, 'Advertisement retrieved successfully');
+
+  } catch (err) {
+    console.error('Get advertisement by ID error:', err);
+    return error(res, { message: 'Failed to fetch advertisement', statusCode: 500 });
   }
 };
 
@@ -265,36 +271,41 @@ const getAdvertisementById = async (req, res) => {
  */
 const createAdvertisement = async (req, res) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
+    const { storeId } = req.params;
+    const advertisementData = req.body;
 
-    // Add store to the request body
-    const advertisementData = {
-      ...req.body,
-      store: req.store._id
-    };
+    // Add store ID
+    advertisementData.store = storeId;
+
+    // If this advertisement is active, deactivate others
+    if (advertisementData.isActive) {
+      await Advertisement.updateMany(
+        { store: storeId, isActive: true },
+        { isActive: false }
+      );
+    }
 
     const advertisement = await Advertisement.create(advertisementData);
 
-    res.status(201).json({
-      success: true,
-      message: 'Advertisement created successfully',
-      data: advertisement
+    return success(res, { 
+      data: advertisement, 
+      message: 'Advertisement created successfully', 
+      statusCode: 201 
     });
-  } catch (error) {
-    console.error('Create advertisement error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error creating advertisement',
-      error: error.message
-    });
+
+  } catch (err) {
+    console.error('Create advertisement error:', err);
+    
+    if (err.code === 11000) {
+      return error(res, { message: 'Only one active advertisement allowed per store', statusCode: 400 });
+    }
+    
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message);
+      return error(res, { message: errors.join(', '), statusCode: 400 });
+    }
+    
+    return error(res, { message: 'Failed to create advertisement', statusCode: 500 });
   }
 };
 
@@ -343,44 +354,52 @@ const createAdvertisement = async (req, res) => {
  */
 const updateAdvertisement = async (req, res) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
+    const { storeId, advertisementId } = req.params;
+    const updateData = req.body;
+
+    // Find advertisement
+    const advertisement = await Advertisement.findOne({ 
+      _id: advertisementId, 
+      store: storeId 
+    });
+
+    if (!advertisement) {
+      return error(res, { message: 'Advertisement not found', statusCode: 404 });
     }
 
-    // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
-    
-    const advertisement = await Advertisement.findOneAndUpdate(
-      filter,
-      req.body,
+    // If activating this advertisement, deactivate others
+    if (updateData.isActive && !advertisement.isActive) {
+      await Advertisement.updateMany(
+        { store: storeId, _id: { $ne: advertisementId }, isActive: true },
+        { isActive: false }
+      );
+    }
+
+    // Update advertisement
+    const updatedAdvertisement = await Advertisement.findByIdAndUpdate(
+      advertisementId,
+      updateData,
       { new: true, runValidators: true }
     ).populate('store', 'name domain');
 
-    if (!advertisement) {
-      return res.status(404).json({
-        success: false,
-        message: 'Advertisement not found'
-      });
-    }
+    return success(res, { 
+      data: updatedAdvertisement, 
+      message: 'Advertisement updated successfully' 
+    });
 
-    res.status(200).json({
-      success: true,
-      message: 'Advertisement updated successfully',
-      data: advertisement
-    });
-  } catch (error) {
-    console.error('Update advertisement error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating advertisement',
-      error: error.message
-    });
+  } catch (err) {
+    console.error('Update advertisement error:', err);
+    
+    if (err.code === 11000) {
+      return error(res, { message: 'Only one active advertisement allowed per store', statusCode: 400 });
+    }
+    
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message);
+      return error(res, { message: errors.join(', '), statusCode: 400 });
+    }
+    
+    return error(res, { message: 'Failed to update advertisement', statusCode: 500 });
   }
 };
 
@@ -421,29 +440,25 @@ const updateAdvertisement = async (req, res) => {
  */
 const deleteAdvertisement = async (req, res) => {
   try {
-    // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
-    
-    const advertisement = await Advertisement.findOneAndDelete(filter);
+    const { storeId, advertisementId } = req.params;
+
+    const advertisement = await Advertisement.findOneAndDelete({ 
+      _id: advertisementId, 
+      store: storeId 
+    });
 
     if (!advertisement) {
-      return res.status(404).json({
-        success: false,
-        message: 'Advertisement not found'
-      });
+      return error(res, { message: 'Advertisement not found', statusCode: 404 });
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Advertisement deleted successfully'
+    return success(res, { 
+      data: null, 
+      message: 'Advertisement deleted successfully' 
     });
-  } catch (error) {
-    console.error('Delete advertisement error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting advertisement',
-      error: error.message
-    });
+
+  } catch (err) {
+    console.error('Delete advertisement error:', err);
+    return error(res, { message: 'Failed to delete advertisement', statusCode: 500 });
   }
 };
 
@@ -486,41 +501,108 @@ const deleteAdvertisement = async (req, res) => {
  */
 const toggleActiveStatus = async (req, res) => {
   try {
-    // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
-    
-    const advertisement = await Advertisement.findOne(filter);
-    
+    const { storeId, advertisementId } = req.params;
+
+    const advertisement = await Advertisement.findOne({ 
+      _id: advertisementId, 
+      store: storeId 
+    });
+
     if (!advertisement) {
-      return res.status(404).json({
-        success: false,
-        message: 'Advertisement not found'
-      });
+      return error(res, { message: 'Advertisement not found', statusCode: 404 });
     }
 
-    advertisement.isActive = !advertisement.isActive;
-    await advertisement.save();
+    // Toggle status
+    if (advertisement.isActive) {
+      advertisement.isActive = false;
+      await advertisement.save();
+    } else {
+      // Activate this advertisement (will deactivate others)
+      await advertisement.activate();
+    }
 
-    res.status(200).json({
-      success: true,
-      message: 'Advertisement status updated successfully',
-      data: advertisement
+    return success(res, { 
+      data: advertisement, 
+      message: 'Advertisement status updated successfully' 
     });
-  } catch (error) {
-    console.error('Toggle advertisement status error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating advertisement status',
-      error: error.message
+
+  } catch (err) {
+    console.error('Toggle advertisement status error:', err);
+    return error(res, { message: 'Failed to update advertisement status', statusCode: 500 });
+  }
+};
+
+// Increment click count
+const incrementClick = async (req, res) => {
+  try {
+    const { storeId, advertisementId } = req.params;
+
+    const advertisement = await Advertisement.findOne({ 
+      _id: advertisementId, 
+      store: storeId 
     });
+
+    if (!advertisement) {
+      return error(res, { message: 'Advertisement not found', statusCode: 404 });
+    }
+
+    await advertisement.incrementClick();
+
+    return success(res, { 
+      data: { clickCount: advertisement.clickCount }, 
+      message: 'Click count updated successfully' 
+    });
+
+  } catch (err) {
+    console.error('Increment click count error:', err);
+    return error(res, { message: 'Failed to update click count', statusCode: 500 });
+  }
+};
+
+// Get advertisement statistics
+const getAdvertisementStats = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    const stats = await Advertisement.aggregate([
+      { $match: { store: storeId } },
+      {
+        $group: {
+          _id: null,
+          totalAdvertisements: { $sum: 1 },
+          activeAdvertisements: { $sum: { $cond: ['$isActive', 1, 0] } },
+          totalClicks: { $sum: '$clickCount' },
+          totalViews: { $sum: '$viewCount' },
+          averagePriority: { $avg: '$priority' }
+        }
+      }
+    ]);
+
+    return success(res, { 
+      data: stats[0] || {
+        totalAdvertisements: 0,
+        activeAdvertisements: 0,
+        totalClicks: 0,
+        totalViews: 0,
+        averagePriority: 0
+      },
+      message: 'Advertisement statistics retrieved successfully' 
+    });
+
+  } catch (err) {
+    console.error('Get advertisement stats error:', err);
+    return error(res, { message: 'Failed to fetch advertisement statistics', statusCode: 500 });
   }
 };
 
 module.exports = {
   getAllAdvertisements,
+  getActiveAdvertisement,
   getAdvertisementById,
   createAdvertisement,
   updateAdvertisement,
   deleteAdvertisement,
-  toggleActiveStatus
+  toggleActiveStatus,
+  incrementClick,
+  getAdvertisementStats
 }; 

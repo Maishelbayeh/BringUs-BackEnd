@@ -129,7 +129,7 @@ paymentMethodSchema.index({ store: 1, isDefault: 1 });
 paymentMethodSchema.index({ store: 1, methodType: 1 });
 paymentMethodSchema.index({ store: 1, priority: 1 });
 
-// Ensure only one default method per store
+// Ensure only one default method per store and prevent inactive default
 paymentMethodSchema.pre('save', async function(next) {
   if (this.isDefault) {
     // Remove default from other methods in the same store
@@ -137,7 +137,24 @@ paymentMethodSchema.pre('save', async function(next) {
       { store: this.store, _id: { $ne: this._id } },
       { isDefault: false }
     );
+    
+    // Ensure default method is always active
+    if (!this.isActive) {
+      this.isActive = true;
+    }
   }
+  
+  // Prevent setting default method as inactive
+  if (this.isDefault && !this.isActive) {
+    const error = new Error('Default payment method cannot be inactive');
+    return next(error);
+  }
+  
+  // Remove default status from inactive methods
+  if (!this.isActive && this.isDefault) {
+    this.isDefault = false;
+  }
+  
   next();
 });
 

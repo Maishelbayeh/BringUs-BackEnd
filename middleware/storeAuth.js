@@ -41,6 +41,7 @@ exports.verifyStoreAccess = async (req, res, next) => {
 
     // Add store to request for later use
     req.store = store;
+    req.params.storeId = storeId;
     next();
   } catch (error) {
     console.error('Store verification error:', error);

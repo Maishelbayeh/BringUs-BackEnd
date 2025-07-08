@@ -360,6 +360,15 @@ const createPaymentMethod = async (req, res) => {
       });
     }
 
+    // Prevent creating default method as inactive
+    if (req.body.isDefault && req.body.isActive === false) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot create a default payment method as inactive. Default methods must be active.',
+        error: 'Default method cannot be inactive'
+      });
+    }
+
     // Add store to the request body
     const paymentMethodData = {
       ...req.body,
@@ -375,6 +384,16 @@ const createPaymentMethod = async (req, res) => {
     });
   } catch (error) {
     console.error('Create payment method error:', error);
+    
+    // Handle model validation errors
+    if (error.message === 'Default payment method cannot be inactive') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot create a default payment method as inactive. Default methods must be active.',
+        error: 'Default method cannot be inactive'
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error creating payment method',
@@ -444,6 +463,18 @@ const updatePaymentMethod = async (req, res) => {
       });
     }
 
+    // Check if trying to deactivate a default method
+    if (req.body.isActive === false) {
+      const existingMethod = await PaymentMethod.findById(req.params.id);
+      if (existingMethod && existingMethod.isDefault) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot deactivate the default payment method. Please set another method as default first.',
+          error: 'Default method cannot be inactive'
+        });
+      }
+    }
+
     // Add store filter for isolation
     const filter = addStoreFilter(req, { _id: req.params.id });
     
@@ -467,6 +498,16 @@ const updatePaymentMethod = async (req, res) => {
     });
   } catch (error) {
     console.error('Update payment method error:', error);
+    
+    // Handle model validation errors
+    if (error.message === 'Default payment method cannot be inactive') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot deactivate the default payment method. Please set another method as default first.',
+        error: 'Default method cannot be inactive'
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error updating payment method',
@@ -515,7 +556,7 @@ const deletePaymentMethod = async (req, res) => {
     // Add store filter for isolation
     const filter = addStoreFilter(req, { _id: req.params.id });
     
-    const paymentMethod = await PaymentMethod.findOneAndDelete(filter);
+    const paymentMethod = await PaymentMethod.findOne(filter);
 
     if (!paymentMethod) {
       return res.status(404).json({
@@ -523,6 +564,18 @@ const deletePaymentMethod = async (req, res) => {
         message: 'Payment method not found'
       });
     }
+
+    // Prevent deleting the default method
+    if (paymentMethod.isDefault) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete the default payment method. Please set another method as default first.',
+        error: 'Default method cannot be deleted'
+      });
+    }
+
+    // Delete the method
+    await PaymentMethod.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,
@@ -586,6 +639,15 @@ const toggleActiveStatus = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Payment method not found'
+      });
+    }
+
+    // Prevent deactivating the default method
+    if (paymentMethod.isDefault && paymentMethod.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot deactivate the default payment method. Please set another method as default first.',
+        error: 'Default method cannot be inactive'
       });
     }
 
@@ -658,8 +720,27 @@ const setAsDefault = async (req, res) => {
       });
     }
 
+    // Prevent setting inactive method as default
+    if (!paymentMethod.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot set an inactive payment method as default. Please activate it first.',
+        error: 'Inactive method cannot be default'
+      });
+    }
+
+    // Set this method as default
     paymentMethod.isDefault = true;
     await paymentMethod.save();
+
+    // Remove default from other methods in the same store
+    await PaymentMethod.updateMany(
+      { 
+        store: paymentMethod.store, 
+        _id: { $ne: paymentMethod._id } 
+      },
+      { isDefault: false }
+    );
 
     res.status(200).json({
       success: true,

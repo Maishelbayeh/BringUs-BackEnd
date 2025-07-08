@@ -46,13 +46,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(compression());
 
-// Additional headers middleware
+// Additional headers middleware - removed conflicting CORS headers
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
@@ -117,6 +112,8 @@ const storeSliderRoutes = require('./Routes/storeSlider');
 const stockPreviewRoutes = require('./Routes/stockPreview');
 const affiliationRoutes = require('./Routes/affiliation');
 const categoryRoutes = require('./Routes/category');
+const wholesalerRoutes = require('./Routes/wholesaler');
+const termsConditionsRoutes = require('./Routes/termsConditions');
 // const productRoutes = require('./Routes/product');
 // const orderRoutes = require('./Routes/order');
 
@@ -133,6 +130,8 @@ app.use('/api/store-sliders', storeSliderRoutes);
 app.use('/api/stock-preview', stockPreviewRoutes);
 app.use('/api/affiliations', affiliationRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/wholesalers', wholesalerRoutes);
+app.use('/api/terms-conditions', termsConditionsRoutes);
 // app.use('/api/products', productRoutes);
 // app.use('/api/orders', orderRoutes);
 
@@ -204,6 +203,8 @@ app.get('/api', (req, res) => {
       stockPreview: '/api/stock-preview',
       affiliations: '/api/affiliations',
       categories: '/api/categories',
+      wholesalers: '/api/wholesalers',
+      termsConditions: '/api/terms-conditions',
       health: '/api/health',
       docs: '/api-docs'
     },

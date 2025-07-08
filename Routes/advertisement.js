@@ -1,17 +1,24 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
+const { body } = require('express-validator');
 const {
   getAllAdvertisements,
+  getActiveAdvertisement,
   getAdvertisementById,
   createAdvertisement,
   updateAdvertisement,
   deleteAdvertisement,
-  toggleActiveStatus
+  toggleActiveStatus,
+  incrementClick,
+  getAdvertisementStats
 } = require('../Controllers/AdvertisementController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
 const { verifyStoreAccess } = require('../middleware/storeAuth');
 
 const router = express.Router();
+
+// Apply authentication and store access middleware to all routes
+router.use(protect);
+router.use('/stores/:storeId', verifyStoreAccess);
 
 // Validation middleware for advertisement creation/update
 const validateAdvertisement = [
@@ -26,10 +33,20 @@ const validateAdvertisement = [
     .isLength({ max: 1000 })
     .withMessage('Description cannot exceed 1000 characters'),
   
-  body('imageUrl')
+  body('htmlContent')
+    .trim()
+    .isLength({ min: 1, max: 5000 })
+    .withMessage('HTML content is required and cannot exceed 5000 characters'),
+  
+  body('backgroundImageUrl')
     .optional()
     .isURL()
-    .withMessage('Image URL must be a valid URL'),
+    .withMessage('Background image URL must be a valid URL'),
+  
+  body('position')
+    .optional()
+    .isIn(['top', 'bottom', 'sidebar', 'popup', 'banner'])
+    .withMessage('Position must be one of: top, bottom, sidebar, popup, banner'),
   
   body('isActive')
     .optional()
@@ -44,29 +61,110 @@ const validateAdvertisement = [
   body('endDate')
     .optional()
     .isISO8601()
-    .withMessage('End date must be a valid date')
+    .withMessage('End date must be a valid date'),
+  
+  body('priority')
+    .optional()
+    .isInt({ min: 1, max: 10 })
+    .withMessage('Priority must be between 1 and 10')
 ];
 
 /**
  * @swagger
- * /api/advertisements:
+ * /api/advertisements/stores/{storeId}/advertisements:
  *   get:
- *     summary: Get all advertisements
- *     description: Retrieve all advertisements for the current store
+ *     summary: Get all advertisements for a store
+ *     description: Retrieve all advertisements for a specific store
  *     tags: [Advertisements]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of advertisements per page
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
+ *       - in: query
+ *         name: position
+ *         schema:
+ *           type: string
+ *           enum: [top, bottom, sidebar, popup, banner]
+ *         description: Filter by position
  *     responses:
  *       200:
  *         description: Success
  *       403:
  *         description: Access denied
  */
-router.get('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, getAllAdvertisements);
+router.get('/stores/:storeId/advertisements', getAllAdvertisements);
 
 /**
  * @swagger
- * /api/advertisements/{id}:
+ * /api/advertisements/stores/{storeId}/advertisements/active:
+ *   get:
+ *     summary: Get active advertisement for a store
+ *     description: Retrieve the currently active advertisement for a store
+ *     tags: [Advertisements]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: No active advertisement found
+ */
+router.get('/stores/:storeId/advertisements/active', getActiveAdvertisement);
+
+/**
+ * @swagger
+ * /api/advertisements/stores/{storeId}/advertisements/stats:
+ *   get:
+ *     summary: Get advertisement statistics for a store
+ *     description: Retrieve statistics for all advertisements in a store
+ *     tags: [Advertisements]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+router.get('/stores/:storeId/advertisements/stats', getAdvertisementStats);
+
+/**
+ * @swagger
+ * /api/advertisements/stores/{storeId}/advertisements/{id}:
  *   get:
  *     summary: Get advertisement by ID
  *     description: Retrieve a specific advertisement
@@ -75,29 +173,41 @@ router.get('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, ge
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: Advertisement ID
  *     responses:
  *       200:
  *         description: Success
  *       404:
  *         description: Not found
- *       403:
- *         description: Access denied
  */
-router.get('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess, getAdvertisementById);
+router.get('/stores/:storeId/advertisements/:advertisementId', getAdvertisementById);
 
 /**
  * @swagger
- * /api/advertisements:
+ * /api/advertisements/stores/{storeId}/advertisements:
  *   post:
  *     summary: Create advertisement
- *     description: Create a new advertisement for the store
+ *     description: Create a new advertisement for a store
  *     tags: [Advertisements]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
  *     requestBody:
  *       required: true
  *       content:
@@ -106,6 +216,7 @@ router.get('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess,
  *             type: object
  *             required:
  *               - title
+ *               - htmlContent
  *             properties:
  *               title:
  *                 type: string
@@ -113,9 +224,16 @@ router.get('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess,
  *               description:
  *                 type: string
  *                 example: "Special discount for Ramadan"
- *               imageUrl:
+ *               htmlContent:
  *                 type: string
- *                 example: "https://example.com/ad.jpg"
+ *                 example: "<div style='background: red; color: white; padding: 20px;'>Special Offer!</div>"
+ *               backgroundImageUrl:
+ *                 type: string
+ *                 example: "https://example.com/bg.jpg"
+ *               position:
+ *                 type: string
+ *                 enum: [top, bottom, sidebar, popup, banner]
+ *                 example: "top"
  *               isActive:
  *                 type: boolean
  *                 example: true
@@ -127,19 +245,20 @@ router.get('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess,
  *                 type: string
  *                 format: date
  *                 example: "2024-12-31"
+ *               priority:
+ *                 type: number
+ *                 example: 5
  *     responses:
  *       201:
  *         description: Created successfully
  *       400:
  *         description: Validation error
- *       403:
- *         description: Access denied
  */
-router.post('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, validateAdvertisement, createAdvertisement);
+router.post('/stores/:storeId/advertisements', validateAdvertisement, createAdvertisement);
 
 /**
  * @swagger
- * /api/advertisements/{id}:
+ * /api/advertisements/stores/{storeId}/advertisements/{id}:
  *   put:
  *     summary: Update advertisement
  *     description: Update an existing advertisement
@@ -148,10 +267,17 @@ router.post('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, v
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: Advertisement ID
  *     requestBody:
  *       required: true
  *       content:
@@ -163,8 +289,13 @@ router.post('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, v
  *                 type: string
  *               description:
  *                 type: string
- *               imageUrl:
+ *               htmlContent:
  *                 type: string
+ *               backgroundImageUrl:
+ *                 type: string
+ *               position:
+ *                 type: string
+ *                 enum: [top, bottom, sidebar, popup, banner]
  *               isActive:
  *                 type: boolean
  *               startDate:
@@ -173,6 +304,8 @@ router.post('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, v
  *               endDate:
  *                 type: string
  *                 format: date
+ *               priority:
+ *                 type: number
  *     responses:
  *       200:
  *         description: Updated successfully
@@ -180,14 +313,12 @@ router.post('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, v
  *         description: Not found
  *       400:
  *         description: Validation error
- *       403:
- *         description: Access denied
  */
-router.put('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess, validateAdvertisement, updateAdvertisement);
+router.put('/stores/:storeId/advertisements/:advertisementId', validateAdvertisement, updateAdvertisement);
 
 /**
  * @swagger
- * /api/advertisements/{id}:
+ * /api/advertisements/stores/{storeId}/advertisements/{id}:
  *   delete:
  *     summary: Delete advertisement
  *     description: Delete an advertisement
@@ -196,23 +327,28 @@ router.put('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess,
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: Advertisement ID
  *     responses:
  *       200:
  *         description: Deleted successfully
  *       404:
  *         description: Not found
- *       403:
- *         description: Access denied
  */
-router.delete('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess, deleteAdvertisement);
+router.delete('/stores/:storeId/advertisements/:advertisementId', deleteAdvertisement);
 
 /**
  * @swagger
- * /api/advertisements/{id}/toggle-active:
+ * /api/advertisements/stores/{storeId}/advertisements/{id}/toggle-active:
  *   patch:
  *     summary: Toggle advertisement active status
  *     description: Toggle the active status of an advertisement
@@ -221,18 +357,53 @@ router.delete('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAcce
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: Advertisement ID
  *     responses:
  *       200:
  *         description: Status toggled successfully
  *       404:
  *         description: Not found
- *       403:
- *         description: Access denied
  */
-router.patch('/:id/toggle-active', protect, authorize('admin', 'superadmin'), verifyStoreAccess, toggleActiveStatus);
+router.patch('/stores/:storeId/advertisements/:advertisementId/toggle-active', toggleActiveStatus);
+
+/**
+ * @swagger
+ * /api/advertisements/stores/{storeId}/advertisements/{id}/click:
+ *   post:
+ *     summary: Increment advertisement click count
+ *     description: Increment the click count for an advertisement
+ *     tags: [Advertisements]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Advertisement ID
+ *     responses:
+ *       200:
+ *         description: Click count updated successfully
+ *       404:
+ *         description: Not found
+ */
+router.post('/stores/:storeId/advertisements/:advertisementId/click', incrementClick);
 
 module.exports = router; 

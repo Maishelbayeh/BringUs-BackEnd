@@ -1,150 +1,94 @@
-# Affiliation API - CURL Commands
+# Affiliation API - Curl Commands
 
 ## Base URL
 ```
-http://localhost:5001/api/affiliations
+http://localhost:5000/api
 ```
 
-## Authentication
-All requests require a valid JWT token in the Authorization header:
+## Store ID
 ```
-Authorization: Bearer <YOUR_JWT_TOKEN>
-```
-
----
-
-## 1. Get All Affiliates (GET)
-
-### Get all affiliates for current store:
-```bash
-curl -X GET "http://localhost:5001/api/affiliations" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-```
-
-### Get affiliates with pagination:
-```bash
-curl -X GET "http://localhost:5001/api/affiliations?page=1&limit=5" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-```
-
-### Get affiliates by status:
-```bash
-# Get active affiliates
-curl -X GET "http://localhost:5001/api/affiliations?status=Active" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-
-# Get pending affiliates
-curl -X GET "http://localhost:5001/api/affiliations?status=Pending" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-
-# Get inactive affiliates
-curl -X GET "http://localhost:5001/api/affiliations?status=Inactive" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-```
-
-### Search affiliates:
-```bash
-curl -X GET "http://localhost:5001/api/affiliations?search=omar" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-```
-
-### Get affiliates for specific store (superadmin only):
-```bash
-curl -X GET "http://localhost:5001/api/affiliations?storeId=<STORE_ID>" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+686a719956a82bfcc93a2e2d
 ```
 
 ---
 
-## 2. Get Affiliate Statistics (GET)
+## 1. Get Affiliates by Store ID (Public Endpoint)
 
-### Get affiliate statistics:
+### Get all affiliates for a specific store
 ```bash
-curl -X GET "http://localhost:5001/api/affiliations/stats" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+curl -X GET "http://localhost:5000/api/affiliations/store/686a719956a82bfcc93a2e2d" \
+  -H "Content-Type: application/json"
 ```
 
-### Get affiliate statistics for specific store (superadmin only):
+### Get active affiliates only
 ```bash
-curl -X GET "http://localhost:5001/api/affiliations/stats?storeId=<STORE_ID>" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+curl -X GET "http://localhost:5000/api/affiliations/store/686a719956a82bfcc93a2e2d?status=Active" \
+  -H "Content-Type: application/json"
 ```
 
----
-
-## 3. Get Top Performing Affiliates (GET)
-
-### Get top performing affiliates:
+### Get affiliates with limit
 ```bash
-curl -X GET "http://localhost:5001/api/affiliations/top-performers" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+curl -X GET "http://localhost:5000/api/affiliations/store/686a719956a82bfcc93a2e2d?limit=5" \
+  -H "Content-Type: application/json"
 ```
 
-### Get top performing affiliates with limit:
+### Get pending affiliates
 ```bash
-curl -X GET "http://localhost:5001/api/affiliations/top-performers?limit=5" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-```
-
-### Get top performers for specific store (superadmin only):
-```bash
-curl -X GET "http://localhost:5001/api/affiliations/top-performers?storeId=<STORE_ID>" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+curl -X GET "http://localhost:5000/api/affiliations/store/686a719956a82bfcc93a2e2d?status=Pending" \
+  -H "Content-Type: application/json"
 ```
 
 ---
 
-## 4. Get Affiliate by ID (GET)
+## 2. Admin Endpoints (Require Authentication)
 
-### Get specific affiliate:
+### Get all affiliates (Admin)
 ```bash
-curl -X GET "http://localhost:5001/api/affiliations/<AFFILIATE_ID>" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-```
-
-### Get affiliate from specific store (superadmin only):
-```bash
-curl -X GET "http://localhost:5001/api/affiliations/<AFFILIATE_ID>?storeId=<STORE_ID>" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-```
-
----
-
-## 5. Create New Affiliate (POST)
-
-### Create affiliate with basic information:
-```bash
-curl -X POST "http://localhost:5001/api/affiliations" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+curl -X GET "http://localhost:5000/api/affiliations" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+### Get affiliate statistics
+```bash
+curl -X GET "http://localhost:5000/api/affiliations/stats" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+### Get top performing affiliates
+```bash
+curl -X GET "http://localhost:5000/api/affiliations/top-performers?limit=5" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+### Get affiliate by ID
+```bash
+curl -X GET "http://localhost:5000/api/affiliations/AFFILIATE_ID_HERE" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+---
+
+## 3. Create New Affiliate
+
+```bash
+curl -X POST "http://localhost:5000/api/affiliations" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -d '{
-    "firstName": "Omar",
-    "lastName": "Khaled",
-    "email": "omar@example.com",
+    "firstName": "أحمد",
+    "lastName": "محمد",
+    "email": "ahmed.mohamed@example.com",
     "password": "password123",
-    "mobile": "+970599888888",
-    "address": "Hebron, Palestine",
+    "mobile": "+970599123456",
+    "address": "الخليل، فلسطين",
     "percent": 8,
-    "status": "Active"
-  }'
-```
-
-### Create affiliate with bank information:
-```bash
-curl -X POST "http://localhost:5001/api/affiliations" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "firstName": "Lina",
-    "lastName": "Samir",
-    "email": "lina@example.com",
-    "password": "password123",
-    "mobile": "+970567777777",
-    "address": "Jenin, Palestine",
-    "percent": 12,
     "status": "Active",
     "bankInfo": {
-      "bankName": "Bank of Palestine",
+      "bankName": "بنك فلسطين",
       "accountNumber": "1234567890",
       "iban": "PS12PALS123456789012345678901",
       "swiftCode": "PALSPS22"
@@ -152,360 +96,131 @@ curl -X POST "http://localhost:5001/api/affiliations" \
     "settings": {
       "autoPayment": false,
       "paymentThreshold": 100,
-      "paymentMethod": "bank_transfer"
+      "paymentMethod": "bank_transfer",
+      "notifications": {
+        "email": true,
+        "sms": false
+      }
     },
-    "notes": "New affiliate partner"
+    "notes": "شريك جديد"
   }'
 ```
 
 ---
 
-## 6. Update Affiliate (PUT)
+## 4. Update Affiliate
 
-### Update affiliate information:
 ```bash
-curl -X PUT "http://localhost:5001/api/affiliations/<AFFILIATE_ID>" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+curl -X PUT "http://localhost:5000/api/affiliations/AFFILIATE_ID_HERE" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -d '{
-    "firstName": "Omar",
-    "lastName": "Khaled",
-    "email": "omar.updated@example.com",
-    "mobile": "+970599888888",
-    "address": "Hebron, Palestine",
+    "firstName": "أحمد",
+    "lastName": "محمد",
+    "email": "ahmed.mohamed@example.com",
+    "mobile": "+970599123456",
+    "address": "الخليل، فلسطين",
     "percent": 10,
     "status": "Active",
-    "bankInfo": {
-      "bankName": "Bank of Palestine",
-      "accountNumber": "1234567890",
-      "iban": "PS12PALS123456789012345678901",
-      "swiftCode": "PALSPS22"
-    },
-    "settings": {
-      "autoPayment": true,
-      "paymentThreshold": 200,
-      "paymentMethod": "bank_transfer"
-    },
-    "notes": "Updated affiliate information"
-  }'
-```
-
-### Update specific fields only:
-```bash
-curl -X PUT "http://localhost:5001/api/affiliations/<AFFILIATE_ID>" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "percent": 15,
-    "status": "Active",
-    "notes": "Commission rate increased"
+    "notes": "تم تحديث البيانات"
   }'
 ```
 
 ---
 
-## 7. Verify Affiliate (PATCH)
+## 5. Verify Affiliate
 
-### Verify affiliate account:
 ```bash
-curl -X PATCH "http://localhost:5001/api/affiliations/<AFFILIATE_ID>/verify" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-```
-
----
-
-## 8. Get Affiliate Payments (GET)
-
-### Get affiliate payment history:
-```bash
-curl -X GET "http://localhost:5001/api/affiliations/<AFFILIATE_ID>/payments" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-```
-
-### Get payments with pagination:
-```bash
-curl -X GET "http://localhost:5001/api/affiliations/<AFFILIATE_ID>/payments?page=1&limit=5" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-```
-
-### Get payments by status:
-```bash
-# Get completed payments
-curl -X GET "http://localhost:5001/api/affiliations/<AFFILIATE_ID>/payments?status=completed" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-
-# Get pending payments
-curl -X GET "http://localhost:5001/api/affiliations/<AFFILIATE_ID>/payments?status=pending" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
-```
-
----
-
-## 9. Create Affiliate Payment (POST)
-
-### Create bank transfer payment:
-```bash
-curl -X POST "http://localhost:5001/api/affiliations/<AFFILIATE_ID>/payments" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
+curl -X PATCH "http://localhost:5000/api/affiliations/AFFILIATE_ID_HERE/verify" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+---
+
+## 6. Get Affiliate Payments
+
+```bash
+curl -X GET "http://localhost:5000/api/affiliations/AFFILIATE_ID_HERE/payments" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+### Get payments with pagination
+```bash
+curl -X GET "http://localhost:5000/api/affiliations/AFFILIATE_ID_HERE/payments?page=1&limit=10" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+---
+
+## 7. Create Affiliate Payment
+
+```bash
+curl -X POST "http://localhost:5000/api/affiliations/AFFILIATE_ID_HERE/payments" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -d '{
     "amount": 500,
     "paymentMethod": "bank_transfer",
     "paymentDate": "2024-01-15",
-    "description": "Monthly commission payment",
-    "notes": "Payment for January 2024",
+    "description": "دفع عمولة شهر يناير",
+    "notes": "تم التحويل البنكي",
     "bankTransfer": {
-      "bankName": "Bank of Palestine",
+      "bankName": "بنك فلسطين",
       "accountNumber": "1234567890",
       "iban": "PS12PALS123456789012345678901",
       "swiftCode": "PALSPS22",
-      "beneficiaryName": "Omar Khaled"
+      "beneficiaryName": "أحمد محمد"
     }
-  }'
-```
-
-### Create PayPal payment:
-```bash
-curl -X POST "http://localhost:5001/api/affiliations/<AFFILIATE_ID>/payments" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 300,
-    "paymentMethod": "paypal",
-    "paymentDate": "2024-01-15",
-    "description": "Commission payment via PayPal",
-    "notes": "PayPal payment for December 2023",
-    "paypal": {
-      "paypalEmail": "omar@paypal.com",
-      "paypalTransactionId": "TXN123456789"
-    }
-  }'
-```
-
-### Create cash payment:
-```bash
-curl -X POST "http://localhost:5001/api/affiliations/<AFFILIATE_ID>/payments" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 200,
-    "paymentMethod": "cash",
-    "paymentDate": "2024-01-15",
-    "description": "Cash payment",
-    "notes": "Hand-delivered cash payment"
-  }'
-```
-
-### Create check payment:
-```bash
-curl -X POST "http://localhost:5001/api/affiliations/<AFFILIATE_ID>/payments" \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 750,
-    "paymentMethod": "check",
-    "paymentDate": "2024-01-15",
-    "description": "Check payment",
-    "notes": "Check #12345 mailed to affiliate"
   }'
 ```
 
 ---
 
-## Example Store IDs for Testing
+## 8. Search and Filter Examples
 
-### TechStore:
-```
-STORE_ID: <TECH_STORE_ID>
+### Search by name or email
+```bash
+curl -X GET "http://localhost:5000/api/affiliations?search=أحمد" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 
-### FashionStore:
+### Filter by status
+```bash
+curl -X GET "http://localhost:5000/api/affiliations?status=Active" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
-STORE_ID: <FASHION_STORE_ID>
+
+### Pagination
+```bash
+curl -X GET "http://localhost:5000/api/affiliations?page=1&limit=5" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 
 ---
 
-## Response Examples
+## Expected Responses
 
-### Success Response (GET Affiliates):
+### Successful Response (200/201)
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-      "firstName": "Omar",
-      "lastName": "Khaled",
-      "email": "omar@example.com",
-      "mobile": "+970599888888",
-      "address": "Hebron, Palestine",
-      "percent": 8,
-      "status": "Active",
-      "affiliateCode": "ABC12345",
-      "affiliateLink": "https://store.com/ref/ABC12345",
-      "totalSales": 15000,
-      "totalCommission": 1200,
-      "totalPaid": 800,
-      "balance": 400,
-      "totalOrders": 150,
-      "totalCustomers": 120,
-      "conversionRate": 80,
-      "isVerified": true,
-      "verificationDate": "2024-01-01T00:00:00.000Z",
-      "lastActivity": "2024-01-15T00:00:00.000Z",
-      "registrationDate": "2024-01-01T00:00:00.000Z",
-      "bankInfo": {
-        "bankName": "Bank of Palestine",
-        "accountNumber": "1234567890",
-        "iban": "PS12PALS123456789012345678901",
-        "swiftCode": "PALSPS22"
-      },
-      "settings": {
-        "autoPayment": false,
-        "paymentThreshold": 100,
-        "paymentMethod": "bank_transfer",
-        "notifications": {
-          "email": true,
-          "sms": false
-        }
-      },
-      "fullName": "Omar Khaled",
-      "remainingBalance": 400,
-      "commissionRate": "8%",
-      "performanceScore": 80,
-      "store": {
-        "_id": "60f7b3b3b3b3b3b3b3b3b3b5",
-        "name": "TechStore",
-        "domain": "techstore.com"
-      },
-      "verifiedBy": {
-        "_id": "60f7b3b3b3b3b3b3b3b3b3b6",
-        "firstName": "Admin",
-        "lastName": "User"
-      },
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-15T00:00:00.000Z"
-    }
-  ],
-  "pagination": {
-    "currentPage": 1,
-    "totalPages": 1,
-    "totalItems": 1,
-    "itemsPerPage": 10
-  }
+  "data": [...],
+  "message": "Operation completed successfully"
 }
 ```
 
-### Affiliate Statistics Response:
-```json
-{
-  "success": true,
-  "data": {
-    "totalAffiliates": 50,
-    "activeAffiliates": 35,
-    "totalSales": 150000,
-    "totalCommission": 12000,
-    "totalPaid": 8000,
-    "totalBalance": 4000,
-    "totalOrders": 1500,
-    "totalCustomers": 1200,
-    "averageCommission": 8.5
-  }
-}
-```
-
-### Success Response (POST):
-```json
-{
-  "success": true,
-  "message": "Affiliate created successfully",
-  "data": {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b3",
-    "firstName": "Omar",
-    "lastName": "Khaled",
-    "email": "omar@example.com",
-    "mobile": "+970599888888",
-    "address": "Hebron, Palestine",
-    "percent": 8,
-    "status": "Active",
-    "affiliateCode": "ABC12345",
-    "affiliateLink": "https://store.com/ref/ABC12345",
-    "totalSales": 0,
-    "totalCommission": 0,
-    "totalPaid": 0,
-    "balance": 0,
-    "totalOrders": 0,
-    "totalCustomers": 0,
-    "conversionRate": 0,
-    "isVerified": false,
-    "lastActivity": "2024-01-01T00:00:00.000Z",
-    "registrationDate": "2024-01-01T00:00:00.000Z",
-    "store": "<STORE_ID>",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  }
-}
-```
-
-### Payment Response:
-```json
-{
-  "success": true,
-  "message": "Payment created successfully",
-  "data": {
-    "_id": "60f7b3b3b3b3b3b3b3b3b3b4",
-    "affiliate": "<AFFILIATE_ID>",
-    "store": "<STORE_ID>",
-    "amount": 500,
-    "paymentMethod": "bank_transfer",
-    "paymentStatus": "pending",
-    "reference": "PAY-12345678-ABC1",
-    "paymentDate": "2024-01-15T00:00:00.000Z",
-    "previousBalance": 400,
-    "newBalance": -100,
-    "description": "Monthly commission payment",
-    "notes": "Payment for January 2024",
-    "bankTransfer": {
-      "bankName": "Bank of Palestine",
-      "accountNumber": "1234567890",
-      "iban": "PS12PALS123456789012345678901",
-      "swiftCode": "PALSPS22",
-      "beneficiaryName": "Omar Khaled"
-    },
-    "processedBy": "<USER_ID>",
-    "statusDisplay": "Pending",
-    "methodDisplay": "Bank Transfer",
-    "formattedAmount": "$500.00",
-    "auditTrail": [
-      {
-        "action": "created",
-        "performedBy": "<USER_ID>",
-        "timestamp": "2024-01-15T00:00:00.000Z",
-        "notes": "Payment created"
-      }
-    ],
-    "createdAt": "2024-01-15T00:00:00.000Z",
-    "updatedAt": "2024-01-15T00:00:00.000Z"
-  }
-}
-```
-
-### Error Response:
+### Error Response (400/404/500)
 ```json
 {
   "success": false,
-  "message": "Validation failed",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Please enter a valid email address"
-    },
-    {
-      "field": "percent",
-      "message": "Commission percentage must be between 0 and 100"
-    }
-  ]
+  "message": "Error description",
+  "error": "Detailed error information"
 }
 ```
 
@@ -513,72 +228,26 @@ STORE_ID: <FASHION_STORE_ID>
 
 ## Notes
 
-1. **Store Isolation**: By default, users can only access affiliate data from their own store.
-2. **Superadmin Access**: Superadmin users can use `storeId` parameter to access affiliate data from any store.
-3. **Affiliate Codes**: Automatically generated unique 8-character alphanumeric codes.
-4. **Affiliate Links**: Automatically generated based on affiliate code and frontend URL.
-5. **Password Hashing**: Passwords are automatically hashed using bcrypt.
-6. **Commission Calculation**: Automatically calculated based on sales and percentage.
-7. **Balance Tracking**: Automatically updated when payments are processed.
-8. **Verification System**: Affiliates can be verified by admin users.
-9. **Payment Methods**: Support for bank transfer, PayPal, cash, check, and credit card.
-10. **Audit Trail**: All payment actions are tracked with timestamps and user information.
-11. **Validation**: Comprehensive input validation for all fields.
-12. **Pagination**: List endpoints support pagination with `page` and `limit` parameters.
-13. **Search**: You can search affiliates by name, email, or affiliate code.
-14. **Filtering**: You can filter by status, payment status, etc.
-15. **Authentication**: All endpoints require valid JWT token.
-16. **Authorization**: Only admin and superadmin users can access these endpoints.
+1. **Public Endpoint**: `/affiliations/store/{storeId}` - No authentication required
+2. **Admin Endpoints**: Require valid JWT token with admin/superadmin role
+3. **Store Isolation**: All operations are isolated to the specific store
+4. **Password**: All test accounts use password: `password123`
+5. **Affiliate Codes**: Automatically generated unique 8-character codes
+6. **Status Values**: Active, Inactive, Suspended, Pending
+7. **Payment Methods**: bank_transfer, paypal, cash, check, credit_card
 
 ---
 
-## Testing Checklist
+## Test Data Summary
 
-### Basic CRUD Operations:
-- [ ] Get all affiliates (current store)
-- [ ] Get affiliates with pagination
-- [ ] Get affiliates by status (Active, Inactive, Suspended, Pending)
-- [ ] Search affiliates by name/email/code
-- [ ] Get affiliates for specific store (superadmin)
-- [ ] Get affiliate statistics
-- [ ] Get top performing affiliates
-- [ ] Get affiliate by ID
-- [ ] Create new affiliate
-- [ ] Update affiliate information
-- [ ] Verify affiliate account
+The script creates 8 affiliates with the following distribution:
+- **Active**: 6 affiliates
+- **Pending**: 1 affiliate  
+- **Inactive**: 1 affiliate
 
-### Payment Management:
-- [ ] Get affiliate payment history
-- [ ] Get payments with pagination
-- [ ] Get payments by status
-- [ ] Create bank transfer payment
-- [ ] Create PayPal payment
-- [ ] Create cash payment
-- [ ] Create check payment
-- [ ] Test payment amount validation
-- [ ] Test balance validation
-
-### Analytics:
-- [ ] Test affiliate statistics calculations
-- [ ] Test top performers ranking
-- [ ] Test commission calculations
-- [ ] Test balance tracking
-- [ ] Test conversion rate calculations
-
-### Validation:
-- [ ] Test validation errors
-- [ ] Test email uniqueness
-- [ ] Test password requirements
-- [ ] Test commission percentage limits
-- [ ] Test mobile number format
-- [ ] Test unauthorized access
-- [ ] Test store isolation
-
-### Edge Cases:
-- [ ] Test zero commission
-- [ ] Test maximum commission (100%)
-- [ ] Test large payment amounts
-- [ ] Test duplicate affiliate codes
-- [ ] Test payment exceeding balance
-- [ ] Test affiliate verification flow
-- [ ] Test audit trail functionality 
+Each affiliate has:
+- Unique email and affiliate code
+- Bank information
+- Performance statistics
+- Payment settings
+- Notes and comments 
