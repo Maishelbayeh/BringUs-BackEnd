@@ -1,0 +1,205 @@
+const Product = require('../Models/Product');
+const { addStoreFilter } = require('../middleware/storeIsolation');
+
+exports.getAll = async (req, res) => {
+  try {
+    const query = addStoreFilter(req);
+    
+    const products = await Product.find(query)
+      .populate('category')
+      .populate('productLabel')
+      .populate('unit')
+      .populate('store', 'name domain');
+      
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getById = async (req, res) => {
+  try {
+    const query = addStoreFilter(req, { _id: req.params.id });
+    
+    const product = await Product.findOne(query)
+      .populate('category')
+      .populate('productLabel')
+      .populate('unit')
+      .populate('store', 'name domain');
+      
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    res.json(product);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.create = async (req, res) => {
+  try {
+    const { nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit } = req.body;
+    
+    if (!nameAr || !nameEn || !descriptionAr || !descriptionEn || !price || !category || !unit) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        details: {
+          nameAr: !nameAr ? 'Arabic name is required' : null,
+          nameEn: !nameEn ? 'English name is required' : null,
+          descriptionAr: !descriptionAr ? 'Arabic description is required' : null,
+          descriptionEn: !descriptionEn ? 'English description is required' : null,
+          price: !price ? 'Price is required' : null,
+          category: !category ? 'Category is required' : null,
+          unit: !unit ? 'Unit is required' : null
+        }
+      });
+    }
+
+    // Add store from request context
+    const productData = {
+      ...req.body,
+      store: req.store._id
+    };
+
+    const product = new Product(productData);
+    await product.save();
+    
+    const populatedProduct = await Product.findById(product._id)
+      .populate('category')
+      .populate('productLabel')
+      .populate('unit')
+      .populate('store', 'name domain');
+      
+    res.status(201).json(populatedProduct);
+  } catch (err) {
+    console.error('Product creation error:', err);
+    
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.update = async (req, res) => {
+  try {
+    const query = addStoreFilter(req, { _id: req.params.id });
+    
+    const product = await Product.findOneAndUpdate(
+      query, 
+      req.body, 
+      { new: true, runValidators: true }
+    ).populate('category')
+     .populate('productLabel')
+     .populate('unit')
+     .populate('store', 'name domain');
+     
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    res.json(product);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.delete = async (req, res) => {
+  try {
+    const query = addStoreFilter(req, { _id: req.params.id });
+    
+    const product = await Product.findOneAndDelete(query);
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    res.json({ message: 'Product deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get products by category
+exports.getByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const query = addStoreFilter(req, { category: categoryId });
+    
+    const products = await Product.find(query)
+      .populate('category')
+      .populate('productLabel')
+      .populate('unit');
+      
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get products with filters
+exports.getWithFilters = async (req, res) => {
+  try {
+    const { 
+      category, 
+      minPrice, 
+      maxPrice, 
+      isActive, 
+      isFeatured,
+      search,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+      page = 1,
+      limit = 20
+    } = req.query;
+    
+    const query = addStoreFilter(req);
+    
+    // Add filters
+    if (category) query.category = category;
+    if (isActive !== undefined) query.isActive = isActive === 'true';
+    if (isFeatured !== undefined) query.isFeatured = isFeatured === 'true';
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = parseFloat(minPrice);
+      if (maxPrice) query.price.$lte = parseFloat(maxPrice);
+    }
+    if (search) {
+      query.$text = { $search: search };
+    }
+    
+    // Pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const products = await Product.find(query)
+      .populate('category')
+      .populate('productLabel')
+      .populate('unit')
+      .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+      
+    const total = await Product.countDocuments(query);
+    
+    res.json({
+      products,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}; 

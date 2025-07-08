@@ -1,5 +1,6 @@
 const User = require('../Models/User');
 const { validationResult } = require('express-validator');
+const { addStoreFilter } = require('../middleware/storeIsolation');
 
 /**
  * @swagger
@@ -265,14 +266,23 @@ const createUser = async (req, res) => {
  */
 const getAllUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 10, role } = req.query;
+    const { page = 1, limit = 10, role, customerOnly = false } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter = {};
+    // Add store filter for isolation
+    const filter = addStoreFilter(req);
+    
+    // Filter by role if specified
     if (role) filter.role = role;
+    
+    // Filter customers only if requested
+    if (customerOnly === 'true') {
+      filter.role = 'client';
+    }
 
     const users = await User.find(filter)
       .select('-password')
+      .populate('store', 'name domain')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -336,7 +346,12 @@ const getAllUsers = async (req, res) => {
  */
 const getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    // Add store filter for isolation
+    const filter = addStoreFilter(req, { _id: req.params.id });
+    
+    const user = await User.findOne(filter)
+      .select('-password')
+      .populate('store', 'name domain');
 
     if (!user) {
       return res.status(404).json({
@@ -359,8 +374,94 @@ const getUserById = async (req, res) => {
   }
 };
 
+// Get customers only (clients)
+const getCustomers = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Add store filter for isolation
+    const filter = addStoreFilter(req);
+    filter.role = 'client'; // Only customers
+    
+    if (status) filter.status = status;
+
+    const customers = await User.find(filter)
+      .select('-password')
+      .populate('store', 'name domain')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await User.countDocuments(filter);
+    const totalPages = Math.ceil(total / parseInt(limit));
+
+    res.status(200).json({
+      success: true,
+      data: customers,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get customers error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching customers',
+      error: error.message
+    });
+  }
+};
+
+// Get store staff (admins and owners)
+const getStoreStaff = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, role } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Add store filter for isolation
+    const filter = addStoreFilter(req);
+    filter.role = { $in: ['admin', 'superadmin'] }; // Only staff
+    
+    if (role) filter.role = role;
+
+    const staff = await User.find(filter)
+      .select('-password')
+      .populate('store', 'name domain')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await User.countDocuments(filter);
+    const totalPages = Math.ceil(total / parseInt(limit));
+
+    res.status(200).json({
+      success: true,
+      data: staff,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get store staff error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching store staff',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createUser,
   getAllUsers,
-  getUserById
+  getUserById,
+  getCustomers,
+  getStoreStaff
 }; 

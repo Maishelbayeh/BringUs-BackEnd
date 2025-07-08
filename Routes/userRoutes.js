@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { createUser, getAllUsers, getUserById } = require('../Controllers/UserController');
+const { createUser, getAllUsers, getUserById, getCustomers, getStoreStaff } = require('../Controllers/UserController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -83,94 +83,91 @@ const validateUserCreation = [
     .withMessage('Please enter a valid phone number'),
   body('role')
     .optional()
-    .isIn(['user', 'admin', 'moderator'])
-    .withMessage('Role must be user, admin, or moderator')
+    .isIn(['superadmin', 'admin', 'client'])
+    .withMessage('Role must be superadmin, admin, or client')
 ];
 
 /**
  * @swagger
  * /api/users:
  *   post:
- *     summary: Create a new user
+ *     summary: Create a new user (Admin/Superadmin only)
  *     description: Register a new user account
  *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/User'
- *           example:
- *             firstName: "John"
- *             lastName: "Doe"
- *             email: "john.doe@example.com"
- *             password: "password123"
- *             phone: "+1234567890"
- *             role: "user"
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - email
+ *               - password
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 50
+ *                 example: "John"
+ *               lastName:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 50
+ *                 example: "Doe"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "john.doe@example.com"
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: "password123"
+ *               phone:
+ *                 type: string
+ *                 pattern: "^[\\+]?[1-9][\\d]{0,15}$"
+ *                 example: "+1234567890"
+ *               role:
+ *                 type: string
+ *                 enum: [superadmin, admin, client]
+ *                 example: "client"
  *     responses:
  *       201:
  *         description: User created successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/UserResponse'
+ *               $ref: '#/components/schemas/Success'
  *       400:
- *         description: Bad request - validation errors
+ *         description: Validation error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Validation failed"
- *                 errors:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       field:
- *                         type: string
- *                       message:
- *                         type: string
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       409:
- *         description: Conflict - user already exists
+ *         description: User already exists
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "User already exists with this email"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Error creating user"
+ *               $ref: '#/components/schemas/Error'
  */
-router.post('/', validateUserCreation, createUser);
+router.post('/', protect, authorize('admin', 'superadmin'), validateUserCreation, createUser);
 
 /**
  * @swagger
  * /api/users:
  *   get:
- *     summary: Get all users
- *     description: Retrieve a list of all users (Admin only)
+ *     summary: Get all users (Admin/Superadmin only)
+ *     description: Retrieve a list of all users
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -191,52 +188,35 @@ router.post('/', validateUserCreation, createUser);
  *         name: role
  *         schema:
  *           type: string
- *           enum: [user, admin, moderator]
+ *           enum: [superadmin, admin, client]
  *         description: Filter by user role
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, inactive, banned]
+ *         description: Filter by user status
  *     responses:
  *       200:
  *         description: List of users retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/User'
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     currentPage:
- *                       type: integer
- *                       example: 1
- *                     totalPages:
- *                       type: integer
- *                       example: 5
- *                     totalItems:
- *                       type: integer
- *                       example: 50
- *                     itemsPerPage:
- *                       type: integer
- *                       example: 10
- *       401:
- *         description: Unauthorized - No token provided
+ *               $ref: '#/components/schemas/Success'
  *       403:
- *         description: Forbidden - Insufficient permissions
- *       500:
- *         description: Internal server error
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
-router.get('/', protect, authorize('admin'), getAllUsers);
+router.get('/', protect, authorize('admin', 'superadmin'), getAllUsers);
 
 /**
  * @swagger
  * /api/users/{id}:
  *   get:
- *     summary: Get user by ID
+ *     summary: Get user by ID (Admin/Superadmin only)
  *     description: Retrieve a specific user by their ID
  *     tags: [Users]
  *     security:
@@ -247,25 +227,116 @@ router.get('/', protect, authorize('admin'), getAllUsers);
  *         required: true
  *         schema:
  *           type: string
- *         description: User ID
+ *         example: "507f1f77bcf86cd799439011"
+ *         description: "User ID"
  *     responses:
  *       200:
  *         description: User retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/User'
+ *               $ref: '#/components/schemas/Success'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: User not found
- *       500:
- *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
-router.get('/:id', protect, getUserById);
+router.get('/:id', protect, authorize('admin', 'superadmin'), getUserById);
+
+/**
+ * @swagger
+ * /api/users/customers:
+ *   get:
+ *     summary: Get store customers only
+ *     description: Retrieve a list of customers (clients) for the current store
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of customers per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, inactive, banned]
+ *         description: Filter by customer status
+ *     responses:
+ *       200:
+ *         description: List of customers retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/customers', protect, authorize('admin', 'superadmin'), getCustomers);
+
+/**
+ * @swagger
+ * /api/users/staff:
+ *   get:
+ *     summary: Get store staff only
+ *     description: Retrieve a list of staff (admins) for the current store
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of staff per page
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [admin, superadmin]
+ *         description: Filter by staff role
+ *     responses:
+ *       200:
+ *         description: List of staff retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/staff', protect, authorize('admin', 'superadmin'), getStoreStaff);
 
 module.exports = router; 

@@ -1,0 +1,477 @@
+const Category = require('../Models/Category');
+const Store = require('../Models/Store');
+
+exports.getAll = async (req, res) => {
+  try {
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        error: 'Store ID is required',
+        message: 'Please provide storeId in query parameters'
+      });
+    }
+
+    // Verify store exists
+    const store = await Store.findById(storeId);
+    if (!store) {
+      return res.status(404).json({ 
+        error: 'Store not found',
+        message: 'The specified store does not exist'
+      });
+    }
+    
+    const categories = await Category.find({ store: storeId })
+      .populate('parent')
+      .populate('store', 'name domain');
+      
+    res.json({
+      success: true,
+      data: categories,
+      count: categories.length
+    });
+  } catch (err) {
+    console.error('Get categories error:', err);
+    
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+exports.getById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        error: 'Store ID is required',
+        message: 'Please provide storeId in query parameters'
+      });
+    }
+    
+    const category = await Category.findOne({ _id: id, store: storeId }).populate('parent');
+    if (!category) return res.status(404).json({ 
+      success: false,
+      error: 'Category not found' 
+    });
+    
+    res.json({
+      success: true,
+      data: category
+    });
+  } catch (err) {
+    console.error('Get category by ID error:', err);
+    
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+exports.create = async (req, res) => {
+  try {
+    console.log('Create category - Request body:', req.body);
+    
+    // Validate required fields
+    const { nameAr, nameEn, slug, storeId } = req.body;
+    
+    if (!nameAr || !nameEn) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Missing required fields',
+        details: {
+          nameAr: !nameAr ? 'Arabic name is required' : null,
+          nameEn: !nameEn ? 'English name is required' : null
+        }
+      });
+    }
+
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in request body'
+      });
+    }
+
+    // Verify store exists
+    const store = await Store.findById(storeId);
+    if (!store) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Store not found',
+        message: 'The specified store does not exist'
+      });
+    }
+
+    // Add store to category data
+    const categoryData = {
+      ...req.body,
+      store: storeId
+    };
+
+    // معالجة الصورة: حفظ الرابط مباشرة كـ string
+    if (typeof req.body.image === 'string' && req.body.image) {
+      categoryData.image = req.body.image;
+    } else if (req.body.image && typeof req.body.image === 'object' && req.body.image.url) {
+      categoryData.image = req.body.image.url;
+    }
+    
+    console.log('Create category - Final categoryData:', categoryData);
+
+    // Check if slug already exists in the same store
+    if (slug) {
+      const existingCategory = await Category.findOne({ slug, store: storeId });
+      if (existingCategory) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'Category with this slug already exists in this store',
+          slug: slug
+        });
+      }
+    }
+
+    const category = new Category(categoryData);
+    await category.save();
+    
+    const populatedCategory = await Category.findById(category._id)
+      .populate('parent')
+      .populate('store', 'name domain');
+    
+    res.status(201).json({
+      success: true,
+      message: 'Category created successfully',
+      data: populatedCategory
+    });
+  } catch (err) {
+    console.error('Category creation error:', err);
+    
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[0];
+      return res.status(400).json({ 
+        success: false,
+        error: `Duplicate ${field}`,
+        details: { [field]: `${field} already exists in this store` }
+      });
+    }
+    
+    // Handle other errors
+    res.status(400).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+exports.update = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { storeId } = req.body;
+    
+    console.log('Update category - ID:', id);
+    console.log('Update category - Request body:', req.body);
+    console.log('Update category - StoreId:', storeId);
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in request body'
+      });
+    }
+
+    // معالجة الصورة: حفظ الرابط مباشرة كـ string
+    const updateData = { ...req.body };
+    if (typeof req.body.image === 'string' && req.body.image) {
+      updateData.image = req.body.image;
+    } else if (req.body.image && typeof req.body.image === 'object' && req.body.image.url) {
+      updateData.image = req.body.image.url;
+    }
+    
+    console.log('Update category - Final updateData:', updateData);
+    
+    const category = await Category.findOneAndUpdate(
+      { _id: id, store: storeId }, 
+      updateData, 
+      { new: true, runValidators: true }
+    ).populate('parent');
+    
+    if (!category) return res.status(404).json({ 
+      success: false,
+      error: 'Category not found' 
+    });
+    
+    res.json({
+      success: true,
+      message: 'Category updated successfully',
+      data: category
+    });
+  } catch (err) {
+    console.error('Update category error:', err);
+    
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[0];
+      return res.status(400).json({ 
+        success: false,
+        error: `Duplicate ${field}`,
+        details: { [field]: `${field} already exists in this store` }
+      });
+    }
+    
+    res.status(400).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+exports.delete = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in query parameters'
+      });
+    }
+    
+    const category = await Category.findOneAndDelete({ _id: id, store: storeId });
+    if (!category) return res.status(404).json({ 
+      success: false,
+      error: 'Category not found' 
+    });
+    
+    res.json({ 
+      success: true,
+      message: 'Category deleted successfully' 
+    });
+  } catch (err) {
+    console.error('Delete category error:', err);
+    
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+// Get category with children and products
+exports.getCategoryDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { includeProducts = false, storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in query parameters'
+      });
+    }
+
+    let category = await Category.findOne({ _id: id, store: storeId })
+      .populate('parent')
+      .populate('store', 'name domain');
+
+    if (!category) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Category not found' 
+      });
+    }
+
+    // Get children categories for the same store
+    const children = await Category.find({ parent: id, store: storeId })
+      .populate('store', 'name domain');
+
+    // Get products if requested
+    let products = [];
+    if (includeProducts === 'true') {
+      const Product = require('../Models/Product');
+      products = await Product.find({ category: id, store: storeId })
+        .select('nameEn nameAr price stock isActive')
+        .limit(10); // Limit for performance
+    }
+
+    res.json({
+      success: true,
+      data: {
+        category,
+        children,
+        products,
+        hasChildren: children.length > 0,
+        hasProducts: products.length > 0,
+        canHaveBoth: true // This category can have both children and products
+      }
+    });
+
+  } catch (err) {
+    console.error('Get category details error:', err);
+    
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+// Get category tree with product counts
+exports.getCategoryTree = async (req, res) => {
+  try {
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in query parameters'
+      });
+    }
+
+    const rootCategories = await Category.find({ level: 0, store: storeId })
+      .populate('store', 'name domain');
+
+    const Product = require('../Models/Product');
+    
+    // Build tree with product counts
+    const buildTree = async (category) => {
+      const children = await Category.find({ parent: category._id, store: storeId });
+      const productCount = await Product.countDocuments({ category: category._id, store: storeId });
+      
+      const childrenWithDetails = await Promise.all(
+        children.map(child => buildTree(child))
+      );
+
+      return {
+        ...category.toObject(),
+        children: childrenWithDetails,
+        productCount,
+        totalProducts: productCount + childrenWithDetails.reduce((sum, child) => sum + child.totalProducts, 0)
+      };
+    };
+
+    const tree = await Promise.all(
+      rootCategories.map(category => buildTree(category))
+    );
+
+    res.json({
+      success: true,
+      data: tree
+    });
+
+  } catch (err) {
+    console.error('Get category tree error:', err);
+    
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};

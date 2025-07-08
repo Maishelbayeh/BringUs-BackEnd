@@ -49,8 +49,13 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin', 'moderator'],
-    default: 'user'
+    enum: ['superadmin', 'admin', 'client'],
+    default: 'client'
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'banned'],
+    default: 'active'
   },
   addresses: [{
     type: {
@@ -103,6 +108,15 @@ const userSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  // Store association for customers
+  store: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Store',
+    required: function() {
+      // Store is required only for customers (clients)
+      return this.role === 'client';
+    }
   }
 }, {
   timestamps: true
@@ -145,5 +159,10 @@ userSchema.methods.getResetPasswordToken = function() {
 
   return resetToken;
 };
+
+// Create indexes for store isolation
+userSchema.index({ store: 1 });
+userSchema.index({ store: 1, role: 1 });
+userSchema.index({ store: 1, status: 1 });
 
 module.exports = mongoose.model('User', userSchema); 

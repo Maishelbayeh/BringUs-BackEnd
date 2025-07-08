@@ -6,9 +6,94 @@ const crypto = require('crypto');
 
 const router = express.Router();
 
-// @desc    Register user
-// @route   POST /api/auth/register
-// @access  Public
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - email
+ *               - password
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 50
+ *                 example: "John"
+ *               lastName:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 50
+ *                 example: "Doe"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "john@example.com"
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: "password123"
+ *               phone:
+ *                 type: string
+ *                 pattern: "^[\\+]?[1-9][\\d]{0,15}$"
+ *                 example: "+1234567890"
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User registered successfully"
+ *                 token:
+ *                   type: string
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     email:
+ *                       type: string
+ *                       example: "john@example.com"
+ *                     role:
+ *                       type: string
+ *                       example: "client"
+ *       400:
+ *         description: Validation error or user already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/register', [
   body('firstName').trim().isLength({ min: 2, max: 50 }).withMessage('First name must be between 2 and 50 characters'),
   body('lastName').trim().isLength({ min: 2, max: 50 }).withMessage('Last name must be between 2 and 50 characters'),
@@ -71,9 +156,89 @@ router.post('/register', [
   }
 });
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "john@example.com"
+ *               password:
+ *                 type: string
+ *                 example: "password123"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Login successful"
+ *                 token:
+ *                   type: string
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     email:
+ *                       type: string
+ *                       example: "john@example.com"
+ *                     role:
+ *                       type: string
+ *                       example: "admin"
+ *                     avatar:
+ *                       type: object
+ *                       properties:
+ *                         url:
+ *                           type: string
+ *                           example: "https://example.com/avatar.jpg"
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Invalid credentials or account deactivated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/login', [
   body('email').isEmail().normalizeEmail().withMessage('Please enter a valid email'),
   body('password').notEmpty().withMessage('Password is required')
@@ -146,9 +311,34 @@ router.post('/login', [
   }
 });
 
-// @desc    Get current user
-// @route   GET /api/auth/me
-// @access  Private
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Invalid token or account deactivated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/me', async (req, res) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');

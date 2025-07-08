@@ -1,16 +1,27 @@
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
-  name: {
+  nameAr: {
     type: String,
-    required: [true, 'Product name is required'],
+    required: [true, 'Arabic product name is required'],
     trim: true,
-    maxlength: [100, 'Product name cannot exceed 100 characters']
+    maxlength: [100, 'Arabic product name cannot exceed 100 characters']
   },
-  description: {
+  nameEn: {
     type: String,
-    required: [true, 'Product description is required'],
-    maxlength: [2000, 'Description cannot exceed 2000 characters']
+    required: [true, 'English product name is required'],
+    trim: true,
+    maxlength: [100, 'English product name cannot exceed 100 characters']
+  },
+  descriptionAr: {
+    type: String,
+    required: [true, 'Arabic product description is required'],
+    maxlength: [2000, 'Arabic description cannot exceed 2000 characters']
+  },
+  descriptionEn: {
+    type: String,
+    required: [true, 'English product description is required'],
+    maxlength: [2000, 'English description cannot exceed 2000 characters']
   },
   price: {
     type: Number,
@@ -39,10 +50,16 @@ const productSchema = new mongoose.Schema({
     ref: 'Category',
     required: [true, 'Product category is required']
   },
-  subcategory: {
+  store: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Store',
+    required: [true, 'Product store is required']
+  },
+  // Support for hierarchical categories (main category, subcategory, sub-subcategory)
+  categoryPath: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category'
-  },
+  }],
   brand: {
     type: String,
     trim: true
@@ -69,18 +86,34 @@ const productSchema = new mongoose.Schema({
     },
     alt: String
   },
-  variants: [{
-    name: {
-      type: String,
-      required: true
-    },
-    options: [{
-      name: String,
-      price: Number,
-      sku: String,
-      stock: Number
-    }]
-  }],
+  // Product label (Regular, Offer, Featured, New)
+  productLabel: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProductLabel'
+  },
+  // Unit (piece, kg, liter, etc.)
+  unit: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Unit',
+    required: [true, 'Product unit is required']
+  },
+  // Available quantity
+  availableQuantity: {
+    type: Number,
+    required: [true, 'Available quantity is required'],
+    min: [0, 'Available quantity cannot be negative'],
+    default: 0
+  },
+  // Product order for sorting
+  productOrder: {
+    type: Number,
+    default: 0
+  },
+  // Visibility status
+  visibility: {
+    type: Boolean,
+    default: true
+  },
   attributes: [{
     name: {
       type: String,
@@ -183,11 +216,37 @@ const productSchema = new mongoose.Schema({
 
 // Create index for search functionality
 productSchema.index({
-  name: 'text',
-  description: 'text',
+  nameAr: 'text',
+  nameEn: 'text',
+  descriptionAr: 'text',
+  descriptionEn: 'text',
   tags: 'text',
   brand: 'text'
 });
+
+// Create index for category
+productSchema.index({ category: 1 });
+
+// Create index for category path
+productSchema.index({ categoryPath: 1 });
+
+// Create index for product label
+productSchema.index({ productLabel: 1 });
+
+// Create index for unit
+productSchema.index({ unit: 1 });
+
+// Create index for visibility
+productSchema.index({ visibility: 1 });
+
+// Create index for product order
+productSchema.index({ productOrder: 1 });
+
+// Create indexes for store isolation
+productSchema.index({ store: 1 });
+productSchema.index({ store: 1, category: 1 });
+productSchema.index({ store: 1, isActive: 1 });
+productSchema.index({ store: 1, visibility: 1 });
 
 // Virtual for discount percentage
 productSchema.virtual('discountPercentage').get(function() {

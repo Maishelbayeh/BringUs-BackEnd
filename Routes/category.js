@@ -1,25 +1,40 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
+const CategoryController = require('../Controllers/CategoryController');
+const { protect, authorize } = require('../middleware/auth');
 const Category = require('../Models/Category');
 const Product = require('../Models/Product');
+const Store = require('../Models/Store');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 
 const router = express.Router();
 
-// @desc    Get all categories
+// @desc    Get all categories for a store
 // @route   GET /api/categories
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true })
-      .populate('parent', 'name slug')
-      .sort({ sortOrder: 1, name: 1 });
-
-    res.status(200).json({
-      success: true,
-      data: categories
-    });
+    await CategoryController.getAll(req, res);
   } catch (error) {
-    console.error('Get categories error:', error);
+    console.error('Get all categories error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error fetching categories',
@@ -28,72 +43,32 @@ router.get('/', async (req, res) => {
   }
 });
 
-// @desc    Get category tree (hierarchical)
+// @desc    Get category tree (hierarchical) for a store
 // @route   GET /api/categories/tree
 // @access  Public
 router.get('/tree', async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true })
-      .populate('parent', 'name slug')
-      .sort({ sortOrder: 1, name: 1 });
-
-    // Build tree structure
-    const buildTree = (items, parentId = null) => {
-      return items
-        .filter(item => String(item.parent) === String(parentId))
-        .map(item => ({
-          ...item.toObject(),
-          children: buildTree(items, item._id)
-        }));
-    };
-
-    const categoryTree = buildTree(categories);
-
-    res.status(200).json({
-      success: true,
-      data: categoryTree
-    });
+    await CategoryController.getCategoryTree(req, res);
   } catch (error) {
     console.error('Get category tree error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error fetching category tree',
-      error: error.message
-    });
-  }
-});
-
-// @desc    Get single category
-// @route   GET /api/categories/:id
-// @access  Public
-router.get('/:id', async (req, res) => {
-  try {
-    const category = await Category.findById(req.params.id)
-      .populate('parent', 'name slug');
-
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found'
-      });
-    }
-
-    if (!category.isActive) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: category
-    });
-  } catch (error) {
-    console.error('Get category error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching category',
       error: error.message
     });
   }
@@ -104,8 +79,19 @@ router.get('/:id', async (req, res) => {
 // @access  Public
 router.get('/slug/:slug', async (req, res) => {
   try {
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in query parameters'
+      });
+    }
+
     const category = await Category.findOne({ 
       slug: req.params.slug,
+      store: storeId,
       isActive: true 
     }).populate('parent', 'name slug');
 
@@ -122,6 +108,21 @@ router.get('/slug/:slug', async (req, res) => {
     });
   } catch (error) {
     console.error('Get category by slug error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error fetching category',
@@ -130,16 +131,84 @@ router.get('/slug/:slug', async (req, res) => {
   }
 });
 
-// @desc    Create new category
+// @desc    Get single category by ID
+// @route   GET /api/categories/:id
+// @access  Public
+router.get('/:id', async (req, res) => {
+  try {
+    await CategoryController.getById(req, res);
+  } catch (error) {
+    console.error('Get category by ID error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching category',
+      error: error.message
+    });
+  }
+});
+
+// @desc    Get category details with children and products
+// @route   GET /api/categories/:id/details
+// @access  Public
+router.get('/:id/details', async (req, res) => {
+  try {
+    await CategoryController.getCategoryDetails(req, res);
+  } catch (error) {
+    console.error('Get category details error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching category details',
+      error: error.message
+    });
+  }
+});
+
+// @desc    Create new category (Admin only)
 // @route   POST /api/categories
 // @access  Private (Admin only)
 router.post('/', [
-  body('name').trim().isLength({ min: 1, max: 50 }).withMessage('Category name is required and must be less than 50 characters'),
-  body('description').optional().isLength({ max: 500 }).withMessage('Description must be less than 500 characters'),
+  protect,
+  authorize('admin', 'superadmin'),
+  body('nameAr').trim().isLength({ min: 1, max: 50 }).withMessage('Arabic name is required and must be less than 50 characters'),
+  body('nameEn').trim().isLength({ min: 1, max: 50 }).withMessage('English name is required and must be less than 50 characters'),
+  body('storeId').notEmpty().withMessage('Store ID is required'),
+  body('descriptionAr').optional().isLength({ max: 500 }).withMessage('Arabic description must be less than 500 characters'),
+  body('descriptionEn').optional().isLength({ max: 500 }).withMessage('English description must be less than 500 characters'),
   body('parent').optional().isMongoId().withMessage('Parent must be a valid category ID'),
   body('icon').optional().isString().withMessage('Icon must be a string'),
   body('sortOrder').optional().isInt().withMessage('Sort order must be an integer'),
-  body('isFeatured').optional().isBoolean().withMessage('isFeatured must be a boolean')
+  body('isFeatured').optional().isBoolean().withMessage('isFeatured must be a boolean'),
+  body('isActive').optional().isBoolean().withMessage('isActive must be a boolean')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -150,65 +219,47 @@ router.post('/', [
       });
     }
 
-    const {
-      name,
-      description,
-      parent,
-      icon,
-      sortOrder = 0,
-      isFeatured = false
-    } = req.body;
+    // Verify store exists
+    const store = await Store.findById(req.body.storeId);
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found'
+      });
+    }
 
-    // Check if parent exists
-    if (parent) {
-      const parentCategory = await Category.findById(parent);
+    // Check if parent exists and belongs to the same store
+    if (req.body.parent) {
+      const parentCategory = await Category.findOne({ 
+        _id: req.body.parent, 
+        store: req.body.storeId 
+      });
       if (!parentCategory) {
         return res.status(400).json({
           success: false,
-          message: 'Parent category not found'
+          message: 'Parent category not found or does not belong to this store'
         });
       }
     }
 
-    // Generate slug from name
-    const slug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-
-    // Check if slug already exists
-    const existingCategory = await Category.findOne({ slug });
-    if (existingCategory) {
-      return res.status(400).json({
-        success: false,
-        message: 'Category with this name already exists'
-      });
-    }
-
-    // Calculate level
-    const level = parent ? 1 : 0;
-
-    const category = await Category.create({
-      name,
-      slug,
-      description,
-      parent,
-      level,
-      icon,
-      sortOrder,
-      isFeatured
-    });
-
-    const populatedCategory = await Category.findById(category._id)
-      .populate('parent', 'name slug');
-
-    res.status(201).json({
-      success: true,
-      message: 'Category created successfully',
-      data: populatedCategory
-    });
+    await CategoryController.create(req, res);
   } catch (error) {
     console.error('Create category error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error creating category',
@@ -217,16 +268,22 @@ router.post('/', [
   }
 });
 
-// @desc    Update category
+// @desc    Update category (Admin only)
 // @route   PUT /api/categories/:id
 // @access  Private (Admin only)
 router.put('/:id', [
-  body('name').optional().trim().isLength({ min: 1, max: 50 }).withMessage('Category name must be less than 50 characters'),
-  body('description').optional().isLength({ max: 500 }).withMessage('Description must be less than 500 characters'),
+  protect,
+  authorize('admin', 'superadmin'),
+  body('nameAr').optional().trim().isLength({ min: 1, max: 50 }).withMessage('Arabic name must be less than 50 characters'),
+  body('nameEn').optional().trim().isLength({ min: 1, max: 50 }).withMessage('English name must be less than 50 characters'),
+  body('storeId').notEmpty().withMessage('Store ID is required'),
+  body('descriptionAr').optional().isLength({ max: 500 }).withMessage('Arabic description must be less than 500 characters'),
+  body('descriptionEn').optional().isLength({ max: 500 }).withMessage('English description must be less than 500 characters'),
   body('parent').optional().isMongoId().withMessage('Parent must be a valid category ID'),
   body('icon').optional().isString().withMessage('Icon must be a string'),
   body('sortOrder').optional().isInt().withMessage('Sort order must be an integer'),
-  body('isFeatured').optional().isBoolean().withMessage('isFeatured must be a boolean')
+  body('isFeatured').optional().isBoolean().withMessage('isFeatured must be a boolean'),
+  body('isActive').optional().isBoolean().withMessage('isActive must be a boolean')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -237,15 +294,16 @@ router.put('/:id', [
       });
     }
 
-    const category = await Category.findById(req.params.id);
-    if (!category) {
+    // Verify store exists
+    const store = await Store.findById(req.body.storeId);
+    if (!store) {
       return res.status(404).json({
         success: false,
-        message: 'Category not found'
+        message: 'Store not found'
       });
     }
 
-    // Check if parent exists and is not the same as current category
+    // Check if parent exists and belongs to the same store
     if (req.body.parent) {
       if (req.body.parent === req.params.id) {
         return res.status(400).json({
@@ -254,46 +312,36 @@ router.put('/:id', [
         });
       }
 
-      const parentCategory = await Category.findById(req.body.parent);
+      const parentCategory = await Category.findOne({ 
+        _id: req.body.parent, 
+        store: req.body.storeId 
+      });
       if (!parentCategory) {
         return res.status(400).json({
           success: false,
-          message: 'Parent category not found'
+          message: 'Parent category not found or does not belong to this store'
         });
       }
     }
 
-    // Generate new slug if name is being updated
-    if (req.body.name && req.body.name !== category.name) {
-      const newSlug = req.body.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-
-      const existingCategory = await Category.findOne({ slug: newSlug, _id: { $ne: req.params.id } });
-      if (existingCategory) {
-        return res.status(400).json({
-          success: false,
-          message: 'Category with this name already exists'
-        });
-      }
-
-      req.body.slug = newSlug;
-    }
-
-    const updatedCategory = await Category.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    ).populate('parent', 'name slug');
-
-    res.status(200).json({
-      success: true,
-      message: 'Category updated successfully',
-      data: updatedCategory
-    });
+    await CategoryController.update(req, res);
   } catch (error) {
     console.error('Update category error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error updating category',
@@ -302,21 +350,28 @@ router.put('/:id', [
   }
 });
 
-// @desc    Delete category
+// @desc    Delete category (Admin only)
 // @route   DELETE /api/categories/:id
 // @access  Private (Admin only)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', [
+  protect,
+  authorize('admin', 'superadmin')
+], async (req, res) => {
   try {
-    const category = await Category.findById(req.params.id);
-    if (!category) {
-      return res.status(404).json({
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({
         success: false,
-        message: 'Category not found'
+        message: 'Store ID is required'
       });
     }
 
     // Check if category has children
-    const hasChildren = await Category.exists({ parent: req.params.id });
+    const hasChildren = await Category.exists({ 
+      parent: req.params.id, 
+      store: storeId 
+    });
     if (hasChildren) {
       return res.status(400).json({
         success: false,
@@ -325,7 +380,10 @@ router.delete('/:id', async (req, res) => {
     }
 
     // Check if category has products
-    const hasProducts = await Product.exists({ category: req.params.id });
+    const hasProducts = await Product.exists({ 
+      category: req.params.id, 
+      store: storeId 
+    });
     if (hasProducts) {
       return res.status(400).json({
         success: false,
@@ -333,14 +391,24 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    await Category.findByIdAndDelete(req.params.id);
-
-    res.status(200).json({
-      success: true,
-      message: 'Category deleted successfully'
-    });
+    await CategoryController.delete(req, res);
   } catch (error) {
     console.error('Delete category error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error deleting category',
@@ -349,14 +417,28 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// @desc    Get featured categories
+// @desc    Get featured categories for a store
 // @route   GET /api/categories/featured
 // @access  Public
 router.get('/featured', async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true, isFeatured: true })
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in query parameters'
+      });
+    }
+
+    const categories = await Category.find({ 
+      store: storeId,
+      isActive: true, 
+      isFeatured: true 
+    })
       .populate('parent', 'name slug')
-      .sort({ sortOrder: 1, name: 1 })
+      .sort({ sortOrder: 1, nameEn: 1 })
       .limit(10);
 
     res.status(200).json({
@@ -365,10 +447,187 @@ router.get('/featured', async (req, res) => {
     });
   } catch (error) {
     console.error('Get featured categories error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error fetching featured categories',
       error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/categories/store/{storeId}:
+ *   get:
+ *     summary: Get all categories for a specific store
+ *     tags: [Categories]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID to filter categories
+ *         example: 686a719956a82bfcc93a2e2d
+ *     responses:
+ *       200:
+ *         description: List of categories for the store
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Category'
+ *                 count:
+ *                   type: integer
+ *                   example: 9
+ *       400:
+ *         description: Store ID is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: Store ID is required
+ *                 message:
+ *                   type: string
+ *                   example: Please provide storeId in the URL parameter
+ *       404:
+ *         description: Store not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: Store not found
+ *                 message:
+ *                   type: string
+ *                   example: The specified store does not exist
+ */
+// @desc    Get all categories for a specific store by storeId
+// @route   GET /api/categories/store/:storeId
+// @access  Public
+router.get('/store/:storeId', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in the URL parameter'
+      });
+    }
+    const store = await Store.findById(storeId);
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        error: 'Store not found',
+        message: 'The specified store does not exist'
+      });
+    }
+    const categories = await Category.find({ store: storeId })
+      .populate('parent')
+      .populate('store', 'name domain');
+    res.json({
+      success: true,
+      data: categories,
+      count: categories.length
+    });
+  } catch (err) {
+    console.error('Get categories by storeId error:', err);
+    
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ========== رفع صورة الكاتيجوري فقط ========== //
+// استخدم memoryStorage بدلاً من diskStorage
+const imageStorage = multer.memoryStorage();
+const uploadCategoryImage = multer({ storage: imageStorage });
+
+// @desc    Upload category image only
+// @route   POST /api/categories/upload-image
+// @access  Private (Admin only)
+// يعيد فقط اسم الصورة (image) + رابط العرض (imageUrl)
+router.post('/upload-image', [protect, authorize('admin', 'superadmin')], uploadCategoryImage.single('image'), async (req, res) => {
+  try {
+    const { storeId } = req.body;
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+    // رفع الصورة إلى Cloudflare R2
+    const folder = storeId ? `categories/${storeId}` : 'categories';
+    const result = await uploadToCloudflare(req.file.buffer, req.file.originalname, folder);
+    res.json({ success: true, image: result.key, imageUrl: result.url });
+  } catch (err) {
+    console.error('Upload image error:', err);
+    
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      error: 'Upload failed',
+      message: err.message 
     });
   }
 });

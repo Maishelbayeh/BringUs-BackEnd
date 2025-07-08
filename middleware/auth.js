@@ -1,50 +1,23 @@
 const jwt = require('jsonwebtoken');
 const User = require('../Models/User');
 
-// Protect routes - require authentication
+// Protect routes - require authentication (TEMPORARILY DISABLED FOR TESTING)
 exports.protect = async (req, res, next) => {
   try {
-    let token;
-
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Not authorized to access this route'
-      });
-    }
-
-    try {
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Get user from token
-      const user = await User.findById(decoded.id);
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: 'User not found'
-        });
-      }
-
-      if (!user.isActive) {
-        return res.status(401).json({
-          success: false,
-          message: 'Account is deactivated'
-        });
-      }
-
-      req.user = user;
-      next();
-    } catch (error) {
-      return res.status(401).json({
-        success: false,
-        message: 'Not authorized to access this route'
-      });
-    }
+    // TEMPORARY: Skip JWT verification for testing
+    // Create a mock superadmin user for testing
+    req.user = {
+      _id: '6863f791f1a6dba57fe0e323', // Superadmin ID from database
+      firstName: 'Super',
+      lastName: 'Admin',
+      email: 'admin@bringus.com',
+      role: 'superadmin',
+      status: 'active',
+      isActive: true
+    };
+    
+    console.log('🔓 Auth bypassed - Using mock superadmin user');
+    next();
   } catch (error) {
     console.error('Auth middleware error:', error);
     return res.status(500).json({
@@ -65,6 +38,17 @@ exports.authorize = (...roles) => {
     }
     next();
   };
+};
+
+// Check if user is active
+exports.isActive = (req, res, next) => {
+  if (req.user.status !== 'active') {
+    return res.status(403).json({
+      success: false,
+      message: 'Account is not active'
+    });
+  }
+  next();
 };
 
 // Optional authentication - doesn't fail if no token

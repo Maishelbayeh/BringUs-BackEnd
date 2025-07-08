@@ -3,8 +3,12 @@ const mongoose = require('mongoose');
 const orderSchema = new mongoose.Schema({
   orderNumber: {
     type: String,
-    required: true,
-    unique: true
+    required: true
+  },
+  store: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Store',
+    required: [true, 'Order store is required']
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -223,6 +227,12 @@ orderSchema.pre('save', function(next) {
   }
   next();
 });
+
+// Create indexes for store isolation
+orderSchema.index({ store: 1 });
+orderSchema.index({ store: 1, user: 1 });
+orderSchema.index({ store: 1, status: 1 });
+orderSchema.index({ store: 1, orderNumber: 1 }, { unique: true });
 
 // Virtual for order summary
 orderSchema.virtual('orderSummary').get(function() {

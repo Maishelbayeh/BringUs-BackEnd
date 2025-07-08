@@ -1,0 +1,121 @@
+{
+  "techStoreCustomers": [
+    {
+      "firstName": "أحمد",
+      "lastName": "محمد",
+      "email": "ahmed.tech@test.com",
+      "password": "password123",
+      "phone": "+966501234567",
+      "role": "client",
+      "status": "active",
+      "addresses": [
+        {
+          "type": "home",
+          "street": "شارع الملك فهد",
+          "city": "الرياض",
+          "state": "الرياض",
+          "zipCode": "12345",
+          "country": "السعودية",
+          "isDefault": true
+        }
+      ],
+      "avatar": {
+        "public_id": null,
+        "url": "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"
+      },
+      "store": "techstore_id_here"
+    },
+    {
+      "firstName": "فاطمة",
+      "lastName": "علي",
+      "email": "fatima.tech@test.com",
+      "password": "password123",
+      "phone": "+966507654321",
+      "role": "client",
+      "status": "active",
+      "addresses": [
+        {
+          "type": "home",
+          "street": "شارع التحلية",
+          "city": "جدة",
+          "state": "مكة المكرمة",
+          "zipCode": "54321",
+          "country": "السعودية",
+          "isDefault": true
+        }
+      ],
+      "avatar": {
+        "public_id": null,
+        "url": "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"
+      },
+      "store": "techstore_id_here"
+    }
+  ],
+  "fashionStoreCustomers": [
+    {
+      "firstName": "سارة",
+      "lastName": "عبدالله",
+      "email": "sara.fashion@test.com",
+      "password": "password123",
+      "phone": "+966506667778",
+      "role": "client",
+      "status": "active",
+      "addresses": [
+        {
+          "type": "home",
+          "street": "شارع التحلية",
+          "city": "جدة",
+          "state": "مكة المكرمة",
+          "zipCode": "33333",
+          "country": "السعودية",
+          "isDefault": true
+        }
+      ],
+      "avatar": {
+        "public_id": null,
+        "url": "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"
+      },
+      "store": "fashionstore_id_here"
+    },
+    {
+      "firstName": "خالد",
+      "lastName": "علي",
+      "email": "khalid.fashion@test.com",
+      "password": "password123",
+      "phone": "+966508889990",
+      "role": "client",
+      "status": "active",
+      "addresses": [
+        {
+          "type": "work",
+          "street": "شارع الملك فهد",
+          "city": "الرياض",
+          "state": "الرياض",
+          "zipCode": "44444",
+          "country": "السعودية",
+          "isDefault": true
+        }
+      ],
+      "avatar": {
+        "public_id": null,
+        "url": "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"
+      },
+      "store": "fashionstore_id_here"
+    }
+  ],
+  "summary": {
+    "totalCustomers": 4,
+    "techStoreCount": 2,
+    "fashionStoreCount": 2,
+    "testCredentials": {
+      "techStore": [
+        "ahmed.tech@test.com / password123",
+        "fatima.tech@test.com / password123"
+      ],
+      "fashionStore": [
+        "sara.fashion@test.com / password123",
+        "khalid.fashion@test.com / password123"
+      ]
+    }
+  }
+} 
