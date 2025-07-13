@@ -7,9 +7,16 @@ exports.getAll = async (req, res) => {
     
     const products = await Product.find(query)
       .populate('category')
-      .populate('productLabel')
+      .populate('productLabels')
       .populate('unit')
       .populate('store', 'name domain')
+      .populate('costPrice')
+      .populate('compareAtPrice')
+      .populate('specifications')
+      .populate('attributes')
+      .populate('colors')
+      .populate('images')
+      .populate('mainImage')
       .select('nameAr nameEn descriptionAr descriptionEn price barcode category unit store colors mainImage images availableQuantity stock isActive createdAt updatedAt');
       
     res.json({
@@ -31,8 +38,15 @@ exports.getById = async (req, res) => {
     
     const product = await Product.findOne(query)
       .populate('category')
-      .populate('productLabel')
+      .populate('productLabels')
       .populate('unit')
+      .populate('costPrice')
+      .populate('compareAtPrice')
+      .populate('specifications')
+      .populate('attributes')
+      .populate('colors')
+      .populate('images')
+      .populate('mainImage')
       .populate('store', 'name domain');
       
     if (!product) {
@@ -118,7 +132,7 @@ exports.create = async (req, res) => {
     
     const populatedProduct = await Product.findById(product._id)
       .populate('category')
-      .populate('productLabel')
+      .populate('productLabels')
       .populate('unit')
       .populate('store', 'name domain');
       
@@ -185,7 +199,7 @@ exports.update = async (req, res) => {
       updateData, 
       { new: true, runValidators: true }
     ).populate('category')
-     .populate('productLabel')
+     .populate('productLabels')
      .populate('unit')
      .populate('store', 'name domain');
      

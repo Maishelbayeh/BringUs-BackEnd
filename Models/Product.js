@@ -54,16 +54,7 @@ const productSchema = new mongoose.Schema({
     ref: 'Store',
     required: [true, 'Product store is required']
   },
-  // Support for hierarchical categories (main category, subcategory, sub-subcategory)
-  categoryPath: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Category'
-  }],
-  // brand: {
-  //   type: String,
-  //   trim: true
-  // },
-  // Product images - simplified like categories
+
   images: [{
     type: String,
     default: []
@@ -72,11 +63,10 @@ const productSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  // Product label (Regular, Offer, Featured, New)
-  productLabel: {
+  productLabels: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ProductLabel'
-  },
+  }],
   // Unit (piece, kg, liter, etc.)
   unit: {
     type: mongoose.Schema.Types.ObjectId,
@@ -230,8 +220,8 @@ productSchema.index({ category: 1 });
 // Create index for category path
 productSchema.index({ categoryPath: 1 });
 
-// Create index for product label
-productSchema.index({ productLabel: 1 });
+// Create index for product labels
+productSchema.index({ productLabels: 1 });
 
 // Create index for unit
 productSchema.index({ unit: 1 });
