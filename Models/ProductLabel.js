@@ -21,16 +21,7 @@ const productLabelSchema = new mongoose.Schema({
     type: String,
     maxlength: [200, 'English description cannot exceed 200 characters']
   },
-  color: {
-    type: String,
-    default: '#000000',
-    validate: {
-      validator: function(v) {
-        return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(v);
-      },
-      message: 'Color must be a valid hex color'
-    }
-  },
+  
   isActive: {
     type: Boolean,
     default: true

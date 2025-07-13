@@ -9,6 +9,16 @@ exports.getAll = async (req, res) => {
   }
 };
 
+exports.getByStoreId = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const labels = await ProductLabel.find({ store: storeId, isActive: true }).sort({ sortOrder: 1 });
+    res.json(labels);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.getById = async (req, res) => {
   try {
     const label = await ProductLabel.findById(req.params.id);
