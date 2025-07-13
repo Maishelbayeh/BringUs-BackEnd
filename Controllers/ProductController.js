@@ -122,6 +122,7 @@ exports.create = async (req, res) => {
       .populate('unit')
       .populate('store', 'name domain');
       
+      
     res.status(201).json({
       success: true,
       message: 'Product created successfully',
