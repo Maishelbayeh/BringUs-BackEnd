@@ -13,33 +13,31 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Security middleware with custom configuration
+// Security middleware with permissive configuration
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
-  referrerPolicy: { policy: "no-referrer-when-downgrade" },
+  referrerPolicy: { policy: "no-referrer" },
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      defaultSrc: ["'self'", "*"],
+      styleSrc: ["'self'", "'unsafe-inline'", "*"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "*"],
+      imgSrc: ["'self'", "data:", "https:", "*"],
+      connectSrc: ["'self'", "*"],
+      fontSrc: ["'self'", "*"],
+      objectSrc: ["'self'", "*"],
+      mediaSrc: ["'self'", "*"],
+      frameSrc: ["'self'", "*"],
     },
   },
 }));
 
-// CORS configuration
+// CORS configuration - Allow all origins
 const corsOptions = {
-  origin: [
-    'http://localhost:3000', // Frontend development server
-    'http://localhost:5173', // Vite default port
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:5173',
-    'http://localhost:4173', // Vite preview port
-    'http://127.0.0.1:4173'
-  ],
+  origin: true, // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Referer'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Referer', 'User-Agent'],
   exposedHeaders: ['Content-Length', 'X-Requested-With'],
   preflightContinue: false,
   optionsSuccessStatus: 204
@@ -47,8 +45,17 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(compression());
 
-// Additional headers middleware - removed conflicting CORS headers
+// Additional headers middleware - Allow all origins
 app.use((req, res, next) => {
+  // Set permissive CORS headers
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, User-Agent');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
+  res.header('Cross-Origin-Opener-Policy', 'unsafe-none');
+  
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
