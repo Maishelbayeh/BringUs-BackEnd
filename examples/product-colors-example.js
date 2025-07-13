@@ -17,6 +17,7 @@ const singleColorProduct = {
   descriptionAr: 'قميص أسود أنيق ومريح',
   descriptionEn: 'Elegant and comfortable black shirt',
   price: 50,
+  barcode: '1234567890123',
   category: '507f1f77bcf86cd799439011', // Example category ID
   store: storeId,
   unit: '507f1f77bcf86cd799439013', // Example unit ID
@@ -27,6 +28,7 @@ const singleColorProduct = {
   ]
 };
 
+
 // Example 2: Product with multiple single color options
 const multiColorProduct = {
   nameAr: 'قميص بألوان متعددة',
@@ -34,6 +36,7 @@ const multiColorProduct = {
   descriptionAr: 'قميص متوفر بعدة ألوان جميلة',
   descriptionEn: 'Shirt available in multiple beautiful colors',
   price: 45,
+  barcode: '1234567890124',
   category: '507f1f77bcf86cd799439011', // Example category ID
   store: storeId,
   unit: '507f1f77bcf86cd799439013', // Example unit ID
@@ -54,6 +57,7 @@ const mixedColorProduct = {
   descriptionAr: 'قميص بألوان فردية ومختلطة مميزة',
   descriptionEn: 'Shirt with unique single and mixed colors',
   price: 55,
+  barcode: '1234567890125',
   category: '507f1f77bcf86cd799439011', // Example category ID
   store: storeId,
   unit: '507f1f77bcf86cd799439013', // Example unit ID
@@ -74,6 +78,7 @@ const rgbColorProduct = {
   descriptionAr: 'قميص بألوان RGB متقدمة',
   descriptionEn: 'Shirt with advanced RGB colors',
   price: 60,
+  barcode: '1234567890126',
   category: '507f1f77bcf86cd799439011', // Example category ID
   store: storeId,
   unit: '507f1f77bcf86cd799439013', // Example unit ID
@@ -122,22 +127,68 @@ async function createColorProducts() {
   try {
     console.log('=== Creating Color Products in Database ===\n');
     
-    // Clear existing test products for this store
-    await Product.deleteMany({ 
-      store: storeId,
-      nameEn: { $in: ['Black Shirt', 'Multi-color Shirt', 'Mixed Color Shirt', 'RGB Color Shirt'] }
-    });
-    console.log('✅ Cleared existing test products');
+    // Wait for connection to be ready
+    await mongoose.connection.asPromise();
     
-    // Create all products
-    const products = [
-      singleColorProduct,
-      multiColorProduct,
-      mixedColorProduct,
-      rgbColorProduct
+    // First, get or create test category and unit
+    const Category = require('../Models/Category');
+    const Unit = require('../Models/Unit');
+    
+    // Get existing category or create one
+    let testCategory = await Category.findOne({ 
+      store: storeId, 
+      nameEn: 'Test Category' 
+    });
+    
+    if (!testCategory) {
+      testCategory = new Category({
+        nameAr: 'فئة تجريبية',
+        nameEn: 'Test Category',
+        slug: 'test-category',
+        descriptionAr: 'فئة تجريبية للمنتجات',
+        descriptionEn: 'Test category for products',
+        store: storeId,
+        level: 0,
+        isActive: true
+      });
+      await testCategory.save();
+      console.log('✅ Created test category:', testCategory._id);
+    } else {
+      console.log('✅ Using existing test category:', testCategory._id);
+    }
+    
+    // Get existing unit or create one
+    let testUnit = await Unit.findOne({ 
+      nameEn: 'Piece' 
+    });
+    
+    if (!testUnit) {
+      testUnit = new Unit({
+        nameAr: 'قطعة',
+        nameEn: 'Piece',
+        symbol: 'pc',
+        isActive: true
+      });
+      await testUnit.save();
+      console.log('✅ Created test unit:', testUnit._id);
+    } else {
+      console.log('✅ Using existing test unit:', testUnit._id);
+    }
+    
+    // Update product data with real IDs
+    const productsWithRealIds = [
+      { ...singleColorProduct, category: testCategory._id, unit: testUnit._id },
+      { ...multiColorProduct, category: testCategory._id, unit: testUnit._id },
+      { ...mixedColorProduct, category: testCategory._id, unit: testUnit._id },
+      { ...rgbColorProduct, category: testCategory._id, unit: testUnit._id }
     ];
     
-    const createdProducts = await Product.insertMany(products);
+    // Clear ALL existing products for this store
+    await Product.deleteMany({ store: storeId });
+    console.log('✅ Cleared ALL existing products for store');
+    
+    // Create all products
+    const createdProducts = await Product.insertMany(productsWithRealIds);
     console.log(`✅ Successfully created ${createdProducts.length} products`);
     
     // Display created products
@@ -151,6 +202,8 @@ async function createColorProducts() {
     
     console.log('\n=== Product Creation Summary ===');
     console.log(`✅ Store ID: ${storeId}`);
+    console.log(`✅ Category ID: ${testCategory._id}`);
+    console.log(`✅ Unit ID: ${testUnit._id}`);
     console.log(`✅ Total Products: ${createdProducts.length}`);
     console.log(`✅ All products have colors and virtual properties working`);
     

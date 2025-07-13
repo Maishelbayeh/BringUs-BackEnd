@@ -9,11 +9,19 @@ exports.getAll = async (req, res) => {
       .populate('category')
       .populate('productLabel')
       .populate('unit')
-      .populate('store', 'name domain');
+      .populate('store', 'name domain')
+      .select('nameAr nameEn descriptionAr descriptionEn price barcode category unit store colors mainImage images availableQuantity stock isActive createdAt updatedAt');
       
-    res.json(products);
+    res.json({
+      success: true,
+      data: products,
+      count: products.length
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
   }
 };
 
@@ -28,12 +36,21 @@ exports.getById = async (req, res) => {
       .populate('store', 'name domain');
       
     if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Product not found' 
+      });
     }
     
-    res.json(product);
+    res.json({
+      success: true,
+      data: product
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
   }
 };
 
@@ -41,7 +58,7 @@ exports.create = async (req, res) => {
   try {
     console.log('Create product - Request body:', req.body);
     
-    const { nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, storeId } = req.body;
+    const { nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, storeId, barcode } = req.body;
     
     if (!nameAr || !nameEn || !descriptionAr || !descriptionEn || !price || !category || !unit) {
       return res.status(400).json({ 
@@ -65,6 +82,18 @@ exports.create = async (req, res) => {
         error: 'Store ID is required',
         message: 'Please provide storeId in request body'
       });
+    }
+
+    // Check if barcode already exists (if provided)
+    if (barcode) {
+      const existingProduct = await Product.findOne({ barcode });
+      if (existingProduct) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'Barcode already exists',
+          message: 'A product with this barcode already exists'
+        });
+      }
     }
 
     // Add store to product data
