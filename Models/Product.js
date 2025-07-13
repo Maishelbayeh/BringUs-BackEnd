@@ -37,10 +37,13 @@ const productSchema = new mongoose.Schema({
     min: [0, 'Cost price cannot be negative']
   },
 
-  // barcode: {
-  //   type: String,
-  //   trim: true
-  // },
+  barcode: {
+    type: String,
+    trim: true,
+    unique: true,
+    sparse: true,
+    index: true
+  },
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
