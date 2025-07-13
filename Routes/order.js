@@ -114,7 +114,7 @@ router.post('/', [
       processedItems.push({
         product: product._id,
         name: product.name,
-        sku: product.sku,
+
         quantity: item.quantity,
         price: product.price,
         totalPrice: itemTotal,

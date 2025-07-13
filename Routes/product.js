@@ -2,6 +2,8 @@ const express = require('express');
 const { body, validationResult, query } = require('express-validator');
 const Product = require('../Models/Product');
 const Category = require('../Models/Category');
+const multer = require('multer');
+const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 
 const router = express.Router();
 
@@ -169,7 +171,7 @@ router.post('/', [
   body('description').trim().isLength({ min: 1, max: 2000 }).withMessage('Description is required and must be less than 2000 characters'),
   body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number'),
   body('category').isMongoId().withMessage('Valid category ID is required'),
-  body('sku').optional().isString().withMessage('SKU must be a string'),
+
   body('stock').optional().isInt({ min: 0 }).withMessage('Stock must be a non-negative integer'),
   body('brand').optional().isString().withMessage('Brand must be a string'),
   body('tags').optional().isArray().withMessage('Tags must be an array')
@@ -188,7 +190,6 @@ router.post('/', [
       description,
       price,
       category,
-      sku,
       stock = 0,
       brand,
       tags = [],
@@ -205,23 +206,13 @@ router.post('/', [
       });
     }
 
-    // Check if SKU is unique
-    if (sku) {
-      const existingProduct = await Product.findOne({ sku });
-      if (existingProduct) {
-        return res.status(400).json({
-          success: false,
-          message: 'Product with this SKU already exists'
-        });
-      }
-    }
+
 
     const product = await Product.create({
       name,
       description,
       price,
       category,
-      sku,
       stock,
       brand,
       tags,
@@ -381,6 +372,121 @@ router.get('/sale', async (req, res) => {
       success: false,
       message: 'Error fetching sale products',
       error: error.message
+    });
+  }
+});
+
+// ========== رفع صور المنتجات ========== //
+// استخدم memoryStorage بدلاً من diskStorage
+const imageStorage = multer.memoryStorage();
+const uploadProductImage = multer({ storage: imageStorage });
+
+// @desc    Upload product main image
+// @route   POST /api/products/upload-main-image
+// @access  Private (Admin only)
+// يعيد فقط اسم الصورة (image) + رابط العرض (imageUrl)
+router.post('/upload-main-image', uploadProductImage.single('image'), async (req, res) => {
+  try {
+    const { storeId } = req.body;
+    
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No file uploaded' 
+      });
+    }
+
+    // رفع الصورة إلى Cloudflare R2
+    const folder = storeId ? `products/${storeId}/main` : 'products/main';
+    const result = await uploadToCloudflare(req.file.buffer, req.file.originalname, folder);
+    
+    res.json({ 
+      success: true, 
+      image: result.key, 
+      imageUrl: result.url 
+    });
+  } catch (err) {
+    console.error('Upload main image error:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Upload failed',
+      message: err.message 
+    });
+  }
+});
+
+// @desc    Upload product gallery images
+// @route   POST /api/products/upload-gallery-images
+// @access  Private (Admin only)
+// يعيد array من الصور مع أسمائها وروابطها
+router.post('/upload-gallery-images', uploadProductImage.array('images', 10), async (req, res) => {
+  try {
+    const { storeId } = req.body;
+    
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No files uploaded' 
+      });
+    }
+
+    // رفع الصور إلى Cloudflare R2
+    const folder = storeId ? `products/${storeId}/gallery` : 'products/gallery';
+    const uploadPromises = req.files.map(file => 
+      uploadToCloudflare(file.buffer, file.originalname, folder)
+    );
+    
+    const results = await Promise.all(uploadPromises);
+    
+    const images = results.map(result => ({
+      image: result.key,
+      imageUrl: result.url
+    }));
+    
+    res.json({ 
+      success: true, 
+      images: images 
+    });
+  } catch (err) {
+    console.error('Upload gallery images error:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Upload failed',
+      message: err.message 
+    });
+  }
+});
+
+// @desc    Upload single product image (for gallery)
+// @route   POST /api/products/upload-single-image
+// @access  Private (Admin only)
+// يعيد صورة واحدة مع اسمها ورابطها
+router.post('/upload-single-image', uploadProductImage.single('image'), async (req, res) => {
+  try {
+    const { storeId } = req.body;
+    
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No file uploaded' 
+      });
+    }
+
+    // رفع الصورة إلى Cloudflare R2
+    const folder = storeId ? `products/${storeId}/gallery` : 'products/gallery';
+    const result = await uploadToCloudflare(req.file.buffer, req.file.originalname, folder);
+    
+    res.json({ 
+      success: true, 
+      image: result.key, 
+      imageUrl: result.url 
+    });
+  } catch (err) {
+    console.error('Upload single image error:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Upload failed',
+      message: err.message 
     });
   }
 });

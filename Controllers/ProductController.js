@@ -39,10 +39,13 @@ exports.getById = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit } = req.body;
+    console.log('Create product - Request body:', req.body);
+    
+    const { nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, storeId } = req.body;
     
     if (!nameAr || !nameEn || !descriptionAr || !descriptionEn || !price || !category || !unit) {
       return res.status(400).json({ 
+        success: false,
         error: 'Missing required fields',
         details: {
           nameAr: !nameAr ? 'Arabic name is required' : null,
@@ -56,11 +59,30 @@ exports.create = async (req, res) => {
       });
     }
 
-    // Add store from request context
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in request body'
+      });
+    }
+
+    // Add store to product data
     const productData = {
       ...req.body,
-      store: req.store._id
+      store: storeId
     };
+
+    // معالجة الصور: حفظ الروابط مباشرة كـ strings
+    if (req.body.mainImage && typeof req.body.mainImage === 'string') {
+      productData.mainImage = req.body.mainImage;
+    }
+    
+    if (req.body.images && Array.isArray(req.body.images)) {
+      productData.images = req.body.images.filter(img => typeof img === 'string');
+    }
+    
+    console.log('Create product - Final productData:', productData);
 
     const product = new Product(productData);
     await product.save();
@@ -71,7 +93,11 @@ exports.create = async (req, res) => {
       .populate('unit')
       .populate('store', 'name domain');
       
-    res.status(201).json(populatedProduct);
+    res.status(201).json({
+      success: true,
+      message: 'Product created successfully',
+      data: populatedProduct
+    });
   } catch (err) {
     console.error('Product creation error:', err);
     
@@ -82,22 +108,52 @@ exports.create = async (req, res) => {
       });
       
       return res.status(400).json({ 
+        success: false,
         error: 'Validation failed',
         details: validationErrors
       });
     }
     
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ 
+      success: false,
+      error: err.message 
+    });
   }
 };
 
 exports.update = async (req, res) => {
   try {
-    const query = addStoreFilter(req, { _id: req.params.id });
+    const { id } = req.params;
+    const { storeId } = req.body;
+    
+    console.log('Update product - ID:', id);
+    console.log('Update product - Request body:', req.body);
+    console.log('Update product - StoreId:', storeId);
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in request body'
+      });
+    }
+
+    // معالجة الصور: حفظ الروابط مباشرة كـ strings
+    const updateData = { ...req.body };
+    
+    if (req.body.mainImage && typeof req.body.mainImage === 'string') {
+      updateData.mainImage = req.body.mainImage;
+    }
+    
+    if (req.body.images && Array.isArray(req.body.images)) {
+      updateData.images = req.body.images.filter(img => typeof img === 'string');
+    }
+    
+    console.log('Update product - Final updateData:', updateData);
     
     const product = await Product.findOneAndUpdate(
-      query, 
-      req.body, 
+      { _id: id, store: storeId }, 
+      updateData, 
       { new: true, runValidators: true }
     ).populate('category')
      .populate('productLabel')
@@ -105,12 +161,37 @@ exports.update = async (req, res) => {
      .populate('store', 'name domain');
      
     if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Product not found' 
+      });
     }
     
-    res.json(product);
+    res.json({
+      success: true,
+      message: 'Product updated successfully',
+      data: product
+    });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('Update product error:', err);
+    
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(400).json({ 
+      success: false,
+      error: err.message 
+    });
   }
 };
 
