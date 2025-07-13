@@ -1,5 +1,7 @@
 const fetch = require('node-fetch');
 
+
+
 // Test inactive method default protection
 async function testInactiveDefaultProtection() {
   const BASE_URL = 'http://localhost:5001/api';
