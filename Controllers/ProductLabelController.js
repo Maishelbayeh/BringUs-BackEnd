@@ -49,6 +49,7 @@ exports.update = async (req, res) => {
   }
 };
 
+
 exports.delete = async (req, res) => {
   try {
     const label = await ProductLabel.findByIdAndDelete(req.params.id);
