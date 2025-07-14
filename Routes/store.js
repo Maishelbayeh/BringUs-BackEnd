@@ -9,6 +9,23 @@ const {
   isAdmin, 
   isSuperAdmin 
 } = require('../middleware/permissions');
+const multer = require('multer');
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  },
+});
 
 // All routes require authentication
 router.use(protect);
@@ -16,18 +33,18 @@ router.use(isActive);
 
 /**
  * @swagger
- * /api/stores/domain/{domain}:
+ * /api/stores/slug/{slug}:
  *   get:
- *     summary: Get store by domain (Public)
+ *     summary: Get store by slug (Public)
  *     tags: [Stores]
  *     parameters:
  *       - in: path
- *         name: domain
+ *         name: slug
  *         required: true
  *         schema:
  *           type: string
  *         example: "mystore"
- *         description: "Store domain"
+ *         description: "Store slug"
  *     responses:
  *       200:
  *         description: Store retrieved successfully
@@ -42,7 +59,7 @@ router.use(isActive);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/domain/:domain', StoreController.getStoreByDomain);
+router.get('/slug/:slug', StoreController.getStoreBySlug);
 
 /**
  * @swagger
@@ -79,26 +96,47 @@ router.get('/', isSuperAdmin, StoreController.getAllStores);
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
- *               - name
- *               - domain
+ *               - nameAr
+ *               - nameEn
+ *               - slug
  *               - contact
  *             properties:
- *               name:
+ *               nameAr:
+ *                 type: string
+ *                 maxLength: 100
+ *                 example: "متجري"
+ *                 description: "Store name in Arabic"
+ *               nameEn:
  *                 type: string
  *                 maxLength: 100
  *                 example: "My Store"
- *               description:
+ *                 description: "Store name in English"
+ *               descriptionAr:
+ *                 type: string
+ *                 maxLength: 500
+ *                 example: "متجر رائع"
+ *                 description: "Store description in Arabic"
+ *               descriptionEn:
  *                 type: string
  *                 maxLength: 500
  *                 example: "A great store"
- *               domain:
+ *                 description: "Store description in English"
+ *               slug:
  *                 type: string
  *                 example: "mystore"
- *                 description: "Unique store domain"
+ *                 description: "Unique store slug"
+ *               whatsappNumber:
+ *                 type: string
+ *                 example: "+1234567890"
+ *                 description: "WhatsApp contact number"
+ *               logo:
+ *                 type: string
+ *                 format: binary
+ *                 description: "Store logo image"
  *               contact:
  *                 type: object
  *                 required:
@@ -132,21 +170,60 @@ router.get('/', isSuperAdmin, StoreController.getAllStores);
  *               settings:
  *                 type: object
  *                 properties:
- *                   currency:
+ *                   mainColor:
  *                     type: string
- *                     example: "USD"
+ *                     example: "#000000"
+ *                     description: "Main store color"
  *                   language:
  *                     type: string
  *                     example: "en"
+ *                     description: "Default language"
+ *                   storeDiscount:
+ *                     type: number
+ *                     example: 0
+ *                     description: "Store-wide discount percentage"
  *                   timezone:
  *                     type: string
  *                     example: "UTC"
+ *                     description: "Store timezone"
  *                   taxRate:
  *                     type: number
  *                     example: 0
+ *                     description: "Tax rate percentage"
  *                   shippingEnabled:
  *                     type: boolean
  *                     example: true
+ *                     description: "Enable shipping"
+ *                   storeSocials:
+ *                     type: object
+ *                     properties:
+ *                       facebook:
+ *                         type: string
+ *                         example: "https://facebook.com/mystore"
+ *                       instagram:
+ *                         type: string
+ *                         example: "https://instagram.com/mystore"
+ *                       twitter:
+ *                         type: string
+ *                         example: "https://twitter.com/mystore"
+ *                       youtube:
+ *                         type: string
+ *                         example: "https://youtube.com/mystore"
+ *                       linkedin:
+ *                         type: string
+ *                         example: "https://linkedin.com/mystore"
+ *                       telegram:
+ *                         type: string
+ *                         example: "https://t.me/mystore"
+ *                       snapchat:
+ *                         type: string
+ *                         example: "mystore"
+ *                       pinterest:
+ *                         type: string
+ *                         example: "https://pinterest.com/mystore"
+ *                       tiktok:
+ *                         type: string
+ *                         example: "https://tiktok.com/@mystore"
  *     responses:
  *       201:
  *         description: Store created successfully
@@ -155,13 +232,13 @@ router.get('/', isSuperAdmin, StoreController.getAllStores);
  *             schema:
  *               $ref: '#/components/schemas/Success'
  *       400:
- *         description: Domain already exists
+ *         description: Slug already exists or validation error
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', StoreController.createStore);
+router.post('/', upload.single('logo'), StoreController.createStore);
 
 /**
  * @swagger
@@ -214,25 +291,47 @@ router.get('/:id', StoreController.getStore);
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
- *               name:
+ *               nameAr:
+ *                 type: string
+ *                 maxLength: 100
+ *                 example: "متجري المحدث"
+ *                 description: "Store name in Arabic"
+ *               nameEn:
  *                 type: string
  *                 maxLength: 100
  *                 example: "Updated Store Name"
- *               description:
+ *                 description: "Store name in English"
+ *               descriptionAr:
+ *                 type: string
+ *                 maxLength: 500
+ *                 example: "متجر محدث"
+ *                 description: "Store description in Arabic"
+ *               descriptionEn:
  *                 type: string
  *                 maxLength: 500
  *                 example: "Updated store description"
- *               domain:
+ *                 description: "Store description in English"
+ *               slug:
  *                 type: string
  *                 example: "updatedstore"
+ *                 description: "Store slug"
  *               status:
  *                 type: string
  *                 enum: [active, inactive, suspended]
  *                 example: "active"
+ *                 description: "Store status"
+ *               whatsappNumber:
+ *                 type: string
+ *                 example: "+1234567890"
+ *                 description: "WhatsApp contact number"
+ *               logo:
+ *                 type: string
+ *                 format: binary
+ *                 description: "Store logo image"
  *               contact:
  *                 type: object
  *                 properties:
@@ -243,18 +342,81 @@ router.get('/:id', StoreController.getStore);
  *                   phone:
  *                     type: string
  *                     example: "+1234567890"
+ *                   address:
+ *                     type: object
+ *                     properties:
+ *                       street:
+ *                         type: string
+ *                         example: "123 Main St"
+ *                       city:
+ *                         type: string
+ *                         example: "New York"
+ *                       state:
+ *                         type: string
+ *                         example: "NY"
+ *                       zipCode:
+ *                         type: string
+ *                         example: "10001"
+ *                       country:
+ *                         type: string
+ *                         example: "USA"
  *               settings:
  *                 type: object
  *                 properties:
- *                   currency:
+ *                   mainColor:
  *                     type: string
- *                     example: "EUR"
+ *                     example: "#FF0000"
+ *                     description: "Main store color"
  *                   language:
  *                     type: string
  *                     example: "ar"
+ *                     description: "Default language"
+ *                   storeDiscount:
+ *                     type: number
+ *                     example: 10
+ *                     description: "Store-wide discount percentage"
  *                   timezone:
  *                     type: string
  *                     example: "Asia/Dubai"
+ *                     description: "Store timezone"
+ *                   taxRate:
+ *                     type: number
+ *                     example: 5
+ *                     description: "Tax rate percentage"
+ *                   shippingEnabled:
+ *                     type: boolean
+ *                     example: true
+ *                     description: "Enable shipping"
+ *                   storeSocials:
+ *                     type: object
+ *                     properties:
+ *                       facebook:
+ *                         type: string
+ *                         example: "https://facebook.com/updatedstore"
+ *                       instagram:
+ *                         type: string
+ *                         example: "https://instagram.com/updatedstore"
+ *                       twitter:
+ *                         type: string
+ *                         example: "https://twitter.com/updatedstore"
+ *                       youtube:
+ *                         type: string
+ *                         example: "https://youtube.com/updatedstore"
+ *                       linkedin:
+ *                         type: string
+ *                         example: "https://linkedin.com/updatedstore"
+ *                       telegram:
+ *                         type: string
+ *                         example: "https://t.me/updatedstore"
+ *                       snapchat:
+ *                         type: string
+ *                         example: "updatedstore"
+ *                       pinterest:
+ *                         type: string
+ *                         example: "https://pinterest.com/updatedstore"
+ *                       tiktok:
+ *                         type: string
+ *                         example: "https://tiktok.com/@updatedstore"
  *     responses:
  *       200:
  *         description: Store updated successfully
@@ -263,7 +425,7 @@ router.get('/:id', StoreController.getStore);
  *             schema:
  *               $ref: '#/components/schemas/Success'
  *       400:
- *         description: Domain already exists
+ *         description: Slug already exists or validation error
  *         content:
  *           application/json:
  *             schema:
@@ -281,7 +443,7 @@ router.get('/:id', StoreController.getStore);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', hasStoreAccess, hasPermission('manage_store'), StoreController.updateStore);
+router.put('/:id', hasStoreAccess, hasPermission('manage_store'), upload.single('logo'), StoreController.updateStore);
 
 /**
  * @swagger

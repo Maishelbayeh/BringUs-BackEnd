@@ -1,13 +1,24 @@
 const mongoose = require('mongoose');
 
 const storeSchema = new mongoose.Schema({
-  name: {
+  nameAr: {
     type: String,
     required: [true, 'Store name is required'],
     trim: true,
     maxlength: [100, 'Store name cannot exceed 100 characters']
   },
-  description: {
+  nameEn: {
+    type: String,
+    required: [true, 'Store name is required'],
+    trim: true,
+    maxlength: [100, 'Store name cannot exceed 100 characters']
+  },
+  descriptionAr: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Description cannot exceed 500 characters']
+  },
+  descriptionEn: {
     type: String,
     trim: true,
     maxlength: [500, 'Description cannot exceed 500 characters']
@@ -23,7 +34,7 @@ const storeSchema = new mongoose.Schema({
       default: null
     }
   },
-  domain: {
+  slug: {
     type: String,
     unique: true,
     required: [true, 'Domain is required'],
@@ -36,14 +47,20 @@ const storeSchema = new mongoose.Schema({
     default: 'active'
   },
   settings: {
-    currency: {
+    mainColor: {
       type: String,
-      default: 'USD'
+      default: '#000000'
     },
+  
     language: {
       type: String,
       default: 'en'
     },
+    storeDiscount: {
+      type: Number,
+      default: 0
+    },
+   
     timezone: {
       type: String,
       default: 'UTC'
@@ -55,7 +72,27 @@ const storeSchema = new mongoose.Schema({
     shippingEnabled: {
       type: Boolean,
       default: true
+    },
+
+    storeSocials: {
+      type:   Object,
+      default: {
+        facebook: String,
+        instagram: String,
+        twitter: String,
+        youtube: String,
+        linkedin: String,
+        telegram: String,
+        snapchat: String,
+        pinterest: String,
+        tiktok: String,
+      }
     }
+  },
+  //whatsapp number
+  whatsappNumber: {
+    type: String,
+    required: [false, 'WhatsApp number is required']
   },
   contact: {
     email: {
@@ -75,7 +112,7 @@ const storeSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Ensure unique domain
-storeSchema.index({ domain: 1 }, { unique: true });
+// Ensure unique slug
+storeSchema.index({ slug: 1 }, { unique: true });
 
 module.exports = mongoose.model('Store', storeSchema); 

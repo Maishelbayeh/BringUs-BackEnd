@@ -194,6 +194,7 @@ router.get('/', [
     const products = await Product.find(filter)
       .populate('category', 'nameAr nameEn')
       .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'descriptionAr descriptionEn')
       .populate('unit', 'nameAr nameEn symbol')
       .populate('store', 'name domain')
       .sort(sortObj)
@@ -292,6 +293,7 @@ router.get('/:id', [
     const product = await Product.findOne(filter)
       .populate('category', 'nameAr nameEn')
       .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'descriptionAr descriptionEn')
       .populate('unit', 'nameAr nameEn symbol')
       .populate('store', 'name domain');
 
@@ -586,7 +588,8 @@ router.post('/', [
   body('availableQuantity').optional().isInt({ min: 0 }).withMessage('Available quantity must be a non-negative integer'),
   body('stock').optional().isInt({ min: 0 }).withMessage('Stock must be a non-negative integer'),
   body('productLabels').optional().isArray().withMessage('Product labels must be an array'),
-  body('colors').optional().isArray().withMessage('Colors must be an array')
+  body('colors').optional().isArray().withMessage('Colors must be an array'),
+  body('specifications').optional().isArray().withMessage('Specifications must be an array')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -684,6 +687,7 @@ router.post('/', [
     const populatedProduct = await Product.findById(product._id)
       .populate('category', 'nameAr nameEn')
       .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'descriptionAr descriptionEn')
       .populate('unit', 'nameAr nameEn symbol')
       .populate('store', 'name domain');
 
@@ -1009,6 +1013,7 @@ router.put('/:id', [
       { new: true, runValidators: true }
     ).populate('category', 'nameAr nameEn')
      .populate('productLabels', 'nameAr nameEn color')
+     .populate('specifications', 'descriptionAr descriptionEn')
      .populate('unit', 'nameAr nameEn symbol')
      .populate('store', 'name domain');
 

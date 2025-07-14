@@ -522,7 +522,7 @@ async function createCompleteProductData() {
     const productLabels = [];
     
     for (const labelName of labelNames) {
-      let label = await ProductLabel.findOne({ nameEn: labelName });
+      let label = await ProductLabel.findOne({ nameEn: labelName, store: storeId });
       
       if (!label) {
         const labelData = {
@@ -530,10 +530,20 @@ async function createCompleteProductData() {
                   labelName === 'Featured' ? 'مميز' :
                   labelName === 'New' ? 'جديد' : 'تخفيض',
           nameEn: labelName,
-          color: labelName === 'Regular' ? '#000000' :
-                 labelName === 'Featured' ? '#FFD700' :
-                 labelName === 'New' ? '#00FF00' : '#FF0000',
-          isActive: true
+          descriptionAr: labelName === 'Regular' ? 'منتجات عادية' : 
+                         labelName === 'Featured' ? 'منتجات مميزة' :
+                         labelName === 'New' ? 'منتجات جديدة' : 'منتجات مخفضة',
+          descriptionEn: labelName === 'Regular' ? 'Regular products' : 
+                         labelName === 'Featured' ? 'Featured products' :
+                         labelName === 'New' ? 'New products' : 'Sale products',
+          color: labelName === 'Regular' ? '#6B7280' :
+                 labelName === 'Featured' ? '#F59E0B' :
+                 labelName === 'New' ? '#10B981' : '#EF4444',
+          store: storeId,
+          isActive: true,
+          sortOrder: labelName === 'Regular' ? 1 : 
+                     labelName === 'Featured' ? 2 :
+                     labelName === 'New' ? 3 : 4
         };
         
         label = new ProductLabel(labelData);
