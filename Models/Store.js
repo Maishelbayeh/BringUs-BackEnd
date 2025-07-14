@@ -12,6 +12,7 @@ const storeSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'Description cannot exceed 500 characters']
   },
+  
   logo: {
     public_id: {
       type: String,
