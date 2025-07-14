@@ -133,6 +133,7 @@ exports.create = async (req, res) => {
     const populatedProduct = await Product.findById(product._id)
       .populate('category')
       .populate('productLabels')
+      .populate('specifications')
       .populate('unit')
       .populate('store', 'name domain');
       
@@ -202,6 +203,7 @@ exports.update = async (req, res) => {
       { new: true, runValidators: true }
     ).populate('category')
      .populate('productLabels')
+     .populate('specifications')
      .populate('unit')
      .populate('store', 'name domain');
      
