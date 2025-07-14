@@ -88,6 +88,7 @@ exports.create = async (req, res) => {
           unit: !unit ? 'Unit is required' : null
         }
       });
+      
     }
 
     if (!storeId) {
@@ -129,6 +130,7 @@ exports.create = async (req, res) => {
 
     const product = new Product(productData);
     await product.save();
+    
     
     const populatedProduct = await Product.findById(product._id)
       .populate('category')
