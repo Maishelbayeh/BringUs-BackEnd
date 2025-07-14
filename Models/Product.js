@@ -133,6 +133,7 @@ const productSchema = new mongoose.Schema({
       min: [0, 'Height cannot be negative']
     }
   },
+  
   tags: [{
     type: String,
     trim: true
