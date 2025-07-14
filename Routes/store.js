@@ -363,4 +363,267 @@ router.delete('/:id', hasStoreAccess, isPrimaryOwner, StoreController.deleteStor
  */
 router.get('/:storeId/stats', hasStoreAccess, hasPermission('view_analytics'), StoreController.getStoreStats);
 
+/**
+ * @swagger
+ * /api/stores/{storeId}/customers:
+ *   get:
+ *     summary: Get customers by store ID
+ *     tags: [Stores]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439012"
+ *         description: "Store ID"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: "Page number"
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: "Number of customers per page"
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, inactive, banned]
+ *         description: "Filter by customer status"
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: "Search in first name, last name, email, or phone"
+ *     responses:
+ *       200:
+ *         description: Customers retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/User'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 5
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 50
+ *                     itemsPerPage:
+ *                       type: integer
+ *                       example: 10
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                 statistics:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                       example: 50
+ *                     active:
+ *                       type: integer
+ *                       example: 45
+ *                     inactive:
+ *                       type: integer
+ *                       example: 3
+ *                     banned:
+ *                       type: integer
+ *                       example: 2
+ *                     emailVerified:
+ *                       type: integer
+ *                       example: 40
+ *       403:
+ *         description: Access denied or permission required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/:storeId/customers', hasStoreAccess, hasPermission('manage_users'), StoreController.getCustomersByStoreId);
+
+/**
+ * @swagger
+ * /api/stores/{storeId}/customers/{customerId}:
+ *   get:
+ *     summary: Get customer by ID within store
+ *     tags: [Stores]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439012"
+ *         description: "Store ID"
+ *       - in: path
+ *         name: customerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439013"
+ *         description: "Customer ID"
+ *     responses:
+ *       200:
+ *         description: Customer retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Customer not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied or permission required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('manage_users'), StoreController.getCustomerById);
+
+/**
+ * @swagger
+ * /api/stores/{storeId}/customers/{customerId}:
+ *   put:
+ *     summary: Update customer within store
+ *     tags: [Stores]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439012"
+ *         description: "Store ID"
+ *       - in: path
+ *         name: customerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439013"
+ *         description: "Customer ID"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 example: "Updated First Name"
+ *               lastName:
+ *                 type: string
+ *                 example: "Updated Last Name"
+ *               phone:
+ *                 type: string
+ *                 example: "+1234567890"
+ *               status:
+ *                 type: string
+ *                 enum: [active, inactive, banned]
+ *                 example: "active"
+ *               isEmailVerified:
+ *                 type: boolean
+ *                 example: true
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Customer updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Customer not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied or permission required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('manage_users'), StoreController.updateCustomer);
+
+/**
+ * @swagger
+ * /api/stores/{storeId}/customers/{customerId}:
+ *   delete:
+ *     summary: Delete customer within store
+ *     tags: [Stores]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439012"
+ *         description: "Store ID"
+ *       - in: path
+ *         name: customerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439013"
+ *         description: "Customer ID"
+ *     responses:
+ *       200:
+ *         description: Customer deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Customer not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied or permission required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.delete('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('manage_users'), StoreController.deleteCustomer);
+
 module.exports = router; 

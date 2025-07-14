@@ -3,6 +3,7 @@ const Product = require('../Models/Product');
 const Category = require('../Models/Category');
 const Unit = require('../Models/Unit');
 const ProductLabel = require('../Models/ProductLabel');
+const ProductSpecification = require('../Models/ProductSpecification');
 require('dotenv').config();
 
 // Connect to MongoDB
@@ -70,11 +71,7 @@ const completeProducts = [
       { name: 'Fit', value: 'Regular' },
       { name: 'Sleeve', value: 'Long Sleeve' }
     ],
-    specifications: [
-      { name: 'Weight', value: '200g' },
-      { name: 'Care', value: 'Machine washable' },
-      { name: 'Origin', value: 'Made in Egypt' }
-    ],
+    specifications: [], // Will be populated with ProductSpecification ObjectIds
     
     // Physical Properties
     weight: 0.2,
@@ -162,11 +159,7 @@ const completeProducts = [
       { name: 'Fit', value: 'Slim Fit' },
       { name: 'Style', value: 'Straight Leg' }
     ],
-    specifications: [
-      { name: 'Weight', value: '400g' },
-      { name: 'Care', value: 'Machine wash cold' },
-      { name: 'Origin', value: 'Made in Turkey' }
-    ],
+    specifications: [], // Will be populated with ProductSpecification ObjectIds
     
     // Physical Properties
     weight: 0.4,
@@ -441,11 +434,7 @@ const completeProducts = [
       { name: 'Type', value: 'Shoulder Bag' },
       { name: 'Size', value: 'Medium' }
     ],
-    specifications: [
-      { name: 'Weight', value: '500g' },
-      { name: 'Care', value: 'Leather conditioner' },
-      { name: 'Origin', value: 'Made in Italy' }
-    ],
+    specifications: [], // Will be populated with ProductSpecification ObjectIds
     
     // Physical Properties
     weight: 0.5,
@@ -557,6 +546,14 @@ async function createCompleteProductData() {
       productLabels.push(label._id);
     }
     
+    // Get product specifications for this store
+    const productSpecifications = await ProductSpecification.find({ store: storeId });
+    console.log(`✅ Found ${productSpecifications.length} product specifications for store`);
+    
+    if (productSpecifications.length === 0) {
+      console.log('⚠️ No product specifications found. Please run createProductSpecificationsData.js first.');
+    }
+    
     // Clear ALL existing products for this store
     await Product.deleteMany({ store: storeId });
     console.log('✅ Cleared ALL existing products for store');
@@ -571,12 +568,25 @@ async function createCompleteProductData() {
       else if (index === 3) labels = [productLabels[1], productLabels[3]]; // Featured + Sale
       else labels = [productLabels[0]]; // Regular only
       
+      // Assign specifications based on product type
+      let specifications = [];
+      if (productSpecifications.length > 0) {
+        if (index === 0) { // Shirt - assign size specifications
+          specifications = productSpecifications.slice(0, 3).map(spec => spec._id); // طويل، قصير، كبير
+        } else if (index === 1) { // Jeans - assign size specifications
+          specifications = productSpecifications.slice(5, 8).map(spec => spec._id); // نمرة 40، نمرة 42، نمرة 44
+        } else if (index === 2) { // Bag - assign general specifications
+          specifications = productSpecifications.slice(3, 6).map(spec => spec._id); // وسط، صغير، نمرة 40
+        }
+      }
+      
       return {
         ...product,
         category: testCategory._id,
         categoryPath: [testCategory._id],
         unit: testUnit._id,
-        productLabels: labels
+        productLabels: labels,
+        specifications: specifications
       };
     });
     
@@ -593,6 +603,7 @@ async function createCompleteProductData() {
       console.log(`   Stock: ${product.stock}`);
       console.log(`   Rating: ${product.rating}/5 (${product.numReviews} reviews)`);
       console.log(`   Labels: ${product.productLabels.length} labels`);
+      console.log(`   Specifications: ${product.specifications.length} specifications`);
       console.log(`   ID: ${product._id}`);
     });
     

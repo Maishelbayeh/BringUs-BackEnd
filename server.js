@@ -122,7 +122,7 @@ const affiliationRoutes = require('./Routes/affiliation');
 const categoryRoutes = require('./Routes/category');
 const wholesalerRoutes = require('./Routes/wholesaler');
 const termsConditionsRoutes = require('./Routes/termsConditions');
-// const productRoutes = require('./Routes/product');
+const productRoutes = require('./Routes/product');
 // const orderRoutes = require('./Routes/order');
 
 // Route middleware
@@ -140,7 +140,7 @@ app.use('/api/affiliations', affiliationRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/wholesalers', wholesalerRoutes);
 app.use('/api/terms-conditions', termsConditionsRoutes);
-// app.use('/api/products', productRoutes);
+app.use('/api/products', productRoutes);
 // app.use('/api/orders', orderRoutes);
 
 /**
@@ -211,6 +211,7 @@ app.get('/api', (req, res) => {
       stockPreview: '/api/stock-preview',
       affiliations: '/api/affiliations',
       categories: '/api/categories',
+      products: '/api/products',
       wholesalers: '/api/wholesalers',
       termsConditions: '/api/terms-conditions',
       health: '/api/health',
@@ -442,20 +443,61 @@ const swaggerOptions = {
             price: { type: 'number', example: 2500 },
             compareAtPrice: { type: 'number', example: 2700 },
             costPrice: { type: 'number', example: 2000 },
-            sku: { type: 'string', example: 'SAMS22-001' },
             barcode: { type: 'string', example: '1234567890123' },
             category: { $ref: '#/components/schemas/Category' },
-            categoryPath: { 
+            store: { $ref: '#/components/schemas/Store' },
+            images: { 
               type: 'array', 
-              items: { $ref: '#/components/schemas/Category' }
+              items: { type: 'string' },
+              example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg']
             },
-            brand: { type: 'string', example: 'Samsung' },
-            productLabel: { $ref: '#/components/schemas/ProductLabel' },
+            mainImage: { type: 'string', example: 'https://example.com/main-image.jpg' },
+            productLabels: { 
+              type: 'array', 
+              items: { $ref: '#/components/schemas/ProductLabel' }
+            },
             unit: { $ref: '#/components/schemas/Unit' },
             availableQuantity: { type: 'number', example: 980 },
             productOrder: { type: 'number', example: 1 },
             visibility: { type: 'boolean', example: true },
+            attributes: { 
+              type: 'array', 
+              items: { 
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'Material' },
+                  value: { type: 'string', example: 'Cotton' }
+                }
+              }
+            },
+            specifications: { 
+              type: 'array', 
+              items: { $ref: '#/components/schemas/ProductSpecification' }
+            },
             stock: { type: 'number', example: 980 },
+            lowStockThreshold: { type: 'number', example: 5 },
+            weight: { type: 'number', example: 0.2 },
+            dimensions: {
+              type: 'object',
+              properties: {
+                length: { type: 'number', example: 70 },
+                width: { type: 'number', example: 50 },
+                height: { type: 'number', example: 5 }
+              }
+            },
+            tags: { 
+              type: 'array', 
+              items: { type: 'string' },
+              example: ['phone', 'samsung', 'smartphone']
+            },
+            colors: { 
+              type: 'array', 
+              items: { 
+                type: 'array',
+                items: { type: 'string' }
+              },
+              example: [['#000000'], ['#FFFFFF', '#FF0000']]
+            },
             isActive: { type: 'boolean', example: true },
             isFeatured: { type: 'boolean', example: false },
             isOnSale: { type: 'boolean', example: false },
@@ -463,7 +505,30 @@ const swaggerOptions = {
             rating: { type: 'number', example: 4.5 },
             numReviews: { type: 'number', example: 25 },
             views: { type: 'number', example: 150 },
-            soldCount: { type: 'number', example: 50 }
+            soldCount: { type: 'number', example: 50 },
+            seo: {
+              type: 'object',
+              properties: {
+                title: { type: 'string', example: 'Samsung Galaxy S22 - Premium Smartphone' },
+                description: { type: 'string', example: 'High-quality Samsung smartphone' },
+                keywords: { 
+                  type: 'array', 
+                  items: { type: 'string' },
+                  example: ['samsung', 'smartphone', 'galaxy']
+                }
+              }
+            },
+            discountPercentage: { type: 'number', example: 7 },
+            finalPrice: { type: 'number', example: 2325 },
+            stockStatus: { type: 'string', enum: ['in_stock', 'low_stock', 'out_of_stock'], example: 'in_stock' },
+            allColors: { 
+              type: 'array', 
+              items: { type: 'string' },
+              example: ['#000000', '#FFFFFF', '#FF0000']
+            },
+            colorOptionsCount: { type: 'number', example: 2 },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
           }
         }
       }

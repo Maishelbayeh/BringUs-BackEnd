@@ -101,8 +101,8 @@ const productSchema = new mongoose.Schema({
     }
   }],
   specifications: [{
-    name: String,
-    value: String
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProductSpecification'
   }],
   stock: {
     type: Number,
@@ -223,6 +223,9 @@ productSchema.index({ categoryPath: 1 });
 
 // Create index for product labels
 productSchema.index({ productLabels: 1 });
+
+// Create index for specifications
+productSchema.index({ specifications: 1 });
 
 // Create index for unit
 productSchema.index({ unit: 1 });

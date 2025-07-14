@@ -7,9 +7,114 @@ const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 
 const router = express.Router();
 
-// @desc    Get all products with filtering and pagination
-// @route   GET /api/products
-// @access  Public
+/**
+ * @swagger
+ * /api/products:
+ *   get:
+ *     summary: Get all products with filtering and pagination
+ *     description: Retrieve products with optional filtering, sorting, and pagination
+ *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by category ID
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         description: Minimum price filter
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         description: Maximum price filter
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [price_asc, price_desc, name_asc, name_desc, rating_desc, newest]
+ *           default: newest
+ *         description: Sort order
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for product names and descriptions
+ *       - in: query
+ *         name: storeId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by store ID
+ *     responses:
+ *       200:
+ *         description: Products retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 5
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 50
+ *                     itemsPerPage:
+ *                       type: integer
+ *                       example: 10
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *       400:
+ *         description: Bad request - validation errors
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/', [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
@@ -125,9 +230,53 @@ router.get('/', [
   }
 });
 
-// @desc    Get single product
-// @route   GET /api/products/:id
-// @access  Public
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   get:
+ *     summary: Get single product by ID
+ *     description: Retrieve a specific product by its ID
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Product ID
+ *       - in: query
+ *         name: storeId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Store ID for filtering
+ *     responses:
+ *       200:
+ *         description: Product retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Product'
+ *       404:
+ *         description: Product not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/:id', [
   query('storeId').optional().isMongoId().withMessage('Invalid store ID')
 ], async (req, res) => {
@@ -178,9 +327,253 @@ router.get('/:id', [
   }
 });
 
-// @desc    Create new product
-// @route   POST /api/products
-// @access  Private (Admin only)
+/**
+ * @swagger
+ * /api/products:
+ *   post:
+ *     summary: Create a new product
+ *     description: Create a new product with all required and optional fields
+ *     tags: [Products]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nameAr
+ *               - nameEn
+ *               - descriptionAr
+ *               - descriptionEn
+ *               - price
+ *               - category
+ *               - unit
+ *               - storeId
+ *             properties:
+ *               nameAr:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 100
+ *                 example: 'سامسونج جالاكسي S22'
+ *                 description: Arabic product name
+ *               nameEn:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 100
+ *                 example: 'Samsung Galaxy S22'
+ *                 description: English product name
+ *               descriptionAr:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 2000
+ *                 example: 'هاتف ذكي سامسونج'
+ *                 description: Arabic product description
+ *               descriptionEn:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 2000
+ *                 example: 'Samsung smartphone'
+ *                 description: English product description
+ *               price:
+ *                 type: number
+ *                 minimum: 0
+ *                 example: 2500
+ *                 description: Product price
+ *               compareAtPrice:
+ *                 type: number
+ *                 minimum: 0
+ *                 example: 2700
+ *                 description: Compare at price
+ *               costPrice:
+ *                 type: number
+ *                 minimum: 0
+ *                 example: 2000
+ *                 description: Cost price
+ *               barcode:
+ *                 type: string
+ *                 example: '1234567890123'
+ *                 description: Product barcode
+ *               category:
+ *                 type: string
+ *                 format: uuid
+ *                 example: '507f1f77bcf86cd799439014'
+ *                 description: Category ID
+ *               unit:
+ *                 type: string
+ *                 format: uuid
+ *                 example: '507f1f77bcf86cd799439016'
+ *                 description: Unit ID
+ *               storeId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: '507f1f77bcf86cd799439012'
+ *                 description: Store ID
+ *               availableQuantity:
+ *                 type: integer
+ *                 minimum: 0
+ *                 default: 0
+ *                 example: 980
+ *                 description: Available quantity
+ *               stock:
+ *                 type: integer
+ *                 minimum: 0
+ *                 default: 0
+ *                 example: 980
+ *                 description: Stock quantity
+ *               productLabels:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 example: ['507f1f77bcf86cd799439015']
+ *                 description: Array of product label IDs
+ *               specifications:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 example: ['507f1f77bcf86cd799439017']
+ *                 description: Array of product specification IDs
+ *               colors:
+ *                 type: array
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 example: [['#000000'], ['#FFFFFF', '#FF0000']]
+ *                 description: Array of color arrays
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ['https://example.com/image1.jpg']
+ *                 description: Array of image URLs
+ *               mainImage:
+ *                 type: string
+ *                 example: 'https://example.com/main-image.jpg'
+ *                 description: Main image URL
+ *               attributes:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       example: 'Material'
+ *                     value:
+ *                       type: string
+ *                       example: 'Cotton'
+ *                 description: Array of product attributes
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ['phone', 'samsung', 'smartphone']
+ *                 description: Array of product tags
+ *               weight:
+ *                 type: number
+ *                 minimum: 0
+ *                 example: 0.2
+ *                 description: Product weight
+ *               dimensions:
+ *                 type: object
+ *                 properties:
+ *                   length:
+ *                     type: number
+ *                     minimum: 0
+ *                     example: 70
+ *                   width:
+ *                     type: number
+ *                     minimum: 0
+ *                     example: 50
+ *                   height:
+ *                     type: number
+ *                     minimum: 0
+ *                     example: 5
+ *                 description: Product dimensions
+ *               productOrder:
+ *                 type: integer
+ *                 default: 0
+ *                 example: 1
+ *                 description: Product order for sorting
+ *               visibility:
+ *                 type: boolean
+ *                 default: true
+ *                 example: true
+ *                 description: Product visibility
+ *               isActive:
+ *                 type: boolean
+ *                 default: true
+ *                 example: true
+ *                 description: Product active status
+ *               isFeatured:
+ *                 type: boolean
+ *                 default: false
+ *                 example: false
+ *                 description: Featured product status
+ *               isOnSale:
+ *                 type: boolean
+ *                 default: false
+ *                 example: false
+ *                 description: Sale status
+ *               salePercentage:
+ *                 type: number
+ *                 minimum: 0
+ *                 maximum: 100
+ *                 example: 10
+ *                 description: Sale percentage
+ *               lowStockThreshold:
+ *                 type: number
+ *                 minimum: 0
+ *                 default: 5
+ *                 example: 5
+ *                 description: Low stock threshold
+ *               seo:
+ *                 type: object
+ *                 properties:
+ *                   title:
+ *                     type: string
+ *                     maxLength: 60
+ *                     example: 'Samsung Galaxy S22 - Premium Smartphone'
+ *                   description:
+ *                     type: string
+ *                     maxLength: 160
+ *                     example: 'High-quality Samsung smartphone'
+ *                   keywords:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                     example: ['samsung', 'smartphone', 'galaxy']
+ *                 description: SEO information
+ *     responses:
+ *       201:
+ *         description: Product created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Product created successfully'
+ *                 data:
+ *                   $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Bad request - validation errors
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/', [
   body('nameAr').trim().isLength({ min: 1, max: 100 }).withMessage('Arabic product name is required and must be less than 100 characters'),
   body('nameEn').trim().isLength({ min: 1, max: 100 }).withMessage('English product name is required and must be less than 100 characters'),
@@ -309,9 +702,250 @@ router.post('/', [
   }
 });
 
-// @desc    Update product
-// @route   PUT /api/products/:id
-// @access  Private (Admin only)
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   put:
+ *     summary: Update a product
+ *     description: Update an existing product with new data
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Product ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nameAr:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 100
+ *                 example: 'سامسونج جالاكسي S22'
+ *                 description: Arabic product name
+ *               nameEn:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 100
+ *                 example: 'Samsung Galaxy S22'
+ *                 description: English product name
+ *               descriptionAr:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 2000
+ *                 example: 'هاتف ذكي سامسونج'
+ *                 description: Arabic product description
+ *               descriptionEn:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 2000
+ *                 example: 'Samsung smartphone'
+ *                 description: English product description
+ *               price:
+ *                 type: number
+ *                 minimum: 0
+ *                 example: 2500
+ *                 description: Product price
+ *               compareAtPrice:
+ *                 type: number
+ *                 minimum: 0
+ *                 example: 2700
+ *                 description: Compare at price
+ *               costPrice:
+ *                 type: number
+ *                 minimum: 0
+ *                 example: 2000
+ *                 description: Cost price
+ *               barcode:
+ *                 type: string
+ *                 example: '1234567890123'
+ *                 description: Product barcode
+ *               category:
+ *                 type: string
+ *                 format: uuid
+ *                 example: '507f1f77bcf86cd799439014'
+ *                 description: Category ID
+ *               unit:
+ *                 type: string
+ *                 format: uuid
+ *                 example: '507f1f77bcf86cd799439016'
+ *                 description: Unit ID
+ *               storeId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: '507f1f77bcf86cd799439012'
+ *                 description: Store ID
+ *               availableQuantity:
+ *                 type: integer
+ *                 minimum: 0
+ *                 example: 980
+ *                 description: Available quantity
+ *               stock:
+ *                 type: integer
+ *                 minimum: 0
+ *                 example: 980
+ *                 description: Stock quantity
+ *               productLabels:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 example: ['507f1f77bcf86cd799439015']
+ *                 description: Array of product label IDs
+ *               specifications:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 example: ['507f1f77bcf86cd799439017']
+ *                 description: Array of product specification IDs
+ *               colors:
+ *                 type: array
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 example: [['#000000'], ['#FFFFFF', '#FF0000']]
+ *                 description: Array of color arrays
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ['https://example.com/image1.jpg']
+ *                 description: Array of image URLs
+ *               mainImage:
+ *                 type: string
+ *                 example: 'https://example.com/main-image.jpg'
+ *                 description: Main image URL
+ *               attributes:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       example: 'Material'
+ *                     value:
+ *                       type: string
+ *                       example: 'Cotton'
+ *                 description: Array of product attributes
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ['phone', 'samsung', 'smartphone']
+ *                 description: Array of product tags
+ *               weight:
+ *                 type: number
+ *                 minimum: 0
+ *                 example: 0.2
+ *                 description: Product weight
+ *               dimensions:
+ *                 type: object
+ *                 properties:
+ *                   length:
+ *                     type: number
+ *                     minimum: 0
+ *                     example: 70
+ *                   width:
+ *                     type: number
+ *                     minimum: 0
+ *                     example: 50
+ *                   height:
+ *                     type: number
+ *                     minimum: 0
+ *                     example: 5
+ *                 description: Product dimensions
+ *               productOrder:
+ *                 type: integer
+ *                 example: 1
+ *                 description: Product order for sorting
+ *               visibility:
+ *                 type: boolean
+ *                 example: true
+ *                 description: Product visibility
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
+ *                 description: Product active status
+ *               isFeatured:
+ *                 type: boolean
+ *                 example: false
+ *                 description: Featured product status
+ *               isOnSale:
+ *                 type: boolean
+ *                 example: false
+ *                 description: Sale status
+ *               salePercentage:
+ *                 type: number
+ *                 minimum: 0
+ *                 maximum: 100
+ *                 example: 10
+ *                 description: Sale percentage
+ *               lowStockThreshold:
+ *                 type: number
+ *                 minimum: 0
+ *                 example: 5
+ *                 description: Low stock threshold
+ *               seo:
+ *                 type: object
+ *                 properties:
+ *                   title:
+ *                     type: string
+ *                     maxLength: 60
+ *                     example: 'Samsung Galaxy S22 - Premium Smartphone'
+ *                   description:
+ *                     type: string
+ *                     maxLength: 160
+ *                     example: 'High-quality Samsung smartphone'
+ *                   keywords:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                     example: ['samsung', 'smartphone', 'galaxy']
+ *                 description: SEO information
+ *     responses:
+ *       200:
+ *         description: Product updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Product updated successfully'
+ *                 data:
+ *                   $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Bad request - validation errors
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Product not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.put('/:id', [
   body('nameAr').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Arabic product name must be less than 100 characters'),
   body('nameEn').optional().trim().isLength({ min: 1, max: 100 }).withMessage('English product name must be less than 100 characters'),
@@ -393,9 +1027,54 @@ router.put('/:id', [
   }
 });
 
-// @desc    Delete product
-// @route   DELETE /api/products/:id
-// @access  Private (Admin only)
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   delete:
+ *     summary: Delete a product
+ *     description: Delete a product by its ID
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Product ID
+ *       - in: query
+ *         name: storeId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Store ID for filtering
+ *     responses:
+ *       200:
+ *         description: Product deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Product deleted successfully'
+ *       404:
+ *         description: Product not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.delete('/:id', [
   query('storeId').optional().isMongoId().withMessage('Invalid store ID')
 ], async (req, res) => {
@@ -432,9 +1111,35 @@ router.delete('/:id', [
   }
 });
 
-// @desc    Get featured products
-// @route   GET /api/products/featured
-// @access  Public
+/**
+ * @swagger
+ * /api/products/featured:
+ *   get:
+ *     summary: Get featured products
+ *     description: Retrieve all featured products
+ *     tags: [Products]
+ *     responses:
+ *       200:
+ *         description: Featured products retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/featured', async (req, res) => {
   try {
     const products = await Product.find({ isActive: true, isFeatured: true })
@@ -456,9 +1161,35 @@ router.get('/featured', async (req, res) => {
   }
 });
 
-// @desc    Get products on sale
-// @route   GET /api/products/sale
-// @access  Public
+/**
+ * @swagger
+ * /api/products/sale:
+ *   get:
+ *     summary: Get products on sale
+ *     description: Retrieve all products that are currently on sale
+ *     tags: [Products]
+ *     responses:
+ *       200:
+ *         description: Sale products retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/sale', async (req, res) => {
   try {
     const products = await Product.find({ isActive: true, isOnSale: true })
@@ -485,10 +1216,64 @@ router.get('/sale', async (req, res) => {
 const imageStorage = multer.memoryStorage();
 const uploadProductImage = multer({ storage: imageStorage });
 
-// @desc    Upload product main image
-// @route   POST /api/products/upload-main-image
-// @access  Private (Admin only)
-// يعيد فقط اسم الصورة (image) + رابط العرض (imageUrl)
+/**
+ * @swagger
+ * /api/products/upload-main-image:
+ *   post:
+ *     summary: Upload product main image
+ *     description: Upload a main image for a product to Cloudflare R2
+ *     tags: [Products]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - image
+ *               - storeId
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Product main image file
+ *               storeId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: '507f1f77bcf86cd799439012'
+ *                 description: Store ID for organizing uploads
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 image:
+ *                   type: string
+ *                   example: 'products/507f1f77bcf86cd799439012/main/image.jpg'
+ *                   description: Image key in storage
+ *                 imageUrl:
+ *                   type: string
+ *                   example: 'https://example.com/products/507f1f77bcf86cd799439012/main/image.jpg'
+ *                   description: Public URL for the uploaded image
+ *       400:
+ *         description: Bad request - no file uploaded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/upload-main-image', uploadProductImage.single('image'), async (req, res) => {
   try {
     const { storeId } = req.body;
@@ -519,10 +1304,71 @@ router.post('/upload-main-image', uploadProductImage.single('image'), async (req
   }
 });
 
-// @desc    Upload product gallery images
-// @route   POST /api/products/upload-gallery-images
-// @access  Private (Admin only)
-// يعيد array من الصور مع أسمائها وروابطها
+/**
+ * @swagger
+ * /api/products/upload-gallery-images:
+ *   post:
+ *     summary: Upload product gallery images
+ *     description: Upload multiple images for product gallery to Cloudflare R2
+ *     tags: [Products]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - images
+ *               - storeId
+ *             properties:
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Product gallery image files (max 10)
+ *               storeId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: '507f1f77bcf86cd799439012'
+ *                 description: Store ID for organizing uploads
+ *     responses:
+ *       200:
+ *         description: Images uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 images:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       image:
+ *                         type: string
+ *                         example: 'products/507f1f77bcf86cd799439012/gallery/image1.jpg'
+ *                         description: Image key in storage
+ *                       imageUrl:
+ *                         type: string
+ *                         example: 'https://example.com/products/507f1f77bcf86cd799439012/gallery/image1.jpg'
+ *                         description: Public URL for the uploaded image
+ *       400:
+ *         description: Bad request - no files uploaded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/upload-gallery-images', uploadProductImage.array('images', 10), async (req, res) => {
   try {
     const { storeId } = req.body;
@@ -561,10 +1407,64 @@ router.post('/upload-gallery-images', uploadProductImage.array('images', 10), as
   }
 });
 
-// @desc    Upload single product image (for gallery)
-// @route   POST /api/products/upload-single-image
-// @access  Private (Admin only)
-// يعيد صورة واحدة مع اسمها ورابطها
+/**
+ * @swagger
+ * /api/products/upload-single-image:
+ *   post:
+ *     summary: Upload single product image for gallery
+ *     description: Upload a single image for product gallery to Cloudflare R2
+ *     tags: [Products]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - image
+ *               - storeId
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Product gallery image file
+ *               storeId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: '507f1f77bcf86cd799439012'
+ *                 description: Store ID for organizing uploads
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 image:
+ *                   type: string
+ *                   example: 'products/507f1f77bcf86cd799439012/gallery/image.jpg'
+ *                   description: Image key in storage
+ *                 imageUrl:
+ *                   type: string
+ *                   example: 'https://example.com/products/507f1f77bcf86cd799439012/gallery/image.jpg'
+ *                   description: Public URL for the uploaded image
+ *       400:
+ *         description: Bad request - no file uploaded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/upload-single-image', uploadProductImage.single('image'), async (req, res) => {
   try {
     const { storeId } = req.body;
