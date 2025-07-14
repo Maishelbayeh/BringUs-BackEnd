@@ -117,7 +117,6 @@ const deliveryMethodRoutes = require('./Routes/deliveryMethod');
 const paymentMethodRoutes = require('./Routes/paymentMethod');
 const advertisementRoutes = require('./Routes/advertisement');
 const storeSliderRoutes = require('./Routes/storeSlider');
-const stockPreviewRoutes = require('./Routes/stockPreview');
 const affiliationRoutes = require('./Routes/affiliation');
 const categoryRoutes = require('./Routes/category');
 const wholesalerRoutes = require('./Routes/wholesaler');
@@ -135,7 +134,6 @@ app.use('/api/delivery-methods', deliveryMethodRoutes);
 app.use('/api/payment-methods', paymentMethodRoutes);
 app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/store-sliders', storeSliderRoutes);
-app.use('/api/stock-preview', stockPreviewRoutes);
 app.use('/api/affiliations', affiliationRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/wholesalers', wholesalerRoutes);
@@ -208,7 +206,6 @@ app.get('/api', (req, res) => {
       paymentMethods: '/api/payment-methods',
       advertisements: '/api/advertisements',
       storeSliders: '/api/store-sliders',
-      stockPreview: '/api/stock-preview',
       affiliations: '/api/affiliations',
       categories: '/api/categories',
       products: '/api/products',
@@ -314,18 +311,64 @@ const swaggerOptions = {
           type: 'object',
           properties: {
             _id: { type: 'string', example: '507f1f77bcf86cd799439012' },
-            name: { type: 'string', example: 'My Store' },
-            description: { type: 'string', example: 'A great store' },
-            domain: { type: 'string', example: 'mystore' },
+            nameAr: { type: 'string', example: 'متجري' },
+            nameEn: { type: 'string', example: 'My Store' },
+            descriptionAr: { type: 'string', example: 'متجر رائع' },
+            descriptionEn: { type: 'string', example: 'A great store' },
+            logo: {
+              type: 'object',
+              properties: {
+                public_id: { type: 'string', example: 'store-logos/1234567890-logo.png' },
+                url: { type: 'string', example: 'https://pub-237eec0793554bacb7debfc287be3b32.r2.dev/store-logos/1234567890-logo.png' }
+              }
+            },
+            slug: { type: 'string', example: 'mystore' },
             status: { type: 'string', enum: ['active', 'inactive', 'suspended'], example: 'active' },
+            whatsappNumber: { type: 'string', example: '+1234567890' },
+            contact: {
+              type: 'object',
+              properties: {
+                email: { type: 'string', format: 'email', example: 'contact@mystore.com' },
+                phone: { type: 'string', example: '+1234567890' },
+                address: {
+                  type: 'object',
+                  properties: {
+                    street: { type: 'string', example: '123 Main St' },
+                    city: { type: 'string', example: 'New York' },
+                    state: { type: 'string', example: 'NY' },
+                    zipCode: { type: 'string', example: '10001' },
+                    country: { type: 'string', example: 'USA' }
+                  }
+                }
+              }
+            },
             settings: {
               type: 'object',
               properties: {
-                currency: { type: 'string', example: 'USD' },
+                mainColor: { type: 'string', example: '#000000' },
                 language: { type: 'string', example: 'en' },
-                timezone: { type: 'string', example: 'UTC' }
+                storeDiscount: { type: 'number', example: 0 },
+                timezone: { type: 'string', example: 'UTC' },
+                taxRate: { type: 'number', example: 0 },
+                shippingEnabled: { type: 'boolean', example: true },
+                storeSocials: {
+                  type: 'object',
+                  properties: {
+                    facebook: { type: 'string', example: 'https://facebook.com/mystore' },
+                    instagram: { type: 'string', example: 'https://instagram.com/mystore' },
+                    twitter: { type: 'string', example: 'https://twitter.com/mystore' },
+                    youtube: { type: 'string', example: 'https://youtube.com/mystore' },
+                    linkedin: { type: 'string', example: 'https://linkedin.com/mystore' },
+                    telegram: { type: 'string', example: 'https://t.me/mystore' },
+                    snapchat: { type: 'string', example: 'mystore' },
+                    pinterest: { type: 'string', example: 'https://pinterest.com/mystore' },
+                    tiktok: { type: 'string', example: 'https://tiktok.com/@mystore' }
+                  }
+                }
               }
-            }
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
           }
         },
         Owner: {

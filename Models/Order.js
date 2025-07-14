@@ -198,11 +198,7 @@ const orderSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  giftMessage: String,
-  coupon: {
-    code: String,
-    discount: Number
-  },
+
   estimatedDeliveryDate: Date,
   actualDeliveryDate: Date,
   cancelledAt: Date,

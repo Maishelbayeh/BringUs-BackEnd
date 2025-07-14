@@ -10,14 +10,7 @@ exports.getAll = async (req, res) => {
       .populate('productLabels')
       .populate('unit')
       .populate('store', 'name domain')
-      .populate('costPrice')
-      .populate('compareAtPrice')
-      .populate('specifications')
-      .populate('attributes')
-      .populate('colors')
-      .populate('images')
-      .populate('mainImage')
-      .select('nameAr nameEn descriptionAr descriptionEn price barcode category unit store colors mainImage images availableQuantity stock isActive createdAt updatedAt');
+      .populate('specifications');
       
     res.json({
       success: true,
