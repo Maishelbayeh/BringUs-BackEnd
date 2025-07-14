@@ -275,4 +275,13 @@ productSchema.virtual('stockStatus').get(function() {
 productSchema.set('toJSON', { virtuals: true });
 productSchema.set('toObject', { virtuals: true });
 
+productSchema.pre('remove', async function(next) {
+  try {
+    await mongoose.model('Like').deleteMany({ product: this._id });
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = mongoose.model('Product', productSchema); 
