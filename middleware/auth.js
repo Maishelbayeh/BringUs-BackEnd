@@ -62,7 +62,8 @@ exports.optionalAuth = async (req, res, next) => {
 
     if (token) {
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+    const decoded = jwt.verify(token, jwtSecret);
         const user = await User.findById(decoded.id);
         
         if (user && user.isActive) {
