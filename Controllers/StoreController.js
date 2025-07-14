@@ -116,6 +116,152 @@ class StoreController {
       return error(res, { message: 'Get store stats error', error: err });
     }
   }
+
+  // Get customers by store ID
+  static async getCustomersByStoreId(req, res) {
+    try {
+      const { storeId } = req.params;
+      const { page = 1, limit = 10, status, search } = req.query;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
+      // Build filter
+      const filter = { 
+        store: storeId, 
+        role: 'client' 
+      };
+
+      // Add status filter if provided
+      if (status) {
+        filter.status = status;
+      }
+
+      // Add search filter if provided
+      if (search) {
+        filter.$or = [
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      // Get customers with pagination
+      const customers = await User.find(filter)
+        .select('-password')
+        .populate('store', 'name domain')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+
+      // Get total count
+      const total = await User.countDocuments(filter);
+      const totalPages = Math.ceil(total / parseInt(limit));
+
+      // Get statistics
+      const activeCustomers = await User.countDocuments({ store: storeId, role: 'client', status: 'active' });
+      const inactiveCustomers = await User.countDocuments({ store: storeId, role: 'client', status: 'inactive' });
+      const bannedCustomers = await User.countDocuments({ store: storeId, role: 'client', status: 'banned' });
+      const verifiedCustomers = await User.countDocuments({ store: storeId, role: 'client', isEmailVerified: true });
+
+      return success(res, {
+        data: customers,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages,
+          totalItems: total,
+          itemsPerPage: parseInt(limit),
+          hasNextPage: parseInt(page) < totalPages,
+          hasPrevPage: parseInt(page) > 1
+        },
+        statistics: {
+          total: total,
+          active: activeCustomers,
+          inactive: inactiveCustomers,
+          banned: bannedCustomers,
+          emailVerified: verifiedCustomers
+        }
+      });
+    } catch (err) {
+      return error(res, { message: 'Get customers by store error', error: err });
+    }
+  }
+
+  // Get customer by ID within store
+  static async getCustomerById(req, res) {
+    try {
+      const { storeId, customerId } = req.params;
+
+      const customer = await User.findOne({
+        _id: customerId,
+        store: storeId,
+        role: 'client'
+      })
+      .select('-password')
+      .populate('store', 'name domain');
+
+      if (!customer) {
+        return error(res, { message: 'Customer not found', statusCode: 404 });
+      }
+
+      return success(res, { data: customer });
+    } catch (err) {
+      return error(res, { message: 'Get customer error', error: err });
+    }
+  }
+
+  // Update customer within store
+  static async updateCustomer(req, res) {
+    try {
+      const { storeId, customerId } = req.params;
+      const updateData = req.body;
+
+      // Remove sensitive fields that shouldn't be updated via this endpoint
+      delete updateData.password;
+      delete updateData.role;
+      delete updateData.store;
+
+      const customer = await User.findOneAndUpdate(
+        {
+          _id: customerId,
+          store: storeId,
+          role: 'client'
+        },
+        updateData,
+        { new: true, runValidators: true }
+      )
+      .select('-password')
+      .populate('store', 'name domain');
+
+      if (!customer) {
+        return error(res, { message: 'Customer not found', statusCode: 404 });
+      }
+
+      return success(res, { data: customer, message: 'Customer updated successfully' });
+    } catch (err) {
+      return error(res, { message: 'Update customer error', error: err });
+    }
+  }
+
+  // Delete customer within store
+  static async deleteCustomer(req, res) {
+    try {
+      const { storeId, customerId } = req.params;
+
+      const customer = await User.findOneAndDelete({
+        _id: customerId,
+        store: storeId,
+        role: 'client'
+      });
+
+      if (!customer) {
+        return error(res, { message: 'Customer not found', statusCode: 404 });
+      }
+
+      return success(res, { message: 'Customer deleted successfully' });
+    } catch (err) {
+      return error(res, { message: 'Delete customer error', error: err });
+    }
+  }
 }
 
 module.exports = StoreController; 
