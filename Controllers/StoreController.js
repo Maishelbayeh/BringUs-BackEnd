@@ -176,32 +176,7 @@ class StoreController {
   static async updateStore(req, res) {
     try {
       const { id } = req.params;
-      let updateData = { ...req.body };
-
-      // Parse JSON strings if they come as strings from multipart/form-data
-      if (typeof updateData.contact === 'string') {
-        try {
-          updateData.contact = JSON.parse(updateData.contact);
-        } catch (e) {
-          console.error('Error parsing contact:', e);
-          return error(res, { 
-            message: 'Invalid contact data format', 
-            statusCode: 400 
-          });
-        }
-      }
-
-      if (typeof updateData.settings === 'string') {
-        try {
-          updateData.settings = JSON.parse(updateData.settings);
-        } catch (e) {
-          console.error('Error parsing settings:', e);
-          return error(res, { 
-            message: 'Invalid settings data format', 
-            statusCode: 400 
-          });
-        }
-      }
+      const updateData = { ...req.body };
 
       // Handle logo upload if provided
       if (req.file) {
