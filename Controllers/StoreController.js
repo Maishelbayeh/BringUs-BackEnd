@@ -11,7 +11,10 @@ class StoreController {
   // Create new store
   static async createStore(req, res) {
     try {
-      const { 
+      console.log('Create store - Request body:', req.body);
+      console.log('Create store - Request file:', req.file);
+      
+      let { 
         nameAr, 
         nameEn, 
         descriptionAr, 
@@ -19,11 +22,38 @@ class StoreController {
         slug, 
         contact, 
         settings,
-        whatsappNumber,
-        logo 
+        whatsappNumber
       } = req.body;
       
       const userId = req.user._id;
+
+      // Parse JSON strings if they come as strings from multipart/form-data
+      if (typeof contact === 'string') {
+        try {
+          contact = JSON.parse(contact);
+        } catch (e) {
+          console.error('Error parsing contact:', e);
+          return error(res, { 
+            message: 'Invalid contact data format', 
+            statusCode: 400 
+          });
+        }
+      }
+
+      if (typeof settings === 'string') {
+        try {
+          settings = JSON.parse(settings);
+        } catch (e) {
+          console.error('Error parsing settings:', e);
+          return error(res, { 
+            message: 'Invalid settings data format', 
+            statusCode: 400 
+          });
+        }
+      }
+
+      console.log('Parsed contact:', contact);
+      console.log('Parsed settings:', settings);
 
       // Validate required fields
       if (!nameAr || !nameEn || !slug || !contact?.email) {
@@ -146,7 +176,32 @@ class StoreController {
   static async updateStore(req, res) {
     try {
       const { id } = req.params;
-      const updateData = { ...req.body };
+      let updateData = { ...req.body };
+
+      // Parse JSON strings if they come as strings from multipart/form-data
+      if (typeof updateData.contact === 'string') {
+        try {
+          updateData.contact = JSON.parse(updateData.contact);
+        } catch (e) {
+          console.error('Error parsing contact:', e);
+          return error(res, { 
+            message: 'Invalid contact data format', 
+            statusCode: 400 
+          });
+        }
+      }
+
+      if (typeof updateData.settings === 'string') {
+        try {
+          updateData.settings = JSON.parse(updateData.settings);
+        } catch (e) {
+          console.error('Error parsing settings:', e);
+          return error(res, { 
+            message: 'Invalid settings data format', 
+            statusCode: 400 
+          });
+        }
+      }
 
       // Handle logo upload if provided
       if (req.file) {

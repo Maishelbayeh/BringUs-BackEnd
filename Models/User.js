@@ -139,8 +139,11 @@ userSchema.methods.comparePassword = async function(enteredPassword) {
 
 // Return JWT token
 userSchema.methods.getJwtToken = function() {
-  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE
+  const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+  const jwtExpire = process.env.JWT_EXPIRE || '7d';
+  
+  return jwt.sign({ id: this._id }, jwtSecret, {
+    expiresIn: jwtExpire
   });
 };
 
