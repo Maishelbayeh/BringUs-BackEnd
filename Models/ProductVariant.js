@@ -79,16 +79,16 @@ const productVariantSchema = new mongoose.Schema({
     },
     alt: String
   },
-  attributes: [{
-    name: {
-      type: String,
-      required: true
-    },
-    value: {
-      type: String,
-      required: true
-    }
-  }],
+  // attributes: [{
+  //   name: {
+  //     type: String,
+  //     required: true
+  //   },
+  //   value: {
+  //     type: String,
+  //     required: true
+  //   }
+  // }],
   specifications: [{
     specificationId: {
       type: mongoose.Schema.Types.ObjectId,

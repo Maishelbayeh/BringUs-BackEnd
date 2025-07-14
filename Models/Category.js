@@ -3,13 +3,13 @@ const mongoose = require('mongoose');
 const categorySchema = new mongoose.Schema({
   nameAr: {
     type: String,
-    required: [true, 'Arabic name is required'],
+    required: [false, 'Arabic name is required'],
     trim: true,
     maxlength: [50, 'Arabic name cannot exceed 50 characters']
   },
   nameEn: {
     type: String,
-    required: [true, 'English name is required'],
+    required: [false, 'English name is required'],
     trim: true,
     maxlength: [50, 'English name cannot exceed 50 characters']
   },
@@ -36,19 +36,19 @@ const categorySchema = new mongoose.Schema({
     ref: 'Store',
     required: [true, 'Store is required']
   },
-  level: {
-    type: Number,
-    default: 0,
-    min: [0, 'Level cannot be negative']
-  },
+  // level: {
+  //   type: Number,
+  //   default: 0,
+  //   min: [0, 'Level cannot be negative']
+  // },
   image: {
     type: String,
     default: null
   },
-  icon: {
-    type: String,
-    trim: true
-  },
+  // icon: {
+  //   type: String,
+  //   trim: true
+  // },
   isActive: {
     type: Boolean,
     default: true

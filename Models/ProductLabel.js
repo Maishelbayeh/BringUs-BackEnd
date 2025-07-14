@@ -23,12 +23,12 @@ const productLabelSchema = new mongoose.Schema({
   },
   color: {
     type: String,
-    default: '#000000',
+    default: '#6B7280',
     validate: {
       validator: function(v) {
         return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(v);
       },
-      message: 'Color must be a valid hex color'
+      message: 'Color must be a valid hex color code'
     }
   },
   isActive: {

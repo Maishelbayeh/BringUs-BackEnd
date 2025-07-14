@@ -224,6 +224,26 @@ const ProductController = require('../Controllers/ProductController');
 
 /**
  * @swagger
+ * /api/meta/stores/{storeId}/product-labels:
+ *   get:
+ *     summary: Get all product labels for a specific store
+ *     tags: [ProductLabels]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID to filter product labels
+ *     responses:
+ *       200:
+ *         description: List of active product labels for the store
+ *       400:
+ *         description: Invalid store ID
+ */
+
+/**
+ * @swagger
  * /api/meta/product-specifications:
  *   get:
  *     summary: Get all product specifications
@@ -608,6 +628,7 @@ router.get('/stores/:storeId/categories/tree', CategoryController.getCategoryTre
 // ProductLabel routes
 router.get('/product-labels', ProductLabelController.getAll);
 router.get('/product-labels/:id', ProductLabelController.getById);
+router.get('/stores/:storeId/product-labels', ProductLabelController.getByStoreId);
 router.post('/product-labels', ProductLabelController.create);
 router.put('/product-labels/:id', ProductLabelController.update);
 router.delete('/product-labels/:id', ProductLabelController.delete);

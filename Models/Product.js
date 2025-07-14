@@ -36,14 +36,13 @@ const productSchema = new mongoose.Schema({
     type: Number,
     min: [0, 'Cost price cannot be negative']
   },
-  sku: {
-    type: String,
-    unique: true,
-    trim: true
-  },
+
   barcode: {
     type: String,
-    trim: true
+    trim: true,
+    unique: true,
+    sparse: true,
+    index: true
   },
   category: {
     type: mongoose.Schema.Types.ObjectId,
@@ -55,42 +54,19 @@ const productSchema = new mongoose.Schema({
     ref: 'Store',
     required: [true, 'Product store is required']
   },
-  // Support for hierarchical categories (main category, subcategory, sub-subcategory)
-  categoryPath: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Category'
-  }],
-  brand: {
-    type: String,
-    trim: true
-  },
+
   images: [{
-    public_id: {
-      type: String,
-      required: true
-    },
-    url: {
-      type: String,
-      required: true
-    },
-    alt: String
+    type: String,
+    default: []
   }],
   mainImage: {
-    public_id: {
-      type: String,
-      required: true
-    },
-    url: {
-      type: String,
-      required: true
-    },
-    alt: String
+    type: String,
+    default: null
   },
-  // Product label (Regular, Offer, Featured, New)
-  productLabel: {
+  productLabels: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ProductLabel'
-  },
+  }],
   // Unit (piece, kg, liter, etc.)
   unit: {
     type: mongoose.Schema.Types.ObjectId,
@@ -125,8 +101,8 @@ const productSchema = new mongoose.Schema({
     }
   }],
   specifications: [{
-    name: String,
-    value: String
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProductSpecification'
   }],
   stock: {
     type: Number,
@@ -157,9 +133,24 @@ const productSchema = new mongoose.Schema({
       min: [0, 'Height cannot be negative']
     }
   },
+  
   tags: [{
     type: String,
     trim: true
+  }],
+  // Product colors - array of color arrays
+  // Each inner array represents a color option (can be single color or multiple colors)
+  // Example: [['#000000'], ['#FFFFFF', '#FF0000']] - first option is black only, second is white+red
+  colors: [{
+    type: [String], // Array of color codes (hex, rgb, etc.)
+    validate: {
+      validator: function(colors) {
+        // Validate that each color is a valid color format
+        const colorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$|^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$|^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\)$/;
+        return colors.every(color => colorRegex.test(color));
+      },
+      message: 'Invalid color format. Use hex (#RRGGBB), rgb(r,g,b), or rgba(r,g,b,a) format'
+    }
   }],
   isActive: {
     type: Boolean,
@@ -230,8 +221,11 @@ productSchema.index({ category: 1 });
 // Create index for category path
 productSchema.index({ categoryPath: 1 });
 
-// Create index for product label
-productSchema.index({ productLabel: 1 });
+// Create index for product labels
+productSchema.index({ productLabels: 1 });
+
+// Create index for specifications
+productSchema.index({ specifications: 1 });
 
 // Create index for unit
 productSchema.index({ unit: 1 });
@@ -241,6 +235,9 @@ productSchema.index({ visibility: 1 });
 
 // Create index for product order
 productSchema.index({ productOrder: 1 });
+
+// Create index for colors
+productSchema.index({ colors: 1 });
 
 // Create indexes for store isolation
 productSchema.index({ store: 1 });
@@ -269,6 +266,20 @@ productSchema.virtual('stockStatus').get(function() {
   if (this.stock === 0) return 'out_of_stock';
   if (this.stock <= this.lowStockThreshold) return 'low_stock';
   return 'in_stock';
+});
+
+// Virtual for all unique colors
+productSchema.virtual('allColors').get(function() {
+  if (!this.colors || this.colors.length === 0) return [];
+  
+  // Flatten all color arrays and get unique colors
+  const allColors = this.colors.flat();
+  return [...new Set(allColors)];
+});
+
+// Virtual for color options count
+productSchema.virtual('colorOptionsCount').get(function() {
+  return this.colors ? this.colors.length : 0;
 });
 
 // Ensure virtual fields are serialized

@@ -34,7 +34,7 @@ const deliveryMethodSchema = new mongoose.Schema({
   // Contact information
   whatsappNumber: {
     type: String,
-    required: [true, 'WhatsApp number is required'],
+    required: [false, 'WhatsApp number is required'],
     trim: true
   },
   

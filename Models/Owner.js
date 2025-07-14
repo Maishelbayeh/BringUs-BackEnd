@@ -11,7 +11,10 @@ const ownerSchema = new mongoose.Schema({
     ref: 'Store',
     required: [true, 'Store ID is required']
   },
+
   status: {
+    
+
     type: String,
     enum: ['active', 'inactive'],
     default: 'active'
