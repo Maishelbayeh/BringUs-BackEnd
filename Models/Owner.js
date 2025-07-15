@@ -34,7 +34,7 @@ const ownerSchema = new mongoose.Schema({
   }],
   isPrimaryOwner: {
     type: Boolean,
-    default: false
+    default: true
   }
 }, {
   timestamps: true
