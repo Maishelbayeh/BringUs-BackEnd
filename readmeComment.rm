@@ -1,0 +1,74 @@
+# Social Media Testimonials (SocialComment) Feature – Summary
+
+## 1. Feature Name & Purpose
+**Social Media Testimonials** (`SocialComment`) allow each store to display curated social proof (comments, endorsements, etc.) from various social platforms. All testimonials are strictly scoped to the current store (multi-tenancy).
+
+---
+
+## 2. Files Created
+- **Model:** `Models/SocialComment.js`
+  - Mongoose schema for testimonials, with store reference and all required fields.
+- **Controller:** `Controllers/SocialCommentController.js`
+  - Handles CRUD operations, store isolation, and response formatting.
+- **Routes:** `Routes/socialComment.js`
+  - RESTful API endpoints, middleware, and full Swagger JSDoc documentation.
+- **Validation Middleware:** `validators/socialComment.validator.js`
+  - Express-validator rules for POST/PUT requests.
+- **Swagger Documentation:**
+  - Inline in `Routes/socialComment.js`, including schema definition and response formats.
+
+---
+
+## 3. API Endpoints
+- `GET /api/social-comments` – List all testimonials for the current store
+- `POST /api/social-comments` – Create a new testimonial
+- `PUT /api/social-comments/:id` – Update an existing testimonial
+- `DELETE /api/social-comments/:id` – Delete a testimonial
+
+All endpoints:
+- Require authentication and owner permissions
+- Return responses in `{ success, data }` or `{ success, message }` format
+
+---
+
+## 4. Middleware Used
+- `protect` – Ensures the user is authenticated
+- `permissions(['owner'])` – Restricts access to store owners
+- (Store context is assumed to be set by upstream middleware, e.g., `addStoreFilter` or similar)
+- Validation middleware from `validators/socialComment.validator.js` for POST/PUT
+
+---
+
+## 5. Swagger Coverage & Schema
+- All endpoints are fully documented with Swagger JSDoc in `Routes/socialComment.js`
+- Inline schema definition for `SocialComment` (fields: store, platform, image, personName, personTitle, comment, active, timestamps)
+- All responses documented for 200/201/400/404/500 with example payloads
+- Tag used: `[SocialComment]`
+
+---
+
+## 6. Multi-Tenant Handling & Store Isolation
+- Every testimonial is linked to a specific store via the `store` field (ObjectId)
+- All controller queries are scoped to the current store (using `req.store`)
+- No cross-store access is possible
+- Store deletion (future): testimonials should be cleaned up via a pre-remove hook on the Store model
+
+---
+
+## 7. Validation Rules
+- `platform`: Required, must be one of ['Facebook', 'Instagram', 'Twitter', 'LinkedIn', 'TikTok']
+- `personName`: Required, not empty
+- `comment`: Required, minimum 10 characters
+- `active`: Optional, must be boolean if present
+
+---
+
+## 8. Future Considerations
+- **Image Upload:** Integrate with existing upload utilities for the `image` field
+- **Store Deletion:** Add a pre-remove hook to the Store model to cascade-delete testimonials
+- **Frontend Integration:** Ensure API and schema are reflected in the admin UI
+- **Additional Permissions:** Consider finer-grained permissions if needed
+
+---
+
+**This summary provides a complete overview for developers to understand, extend, or maintain the Social Media Testimonials feature.** 

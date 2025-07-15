@@ -115,4 +115,13 @@ const storeSchema = new mongoose.Schema({
 // Ensure unique slug
 storeSchema.index({ slug: 1 }, { unique: true });
 
+storeSchema.pre('remove', async function(next) {
+  try {
+    await mongoose.model('Like').deleteMany({ store: this._id });
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = mongoose.model('Store', storeSchema); 

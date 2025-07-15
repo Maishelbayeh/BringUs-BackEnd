@@ -11,8 +11,9 @@ const ownerSchema = new mongoose.Schema({
     ref: 'Store',
     required: [true, 'Store ID is required']
   },
-  
+
   status: {
+    
 
     type: String,
     enum: ['active', 'inactive'],
@@ -33,7 +34,7 @@ const ownerSchema = new mongoose.Schema({
   }],
   isPrimaryOwner: {
     type: Boolean,
-    default: false
+    default: true
   }
 }, {
   timestamps: true
