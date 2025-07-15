@@ -9,6 +9,9 @@ const crypto = require('crypto');
 const Cart = require('../Models/Cart');
 // monjed update end
 
+// Import middleware for store access
+const { checkAdminStoreOwnership } = require('../middleware/permissions');
+
 const router = express.Router();
 
 /**
@@ -293,6 +296,40 @@ router.post('/login', [
     // Generate JWT token
     const token = user.getJwtToken();
 
+    // Get store information for admin users
+    let userStore = null;
+    let userStores = [];
+    if (user.role === 'admin') {
+      try {
+        const Owner = require('../Models/Owner');
+        const Store = require('../Models/Store');
+        
+        const owners = await Owner.find({ 
+          userId: user._id, 
+          status: 'active' 
+        }).populate('storeId');
+        
+        if (owners && owners.length > 0) {
+          userStores = owners.map(owner => ({
+            id: owner.storeId._id,
+            nameAr: owner.storeId.nameAr,
+            nameEn: owner.storeId.nameEn,
+            slug: owner.storeId.slug,
+            status: owner.storeId.status,
+            isPrimaryOwner: owner.isPrimaryOwner,
+            isOwner: true,
+            permissions: owner.permissions
+          }));
+          
+          // Set the first store as default
+          userStore = userStores[0];
+        }
+      } catch (storeError) {
+        console.error('Error fetching admin store:', storeError);
+        // Don't fail login if store fetch fails
+      }
+    }
+
     // monjed update start
     // Cart merge logic after successful login
     if (req.guestId && req.store && req.store._id) {
@@ -329,7 +366,9 @@ router.post('/login', [
         lastName: user.lastName,
         email: user.email,
         role: user.role,
-        avatar: user.avatar
+        avatar: user.avatar,
+        store: userStore, // Default store for admin
+        stores: userStores // All stores for admin
       }
     });
   } catch (error) {
@@ -399,6 +438,51 @@ router.get('/me', async (req, res) => {
       });
     }
 
+    // Add user to request for middleware
+    req.user = user;
+
+    // Check store ownership for admin users
+    if (user.role === 'admin') {
+      try {
+        await checkAdminStoreOwnership(req, res, () => {});
+      } catch (error) {
+        console.error('Store ownership check error:', error);
+      }
+    }
+
+    // Get store information for admin users
+    let userStore = null;
+    let userStores = [];
+    if (user.role === 'admin') {
+      try {
+        const Owner = require('../Models/Owner');
+        const Store = require('../Models/Store');
+        
+        const owners = await Owner.find({ 
+          userId: user._id, 
+          status: 'active' 
+        }).populate('storeId');
+        
+        if (owners && owners.length > 0) {
+          userStores = owners.map(owner => ({
+            id: owner.storeId._id,
+            nameAr: owner.storeId.nameAr,
+            nameEn: owner.storeId.nameEn,
+            slug: owner.storeId.slug,
+            status: owner.storeId.status,
+            isPrimaryOwner: owner.isPrimaryOwner,
+            isOwner: true,
+            permissions: owner.permissions
+          }));
+          
+          // Set the first store as default
+          userStore = userStores[0];
+        }
+      } catch (storeError) {
+        console.error('Error fetching admin store:', storeError);
+      }
+    }
+
     res.status(200).json({
       success: true,
       user: {
@@ -411,7 +495,9 @@ router.get('/me', async (req, res) => {
         avatar: user.avatar,
         addresses: user.addresses,
         isEmailVerified: user.isEmailVerified,
-        lastLogin: user.lastLogin
+        lastLogin: user.lastLogin,
+        store: userStore, // Default store for admin
+        stores: userStores // All stores for admin
       }
     });
   } catch (error) {
