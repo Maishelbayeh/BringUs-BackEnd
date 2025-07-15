@@ -112,6 +112,26 @@ const productSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ProductSpecification'
   }],
+  // قيم المواصفات المختارة
+  specificationValues: [{
+    specificationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ProductSpecification',
+      required: true
+    },
+    valueId: {
+      type: String,
+      required: true
+    },
+    value: {
+      type: String,
+      required: true
+    },
+    title: {
+      type: String,
+      required: true
+    }
+  }],
   stock: {
     type: Number,
     required: [true, 'Stock quantity is required'],
@@ -229,6 +249,9 @@ productSchema.index({ productLabels: 1 });
 
 // Create index for specifications
 productSchema.index({ specifications: 1 });
+
+// Create index for specification values
+productSchema.index({ specificationValues: 1 });
 
 // Create index for unit
 productSchema.index({ unit: 1 });

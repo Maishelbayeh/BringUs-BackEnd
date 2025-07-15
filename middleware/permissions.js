@@ -4,7 +4,7 @@ const Store = require('../Models/Store');
 // Check if user has access to store (TEMPORARILY SIMPLIFIED FOR TESTING)
 exports.hasStoreAccess = async (req, res, next) => {
   try {
-    const { storeId } = req.params;
+    const storeId = req.params.storeId || req.params.id;
     
     // TEMPORARY: Superadmin has access to all stores
     if (req.user.role === 'superadmin') {

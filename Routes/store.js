@@ -34,6 +34,38 @@ router.use(isActive);
 
 /**
  * @swagger
+ * /api/stores/{id}:
+ *   get:
+ *     summary: Get store by ID
+ *     tags: [Stores]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439012"
+ *         description: "Store ID"
+ *     responses:
+ *       200:
+ *         description: Store retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       404:
+ *         description: Store not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/:id', StoreController.getStore);
+
+/**
+ * @swagger
  * /api/stores/slug/{slug}:
  *   get:
  *     summary: Get store by slug (Public)
@@ -244,38 +276,6 @@ router.post('/', upload.single('logo'), StoreController.createStore);
 /**
  * @swagger
  * /api/stores/{id}:
- *   get:
- *     summary: Get store by ID
- *     tags: [Stores]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         example: "507f1f77bcf86cd799439012"
- *         description: "Store ID"
- *     responses:
- *       200:
- *         description: Store retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Success'
- *       404:
- *         description: Store not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.get('/:id', StoreController.getStore);
-
-/**
- * @swagger
- * /api/stores/{id}:
  *   put:
  *     summary: Update store
  *     tags: [Stores]
@@ -324,7 +324,6 @@ router.get('/:id', StoreController.getStore);
  *                 type: string
  *                 enum: [active, inactive, suspended]
  *                 example: "active"
- *                 description: "Store status"
  *               whatsappNumber:
  *                 type: string
  *                 example: "+1234567890"
@@ -444,7 +443,7 @@ router.get('/:id', StoreController.getStore);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', hasStoreAccess, hasPermission('manage_store'), upload.single('logo'), StoreController.updateStore);
+router.put('/:id', hasStoreAccess, upload.single('logo'), StoreController.updateStore);
 
 /**
  * @swagger
