@@ -22,7 +22,6 @@ const ownerSchema = new mongoose.Schema({
   permissions: [{
     type: String,
     enum: [
-      
       'manage_store',
       'manage_users',
       'manage_products',

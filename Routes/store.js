@@ -743,6 +743,8 @@ router.get('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('man
  */
 router.put('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('manage_users'), StoreController.updateCustomer);
 
+
+
 /**
  * @swagger
  * /api/stores/{storeId}/customers/{customerId}:
