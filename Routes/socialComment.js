@@ -84,12 +84,12 @@ const permissions = require('../middleware/permissions');
  *                   type: string
  *                   example: "Failed to fetch testimonials"
  */
-router.get(
-  '/api/social-comments',
-  protect,
-  permissions(['owner']),
-  SocialCommentController.getSocialComments
-);
+// router.get(
+//   '/api/social-comments',
+//   protect,
+//   permissions(['owner']),
+//   SocialCommentController.getSocialComments
+// );
 
 /**
  * @swagger
@@ -145,12 +145,12 @@ router.get(
  *                   type: string
  *                   example: "Failed to create testimonial"
  */
-router.post(
-  '/api/social-comments',
-  protect,
-  permissions(['owner']),
-  SocialCommentController.createSocialComment
-);
+// router.post(
+//   '/api/social-comments',
+//   protect,
+//   permissions(['owner']),
+//   SocialCommentController.createSocialComment
+// );
 
 /**
  * @swagger
@@ -226,12 +226,12 @@ router.post(
  *                   type: string
  *                   example: "Failed to update testimonial"
  */
-router.put(
-  '/api/social-comments/:id',
-  protect,
-  permissions(['owner']),
-  SocialCommentController.updateSocialComment
-);
+// router.put(
+//   '/api/social-comments/:id',
+//   protect,
+//   permissions(['owner']),
+//   SocialCommentController.updateSocialComment
+// );
 
 /**
  * @swagger
@@ -288,12 +288,12 @@ router.put(
  *                   type: string
  *                   example: "Failed to delete testimonial"
  */
-router.delete(
-  '/api/social-comments/:id',
-  protect,
-  permissions(['owner']),
-  SocialCommentController.deleteSocialComment
-);
+// router.delete(
+//   '/api/social-comments/:id',
+//   protect,
+//   permissions(['owner']),
+//   SocialCommentController.deleteSocialComment
+// );
 
 module.exports = router;
 
