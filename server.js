@@ -122,6 +122,8 @@ const categoryRoutes = require('./Routes/category');
 const wholesalerRoutes = require('./Routes/wholesaler');
 const termsConditionsRoutes = require('./Routes/termsConditions');
 const productRoutes = require('./Routes/product');
+const socialCommentRoutes = require('./Routes/socialComment');
+// const productRoutes = require('./Routes/product');
 // const orderRoutes = require('./Routes/order');
 
 // Route middleware
@@ -139,6 +141,8 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/wholesalers', wholesalerRoutes);
 app.use('/api/terms-conditions', termsConditionsRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/social-comments', socialCommentRoutes);
+// app.use('/api/products', productRoutes);
 // app.use('/api/orders', orderRoutes);
 
 /**

@@ -4,6 +4,11 @@ const User = require('../Models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
+// monjed update start
+// Cart merge logic after successful login
+const Cart = require('../Models/Cart');
+// monjed update end
+
 const router = express.Router();
 
 /**
@@ -287,6 +292,32 @@ router.post('/login', [
 
     // Generate JWT token
     const token = user.getJwtToken();
+
+    // monjed update start
+    // Cart merge logic after successful login
+    if (req.guestId && req.store && req.store._id) {
+      const guestCart = await Cart.findOne({ guestId: req.guestId, store: req.store._id });
+      if (guestCart) {
+        let userCart = await Cart.findOne({ user: user._id, store: req.store._id });
+        if (!userCart) {
+          userCart = await Cart.create({ user: user._id, store: req.store._id, items: [] });
+        }
+        // Merge items
+        guestCart.items.forEach(guestItem => {
+          const idx = userCart.items.findIndex(
+            item => item.product.toString() === guestItem.product.toString() && item.variant === guestItem.variant
+          );
+          if (idx > -1) {
+            userCart.items[idx].quantity += guestItem.quantity;
+          } else {
+            userCart.items.push({ ...guestItem.toObject() });
+          }
+        });
+        await userCart.save();
+        await Cart.deleteOne({ _id: guestCart._id });
+      }
+    }
+    // monjed update end
 
     res.status(200).json({
       success: true,
