@@ -66,6 +66,8 @@ exports.getById = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     console.log('Create product - Request body:', req.body);
+    console.log('Create product - specificationValues:', req.body.specificationValues);
+    console.log('Create product - specifications:', req.body.specifications);
     
     const { nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, storeId, barcodes, hasVariants } = req.body;
     
@@ -181,6 +183,8 @@ exports.update = async (req, res) => {
     console.log('Update product - ID:', id);
     console.log('Update product - Request body:', req.body);
     console.log('Update product - StoreId:', storeId);
+    console.log('Update product - specificationValues:', req.body.specificationValues);
+    console.log('Update product - specifications:', req.body.specifications);
     
     if (!storeId) {
       return res.status(400).json({ 

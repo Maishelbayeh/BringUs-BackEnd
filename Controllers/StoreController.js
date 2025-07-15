@@ -178,6 +178,31 @@ class StoreController {
       const { id } = req.params;
       const updateData = { ...req.body };
 
+      // Parse JSON strings for complex objects
+      if (updateData.contact && typeof updateData.contact === 'string') {
+        try {
+          updateData.contact = JSON.parse(updateData.contact);
+        } catch (parseError) {
+          console.error('Error parsing contact JSON:', parseError);
+          return error(res, { 
+            message: 'Invalid contact data format', 
+            statusCode: 400 
+          });
+        }
+      }
+
+      if (updateData.settings && typeof updateData.settings === 'string') {
+        try {
+          updateData.settings = JSON.parse(updateData.settings);
+        } catch (parseError) {
+          console.error('Error parsing settings JSON:', parseError);
+          return error(res, { 
+            message: 'Invalid settings data format', 
+            statusCode: 400 
+          });
+        }
+      }
+
       // Handle logo upload if provided
       if (req.file) {
         try {
