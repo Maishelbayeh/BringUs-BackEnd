@@ -805,6 +805,7 @@ router.delete('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('
  *             type: object
  *             required:
  *               - image
+ * 
  *               - storeId
  *             properties:
  *               image:
