@@ -145,7 +145,7 @@ const createUser = async (req, res) => {
       });
     }
 
-    const { firstName, lastName, email, password, phone, role } = req.body;
+    const { firstName, lastName, email, password, phone, role, store, addresses, status } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -156,15 +156,38 @@ const createUser = async (req, res) => {
       });
     }
 
-    // Create user
-    const user = await User.create({
+    // Prepare user data
+    const userData = {
       firstName,
       lastName,
       email,
       password,
       phone,
-      role: role || 'user'
-    });
+      role: role || 'client',
+      status: status || 'active'
+    };
+
+    // Handle addresses - filter out addresses with empty required fields
+    if (addresses && Array.isArray(addresses)) {
+      userData.addresses = addresses.filter(addr => 
+        addr.street && addr.street.trim() && 
+        addr.city && addr.city.trim() && 
+        addr.state && addr.state.trim() && 
+        addr.zipCode && addr.zipCode.trim() && 
+        addr.country && addr.country.trim()
+      );
+    } else {
+      userData.addresses = [];
+    }
+
+    // Add store if provided and user is admin or client
+    if (store && (role === 'admin' || role === 'client')) {
+      // If store is an object with _id, extract the _id
+      userData.store = typeof store === 'object' && store._id ? store._id : store;
+    }
+
+    // Create user
+    const user = await User.create(userData);
 
     // Generate JWT token
     const token = user.getJwtToken();
@@ -180,6 +203,8 @@ const createUser = async (req, res) => {
       avatar: user.avatar,
       isEmailVerified: user.isEmailVerified,
       isActive: user.isActive,
+      addresses: user.addresses,
+      store: user.store,
       createdAt: user.createdAt
     };
 
