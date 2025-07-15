@@ -114,8 +114,9 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Store',
     required: function() {
-      // Store is required only for customers (clients)
-      return this.role === 'client';
+      // Store is required for customers (clients) and admins, but not for superadmin
+      return this.role === 'client' || this.role === 'admin';
+      
     }
   }
 }, {
