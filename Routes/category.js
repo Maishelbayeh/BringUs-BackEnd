@@ -483,7 +483,7 @@ router.get('/featured', async (req, res) => {
  *         schema:
  *           type: string
  *         description: Store ID to filter categories
- *         example: 686a719956a82bfcc93a2e2d
+ *         example: 687505893fbf3098648bfe16
  *     responses:
  *       200:
  *         description: List of categories for the store

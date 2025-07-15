@@ -8,7 +8,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mais_helbayeh:ojTOYKE
   useUnifiedTopology: true,
 });
 
-const storeId = '686a719956a82bfcc93a2e2d';
+const storeId = '687505893fbf3098648bfe16';
 
 // Example 1: Product with single color options
 const singleColorProduct = {

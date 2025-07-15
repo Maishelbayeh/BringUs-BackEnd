@@ -5,7 +5,7 @@ require('dotenv').config();
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://bringus:bringus123@cluster0.mongodb.net/bringus?retryWrites=true&w=majority';
 
 // Store ID
-const STORE_ID = '686a719956a82bfcc93a2e2d';
+const STORE_ID = '687505893fbf3098648bfe16';
 
 // Delivery methods data
 const deliveryMethodsData = [

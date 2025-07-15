@@ -3,7 +3,7 @@ const axios = require('axios');
 const API_BASE_URL = 'http://localhost:5001/api';
 
 // Example store ID (you need to replace this with actual store ID)
-const STORE_ID = 'YOUR_STORE_ID_HERE';
+const STORE_ID = '687505893fbf3098648bfe16';
 
 // Example categories for a specific store
 const storeCategories = [

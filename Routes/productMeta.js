@@ -4,7 +4,7 @@ const router = express.Router();
 const CategoryController = require('../Controllers/CategoryController');
 const ProductLabelController = require('../Controllers/ProductLabelController');
 const ProductSpecificationController = require('../Controllers/ProductSpecificationController');
-const ProductVariantController = require('../Controllers/ProductVariantController');
+// const ProductVariantController = require('../Controllers/ProductVariantController');
 const UnitController = require('../Controllers/UnitController');
 const ProductController = require('../Controllers/ProductController');
 
@@ -38,7 +38,7 @@ const ProductController = require('../Controllers/ProductController');
  *         schema:
  *           type: string
  *         description: Store ID to filter categories
- *         example: 686a719956a82bfcc93a2e2d
+ *         example: 687505893fbf3098648bfe16
  *     responses:
  *       200:
  *         description: List of categories
@@ -413,26 +413,26 @@ router.get('/product-specifications/by-store', require('../Controllers/ProductSp
  *         description: Product variant not found
  */
 
-/**
- * @swagger
- * /api/meta/product-variants/by-store:
- *   get:
- *     summary: Get all product variants for a specific store
- *     tags: [ProductVariants]
- *     parameters:
- *       - in: query
- *         name: storeId
- *         required: true
- *         schema:
- *           type: string
- *         description: Store ID to filter product variants
- *     responses:
- *       200:
- *         description: List of product variants for the store
- *       400:
- *         description: storeId is required
- */
-router.get('/product-variants/by-store', ProductVariantController.getByStoreId);
+// /**
+//  * @swagger
+//  * /api/meta/product-variants/by-store:
+//  *   get:
+//  *     summary: Get all product variants for a specific store
+//  *     tags: [ProductVariants]
+//  *     parameters:
+//  *       - in: query
+//  *         name: storeId
+//  *         required: true
+//  *         schema:
+//  *           type: string
+//  *         description: Store ID to filter product variants
+//  *     responses:
+//  *       200:
+//  *         description: List of product variants for the store
+//  *       400:
+//  *         description: storeId is required
+//  */
+// router.get('/product-variants/by-store', ProductVariantController.getByStoreId);
 
 /**
  * @swagger
@@ -453,11 +453,11 @@ router.get('/product-variants/by-store', ProductVariantController.getByStoreId);
  *       400:
  *         description: storeId is required
  */
-router.get('/variants/:storeId', (req, res) => {
-  // إعادة استخدام نفس الدالة لكن مع req.params
-  req.query.storeId = req.params.storeId;
-  require('../Controllers/ProductVariantController').getByStoreId(req, res);
-});
+// router.get('/variants/:storeId', (req, res) => {
+//   // إعادة استخدام نفس الدالة لكن مع req.params
+//   req.query.storeId = req.params.storeId;
+//   require('../Controllers/ProductVariantController').getByStoreId(req, res);
+// });
 
 /**
  * @swagger
@@ -641,11 +641,11 @@ router.put('/product-specifications/:id', ProductSpecificationController.update)
 router.delete('/product-specifications/:id', ProductSpecificationController.delete);
 
 // ProductVariant routes
-router.get('/product-variants', ProductVariantController.getAll);
-router.get('/product-variants/:id', ProductVariantController.getById);
-router.post('/product-variants', ProductVariantController.create);
-router.put('/product-variants/:id', ProductVariantController.update);
-router.delete('/product-variants/:id', ProductVariantController.delete);
+// router.get('/product-variants', ProductVariantController.getAll);
+// router.get('/product-variants/:id', ProductVariantController.getById);
+// router.post('/product-variants', ProductVariantController.create);
+// router.put('/product-variants/:id', ProductVariantController.update);
+// router.delete('/product-variants/:id', ProductVariantController.delete);
 
 // Unit routes
 router.get('/units', UnitController.getAll);

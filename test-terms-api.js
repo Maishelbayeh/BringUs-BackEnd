@@ -1,7 +1,7 @@
 const fetch = require('node-fetch');
 
 const testTermsAPI = async () => {
-  const storeId = '686a719956a82bfcc93a2e2d';
+  const storeId = '687505893fbf3098648bfe16';
   const baseUrl = 'http://localhost:5001'; // Backend port
   
   console.log('🧪 Testing Terms & Conditions API...');

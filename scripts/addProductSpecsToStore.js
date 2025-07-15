@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const ProductSpecification = require('../Models/ProductSpecification');
 
 const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4mdpc.mongodb.net/bringus?retryWrites=true&w=majority&appName=Cluster0';
-const STORE_ID = '686a719956a82bfcc93a2e2d'; // Store ID المحدد
+const STORE_ID = '687505893fbf3098648bfe16'; // Store ID المحدد
 
 async function addProductSpecsToStore() {
   try {
@@ -11,18 +11,69 @@ async function addProductSpecsToStore() {
     console.log('✅ Connected to MongoDB');
     console.log(`🏪 Adding data to Store ID: ${STORE_ID}`);
 
-    // البيانات المطلوبة إضافتها
+    // البيانات المطلوبة إضافتها - الآن مع الهيكل الصحيح
     const specsToAdd = [
-      { descriptionAr: 'طويل', descriptionEn: 'Long', sortOrder: 1 },
-      { descriptionAr: 'قصير', descriptionEn: 'Short', sortOrder: 2 },
-      { descriptionAr: 'كبير', descriptionEn: 'Large', sortOrder: 3 },
-      { descriptionAr: 'وسط', descriptionEn: 'Medium', sortOrder: 4 },
-      { descriptionAr: 'صغير', descriptionEn: 'Small', sortOrder: 5 },
-      { descriptionAr: 'نمرة 40', descriptionEn: 'Size 40', sortOrder: 6 },
-      { descriptionAr: 'نمرة 42', descriptionEn: 'Size 42', sortOrder: 7 },
-      { descriptionAr: 'نمرة 44', descriptionEn: 'Size 44', sortOrder: 8 },
-      { descriptionAr: 'عريض', descriptionEn: 'Wide', sortOrder: 9 },
-      { descriptionAr: 'ضيق', descriptionEn: 'Narrow', sortOrder: 10 }
+      {
+        titleAr: 'الطول',
+        titleEn: 'Length',
+        values: [
+          { valueAr: 'طويل', valueEn: 'Long' },
+          { valueAr: 'قصير', valueEn: 'Short' }
+        ],
+        sortOrder: 1
+      },
+      {
+        titleAr: 'الحجم',
+        titleEn: 'Size',
+        values: [
+          { valueAr: 'كبير', valueEn: 'Large' },
+          { valueAr: 'وسط', valueEn: 'Medium' },
+          { valueAr: 'صغير', valueEn: 'Small' }
+        ],
+        sortOrder: 2
+      },
+      {
+        titleAr: 'مقاس الحذاء',
+        titleEn: 'Shoe Size',
+        values: [
+          { valueAr: 'نمرة 40', valueEn: 'Size 40' },
+          { valueAr: 'نمرة 42', valueEn: 'Size 42' },
+          { valueAr: 'نمرة 44', valueEn: 'Size 44' }
+        ],
+        sortOrder: 3
+      },
+      {
+        titleAr: 'العرض',
+        titleEn: 'Width',
+        values: [
+          { valueAr: 'عريض', valueEn: 'Wide' },
+          { valueAr: 'ضيق', valueEn: 'Narrow' }
+        ],
+        sortOrder: 4
+      },
+      {
+        titleAr: 'اللون',
+        titleEn: 'Color',
+        values: [
+          { valueAr: 'أحمر', valueEn: 'Red' },
+          { valueAr: 'أزرق', valueEn: 'Blue' },
+          { valueAr: 'أخضر', valueEn: 'Green' },
+          { valueAr: 'أسود', valueEn: 'Black' },
+          { valueAr: 'أبيض', valueEn: 'White' }
+        ],
+        sortOrder: 5
+      },
+      {
+        titleAr: 'المادة',
+        titleEn: 'Material',
+        values: [
+          { valueAr: 'قطن', valueEn: 'Cotton' },
+          { valueAr: 'صوف', valueEn: 'Wool' },
+          { valueAr: 'جلد', valueEn: 'Leather' },
+          { valueAr: 'بلاستيك', valueEn: 'Plastic' }
+        ],
+        sortOrder: 6
+      }
     ];
 
     // إضافة البيانات إلى قاعدة البيانات
@@ -32,12 +83,13 @@ async function addProductSpecsToStore() {
       const newSpec = new ProductSpecification({
         ...spec,
         store: STORE_ID,
-        category: null // بدون تصنيف
+        category: null, // بدون تصنيف
+        isActive: true
       });
       
       await newSpec.save();
       createdSpecs.push(newSpec);
-      console.log(`✅ Added: ${spec.descriptionAr} / ${spec.descriptionEn}`);
+      console.log(`✅ Added: ${spec.titleAr} / ${spec.titleEn} with ${spec.values.length} values`);
     }
 
     console.log(`\n🎉 Successfully added ${createdSpecs.length} specifications to store ${STORE_ID}`);

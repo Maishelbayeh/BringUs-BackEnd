@@ -7,7 +7,7 @@ mongoose.connect('mongodb://localhost:27017/bringus', {
   useUnifiedTopology: true,
 });
 
-const storeId = '686a719956a82bfcc93a2e2d';
+const storeId = '687505893fbf3098648bfe16';
 
 const createSampleProductLabels = async () => {
   try {

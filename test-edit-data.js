@@ -6,7 +6,7 @@ const testEditData = async () => {
     console.log('🔍 Testing Edit Data Structure...\n');
 
     // Test GET products API
-    const response = await axios.get('http://localhost:5000/api/meta/products?storeId=686a719956a82bfcc93a2e2d');
+    const response = await axios.get('http://localhost:5000/api/meta/products?storeId=687505893fbf3098648bfe16');
     
     if (response.data.data && response.data.data.length > 0) {
       const firstProduct = response.data.data[0];

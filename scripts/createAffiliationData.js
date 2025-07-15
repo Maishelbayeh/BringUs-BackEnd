@@ -655,7 +655,7 @@ const affiliateData = [
 // Create affiliations for the store
 const createAffiliationData = async () => {
   try {
-    const storeId = '686a719956a82bfcc93a2e2d';
+    const storeId = '687505893fbf3098648bfe16';
     
     // Check if store exists
     const store = await Store.findById(storeId);

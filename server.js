@@ -459,26 +459,26 @@ const swaggerOptions = {
             sortOrder: { type: 'number', example: 1 }
           }
         },
-        ProductVariant: {
-          type: 'object',
-          properties: {
-            _id: { type: 'string', example: '507f1f77bcf86cd799439018' },
-            productId: { $ref: '#/components/schemas/Product' },
-            name: { type: 'string', example: '128GB Black' },
-            price: { type: 'number', example: 2500 },
-            compareAtPrice: { type: 'number', example: 2700 },
-            sku: { type: 'string', example: 'SAMS22-128-BLK' },
-            barcode: { type: 'string', example: '1234567890123' },
-            stock: { type: 'number', example: 500 },
-            colors: { 
-              type: 'array', 
-              items: { type: 'string' },
-              example: ['#000000']
-            },
-            isActive: { type: 'boolean', example: true },
-            isDefault: { type: 'boolean', example: false }
-          }
-        },
+        // ProductVariant: {
+        //   type: 'object',
+        //   properties: {
+        //     _id: { type: 'string', example: '507f1f77bcf86cd799439018' },
+        //     productId: { $ref: '#/components/schemas/Product' },
+        //     name: { type: 'string', example: '128GB Black' },
+        //     price: { type: 'number', example: 2500 },
+        //     compareAtPrice: { type: 'number', example: 2700 },
+        //     sku: { type: 'string', example: 'SAMS22-128-BLK' },
+        //     barcode: { type: 'string', example: '1234567890123' },
+        //     stock: { type: 'number', example: 500 },
+        //     colors: { 
+        //       type: 'array', 
+        //       items: { type: 'string' },
+        //       example: ['#000000']
+        //     },
+        //     isActive: { type: 'boolean', example: true },
+        //     isDefault: { type: 'boolean', example: false }
+        //   }
+        // },
         Product: {
           type: 'object',
           properties: {
@@ -589,7 +589,7 @@ const swaggerOptions = {
       { name: 'Categories', description: 'Category management endpoints' },
       { name: 'ProductLabels', description: 'Product label management endpoints' },
       { name: 'ProductSpecifications', description: 'Product specification management endpoints' },
-      { name: 'ProductVariants', description: 'Product variant management endpoints' },
+      // { name: 'ProductVariants', description: 'Product variant management endpoints' },
       { name: 'Units', description: 'Product unit management endpoints' },
       { name: 'Products', description: 'Product management endpoints' }
     ]
