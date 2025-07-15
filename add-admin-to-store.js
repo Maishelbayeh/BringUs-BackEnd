@@ -69,7 +69,7 @@ async function addAdminToStore() {
           'view_analytics',
           'manage_settings'
         ],
-        isPrimaryOwner: true,
+        isPrimaryOwner: false,
         status: 'active'
       });
       console.log('✅ Owner relationship created successfully');
