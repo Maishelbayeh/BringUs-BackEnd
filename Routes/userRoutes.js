@@ -84,7 +84,24 @@ const validateUserCreation = [
   body('role')
     .optional()
     .isIn(['superadmin', 'admin', 'client'])
-    .withMessage('Role must be superadmin, admin, or client')
+    .withMessage('Role must be superadmin, admin, or client'),
+  body('store')
+    .optional()
+    .custom((value, { req }) => {
+      // Store is required for admin and client roles
+      if ((req.body.role === 'admin' || req.body.role === 'client') && !value) {
+        throw new Error('Store is required for admin and client roles');
+      }
+      return true;
+    }),
+  body('addresses')
+    .optional()
+    .isArray()
+    .withMessage('Addresses must be an array'),
+  body('status')
+    .optional()
+    .isIn(['active', 'inactive', 'banned'])
+    .withMessage('Status must be active, inactive, or banned')
 ];
 
 /**
