@@ -118,6 +118,7 @@ const userSchema = new mongoose.Schema({
       return this.role === 'client';
     }
   }
+  
 }, {
   timestamps: true
 });
