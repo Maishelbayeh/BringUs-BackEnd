@@ -3,7 +3,7 @@ const axios = require('axios');
 // Test the new product labels API endpoint
 async function testProductLabelsAPI() {
   const baseURL = 'http://localhost:3000/api/meta';
-  const storeId = '686a719956a82bfcc93a2e2d';
+  const storeId = '687505893fbf3098648bfe16';
   
   try {
     console.log('Testing Product Labels API...\n');

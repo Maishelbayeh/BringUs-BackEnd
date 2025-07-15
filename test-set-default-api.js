@@ -74,7 +74,7 @@ async function testWithoutAuth() {
 // Test the public endpoint to get delivery methods first
 async function testGetDeliveryMethods() {
   const BASE_URL = 'http://localhost:5001/api';
-  const STORE_ID = '686a719956a82bfcc93a2e2d';
+  const STORE_ID = '687505893fbf3098648bfe16';
 
   console.log('🧪 Testing Get Delivery Methods (Public)...\n');
 

@@ -3,7 +3,7 @@ const ProductSpecification = require('../Models/ProductSpecification');
 const Category = require('../Models/Category');
 
 const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4mdpc.mongodb.net/bringus?retryWrites=true&w=majority&appName=Cluster0';
-const STORE_ID = '686a719956a82bfcc93a2e2d'; // Store ID المحدد
+const STORE_ID = '687505893fbf3098648bfe16'; // Store ID المحدد
 
 async function createProductSpecificationsData() {
   try {

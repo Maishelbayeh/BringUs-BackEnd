@@ -10,7 +10,7 @@ mongoose.connect(MONGODB_URI)
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // Store ID for which we're creating delivery methods
-const STORE_ID = '686a719956a82bfcc93a2e2d';
+const STORE_ID = '687505893fbf3098648bfe16';
 
 // Delivery methods data for the store
 const deliveryMethodsData = [

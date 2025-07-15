@@ -6,7 +6,7 @@ const testAPIResponse = async () => {
     console.log('🔍 Testing API Response Structure...\n');
 
     // Test GET products API
-    const response = await axios.get('http://localhost:5000/api/meta/products?storeId=686a719956a82bfcc93a2e2d');
+    const response = await axios.get('http://localhost:5000/api/meta/products?storeId=687505893fbf3098648bfe16');
     
     console.log('✅ API Response Status:', response.status);
     console.log('📊 Total Products:', response.data.data?.length || 0);

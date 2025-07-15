@@ -1,18 +1,32 @@
 const mongoose = require('mongoose');
 
 const productSpecificationSchema = new mongoose.Schema({
-  descriptionAr: {
+  titleAr: {
     type: String,
-    required: [true, 'Arabic description is required'],
+    required: [true, 'Arabic title is required'],
     trim: true,
-    maxlength: [100, 'Arabic description cannot exceed 100 characters']
+    maxlength: [100, 'Arabic title cannot exceed 100 characters']
   },
-  descriptionEn: {
+  titleEn: {
     type: String,
-    required: [true, 'English description is required'],
+    required: [true, 'English title is required'],
     trim: true,
-    maxlength: [100, 'English description cannot exceed 100 characters']
+    maxlength: [100, 'English title cannot exceed 100 characters']
   },
+  values: [{
+    valueAr: {
+      type: String,
+      required: [true, 'Arabic value is required'],
+      trim: true,
+      maxlength: [200, 'Arabic value cannot exceed 200 characters']
+    },
+    valueEn: {
+      type: String,
+      required: [true, 'English value is required'],
+      trim: true,
+      maxlength: [200, 'English value cannot exceed 200 characters']
+    }
+  }],
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
@@ -37,8 +51,8 @@ const productSpecificationSchema = new mongoose.Schema({
 
 // Create index for search functionality
 productSpecificationSchema.index({
-  descriptionAr: 'text',
-  descriptionEn: 'text'
+  titleAr: 'text',
+  titleEn: 'text'
 });
 
 // Create index for category

@@ -3,7 +3,7 @@ const axios = require('axios');
 // Test the new delivery methods API
 async function testDeliveryAPI() {
   const BASE_URL = 'http://localhost:5001/api';
-  const STORE_ID = '686a719956a82bfcc93a2e2d';
+  const STORE_ID = '687505893fbf3098648bfe16';
 
   console.log('🧪 Testing Delivery Methods API...\n');
 

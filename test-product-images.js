@@ -15,15 +15,15 @@ async function testProductImages() {
     descriptionEn: 'Product for testing image system',
     price: 99.99,
     category: '507f1f77bcf86cd799439011', // Example ObjectId
-    store: '686a719956a82bfcc93a2e2d',     // Your store ID
+    store: '687505893fbf3098648bfe16',     // Your store ID
     unit: '507f1f77bcf86cd799439013',      // Example ObjectId
     availableQuantity: 10,
     stock: 10,
-    mainImage: 'https://your-cloudflare-domain.com/products/686a719956a82bfcc93a2e2d/main/main-image.jpg',
+    mainImage: 'https://your-cloudflare-domain.com/products/687505893fbf3098648bfe16/main/main-image.jpg',
     images: [
-      'https://your-cloudflare-domain.com/products/686a719956a82bfcc93a2e2d/gallery/image1.jpg',
-      'https://your-cloudflare-domain.com/products/686a719956a82bfcc93a2e2d/gallery/image2.jpg',
-      'https://your-cloudflare-domain.com/products/686a719956a82bfcc93a2e2d/gallery/image3.jpg'
+      'https://your-cloudflare-domain.com/products/687505893fbf3098648bfe16/gallery/image1.jpg',
+      'https://your-cloudflare-domain.com/products/687505893fbf3098648bfe16/gallery/image2.jpg',
+      'https://your-cloudflare-domain.com/products/687505893fbf3098648bfe16/gallery/image3.jpg'
     ],
     colors: [
       ['#000000'],
@@ -61,7 +61,7 @@ async function testProductImages() {
     descriptionEn: 'Product with invalid images',
     price: 50,
     category: '507f1f77bcf86cd799439011',
-    store: '686a719956a82bfcc93a2e2d',
+    store: '687505893fbf3098648bfe16',
     unit: '507f1f77bcf86cd799439013',
     availableQuantity: 10,
     stock: 10,

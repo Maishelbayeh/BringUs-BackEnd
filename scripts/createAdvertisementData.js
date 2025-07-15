@@ -9,7 +9,7 @@ mongoose.connect(MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB Atlas'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
-const storeId = '686a719956a82bfcc93a2e2d';
+const storeId = '687505893fbf3098648bfe16';
 
 const advertisementData = [
   {

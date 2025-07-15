@@ -12,9 +12,9 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mais_helbayeh:ojTOYKE
   useUnifiedTopology: true,
 });
 
-const storeId = '686a719956a82bfcc93a2e2d';
+const storeId = '687505893fbf3098648bfe16';
 
-// Complete product data with all fields
+// Complete product data with all fields - Updated to match new structure
 const completeProducts = [
   {
     // Basic Information
@@ -28,8 +28,8 @@ const completeProducts = [
     compareAtPrice: 99.99,
     costPrice: 45.50,
     
-    // Identification
-    barcode: '1234567890123',
+    // Identification - Updated to use barcodes array
+    barcodes: ['1234567890123', 'SHIRT001'],
     
     // Store and Category
     store: storeId,
@@ -65,6 +65,10 @@ const completeProducts = [
     isOnSale: false,
     salePercentage: 0,
     
+    // Variants
+    hasVariants: false,
+    variants: [],
+    
     // Attributes and Specifications
     attributes: [
       { name: 'Material', value: 'Cotton' },
@@ -81,15 +85,12 @@ const completeProducts = [
       height: 5
     },
     
-    // Colors
+    // Colors - Updated to match new structure
     colors: [
       ['#000000'], // Black
       ['#FFFFFF'], // White
       ['#0000FF']  // Blue
     ],
-    
-    // Tags
-    tags: ['shirt', 'cotton', 'classic', 'casual'],
     
     // Ratings and Reviews
     rating: 4.5,
@@ -118,7 +119,7 @@ const completeProducts = [
     costPrice: 80.25,
     
     // Identification
-    barcode: '1234567890124',
+    barcodes: ['1234567890124', 'JEANS001'],
     
     // Store and Category
     store: storeId,
@@ -153,6 +154,10 @@ const completeProducts = [
     isOnSale: true,
     salePercentage: 20,
     
+    // Variants
+    hasVariants: false,
+    variants: [],
+    
     // Attributes and Specifications
     attributes: [
       { name: 'Material', value: 'Denim' },
@@ -175,9 +180,6 @@ const completeProducts = [
       ['#8B4513'], // Saddle Brown
       ['#000000']  // Black
     ],
-    
-    // Tags
-    tags: ['jeans', 'denim', 'modern', 'casual'],
     
     // Ratings and Reviews
     rating: 4.2,
@@ -206,7 +208,7 @@ const completeProducts = [
     costPrice: 120.00,
     
     // Identification
-    barcode: '1234567890125',
+    barcodes: ['1234567890125', 'SHOES001'],
     
     // Store and Category
     store: storeId,
@@ -243,17 +245,17 @@ const completeProducts = [
     isOnSale: false,
     salePercentage: 0,
     
+    // Variants
+    hasVariants: false,
+    variants: [],
+    
     // Attributes and Specifications
     attributes: [
       { name: 'Material', value: 'Mesh & Rubber' },
       { name: 'Type', value: 'Running Shoes' },
       { name: 'Sole', value: 'Rubber Outsole' }
     ],
-    specifications: [
-      { name: 'Weight', value: '300g' },
-      { name: 'Care', value: 'Wipe with damp cloth' },
-      { name: 'Origin', value: 'Made in China' }
-    ],
+    specifications: [], // Will be populated with ProductSpecification ObjectIds
     
     // Physical Properties
     weight: 0.3,
@@ -269,9 +271,6 @@ const completeProducts = [
       ['#000000', '#FFFFFF'], // Black with White
       ['#0000FF', '#FFFF00']  // Blue with Yellow
     ],
-    
-    // Tags
-    tags: ['shoes', 'sports', 'running', 'comfortable'],
     
     // Ratings and Reviews
     rating: 4.8,
@@ -300,7 +299,7 @@ const completeProducts = [
     costPrice: 200.00,
     
     // Identification
-    barcode: '1234567890126',
+    barcodes: ['1234567890126', 'WATCH001'],
     
     // Store and Category
     store: storeId,
@@ -335,17 +334,17 @@ const completeProducts = [
     isOnSale: true,
     salePercentage: 25,
     
+    // Variants
+    hasVariants: false,
+    variants: [],
+    
     // Attributes and Specifications
     attributes: [
       { name: 'Material', value: 'Stainless Steel' },
       { name: 'Movement', value: 'Quartz' },
       { name: 'Water Resistance', value: '50m' }
     ],
-    specifications: [
-      { name: 'Weight', value: '80g' },
-      { name: 'Care', value: 'Clean with soft cloth' },
-      { name: 'Origin', value: 'Made in Switzerland' }
-    ],
+    specifications: [], // Will be populated with ProductSpecification ObjectIds
     
     // Physical Properties
     weight: 0.08,
@@ -361,9 +360,6 @@ const completeProducts = [
       ['#FFD700'], // Gold
       ['#000000']  // Black
     ],
-    
-    // Tags
-    tags: ['watch', 'elegant', 'classic', 'formal'],
     
     // Ratings and Reviews
     rating: 4.6,
@@ -392,7 +388,7 @@ const completeProducts = [
     costPrice: 100.00,
     
     // Identification
-    barcode: '1234567890127',
+    barcodes: ['1234567890127', 'BAG001'],
     
     // Store and Category
     store: storeId,
@@ -428,6 +424,10 @@ const completeProducts = [
     isOnSale: false,
     salePercentage: 0,
     
+    // Variants
+    hasVariants: false,
+    variants: [],
+    
     // Attributes and Specifications
     attributes: [
       { name: 'Material', value: 'Genuine Leather' },
@@ -450,9 +450,6 @@ const completeProducts = [
       ['#000000'], // Black
       ['#800020']  // Burgundy
     ],
-    
-    // Tags
-    tags: ['bag', 'leather', 'luxury', 'elegant'],
     
     // Ratings and Reviews
     rating: 4.4,
@@ -561,7 +558,7 @@ async function createCompleteProductData() {
     console.log(`✅ Found ${productSpecifications.length} product specifications for store`);
     
     if (productSpecifications.length === 0) {
-      console.log('⚠️ No product specifications found. Please run createProductSpecificationsData.js first.');
+      console.log('⚠️ No product specifications found. Please run addProductSpecsToStore.js first.');
     }
     
     // Clear ALL existing products for this store
@@ -608,7 +605,7 @@ async function createCompleteProductData() {
     createdProducts.forEach((product, index) => {
       console.log(`\n${index + 1}. ${product.nameEn} (${product.nameAr}):`);
       console.log(`   Price: $${product.price}`);
-      console.log(`   Barcode: ${product.barcode}`);
+      console.log(`   Barcodes: ${product.barcodes.join(', ')}`);
       console.log(`   Colors: ${product.colorOptionsCount} options`);
       console.log(`   Stock: ${product.stock}`);
       console.log(`   Rating: ${product.rating}/5 (${product.numReviews} reviews)`);
@@ -623,7 +620,7 @@ async function createCompleteProductData() {
     console.log(`✅ Unit ID: ${testUnit._id}`);
     console.log(`✅ Product Labels: ${productLabels.length} labels created`);
     console.log(`✅ Total Products: ${createdProducts.length}`);
-    console.log(`✅ All products include complete data with all fields`);
+    console.log(`✅ All products include complete data with new structure`);
     
     return createdProducts;
     

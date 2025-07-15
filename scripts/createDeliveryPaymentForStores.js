@@ -2,7 +2,7 @@
  * Create Delivery and Payment Data for Specific Stores
  * 
  * This script creates delivery and payment methods for three specific stores:
- * - Store 1: 686a719956a82bfcc93a2e2d
+ * - Store 1: 687505893fbf3098648bfe16
  * - Store 2: 686a719a56a82bfcc93a2e32  
  * - Store 3: 686a42835d3be132500ac5f4
  * 
@@ -32,7 +32,7 @@ mongoose.connect(MONGODB_URI, {
 
 // Store IDs
 const STORE_IDS = {
-  STORE_1: '686a719956a82bfcc93a2e2d',
+  STORE_1: '687505893fbf3098648bfe16',
   STORE_2: '686a719a56a82bfcc93a2e32',
   STORE_3: '686a42835d3be132500ac5f4'
 };

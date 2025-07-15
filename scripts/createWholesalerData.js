@@ -231,7 +231,7 @@ const main = async () => {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4mdpc.mongodb.net/bringus?retryWrites=true&w=majority&appName=Cluster0');
     
     // Create wholesaler data for specific store
-    const storeId = '686a719956a82bfcc93a2e2d';
+    const storeId = '687505893fbf3098648bfe16';
     
     // Check if store exists
     const store = await Store.findById(storeId);

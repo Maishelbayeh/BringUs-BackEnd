@@ -37,18 +37,16 @@ const productSchema = new mongoose.Schema({
     min: [0, 'Cost price cannot be negative']
   },
 
-  barcode: {
+  barcodes: [{
     type: String,
-    trim: true,
-    unique: true,
-    sparse: true,
-    index: true
-  },
+    trim: true
+  }],
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
     required: [true, 'Product category is required']
   },
+
   store: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Store',
@@ -90,6 +88,16 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // Flag to indicate if product has variants
+  hasVariants: {
+    type: Boolean,
+    default: false
+  },
+ 
+  variants: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product'
+  }],
   attributes: [{
     name: {
       type: String,
@@ -134,10 +142,7 @@ const productSchema = new mongoose.Schema({
     }
   },
   
-  tags: [{
-    type: String,
-    trim: true
-  }],
+
   // Product colors - array of color arrays
   // Each inner array represents a color option (can be single color or multiple colors)
   // Example: [['#000000'], ['#FFFFFF', '#FF0000']] - first option is black only, second is white+red
@@ -210,9 +215,7 @@ productSchema.index({
   nameAr: 'text',
   nameEn: 'text',
   descriptionAr: 'text',
-  descriptionEn: 'text',
-  tags: 'text',
-  brand: 'text'
+  descriptionEn: 'text'
 });
 
 // Create index for category
@@ -238,6 +241,15 @@ productSchema.index({ productOrder: 1 });
 
 // Create index for colors
 productSchema.index({ colors: 1 });
+
+// Create index for barcodes
+productSchema.index({ barcodes: 1 });
+
+// Create index for hasVariants
+productSchema.index({ hasVariants: 1 });
+
+// Create index for variants (for parent products)
+productSchema.index({ variants: 1 });
 
 // Create indexes for store isolation
 productSchema.index({ store: 1 });
@@ -280,6 +292,31 @@ productSchema.virtual('allColors').get(function() {
 // Virtual for color options count
 productSchema.virtual('colorOptionsCount').get(function() {
   return this.colors ? this.colors.length : 0;
+});
+
+// Virtual for total variants count
+productSchema.virtual('variantsCount').get(function() {
+  return this.variants ? this.variants.length : 0;
+});
+
+// Virtual for active variants count
+productSchema.virtual('activeVariantsCount').get(function() {
+  if (!this.variants || !Array.isArray(this.variants)) return 0;
+  return this.variants.filter(variant => variant.isActive).length;
+});
+
+// Virtual for total stock including variants
+productSchema.virtual('totalStock').get(function() {
+  let total = this.stock || 0;
+  if (this.variants && Array.isArray(this.variants) && this.variants.length > 0) {
+    total += this.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0);
+  }
+  return total;
+});
+
+// Virtual to check if product is a parent
+productSchema.virtual('isParent').get(function() {
+  return this.hasVariants && this.variants && this.variants.length > 0;
 });
 
 // Ensure virtual fields are serialized

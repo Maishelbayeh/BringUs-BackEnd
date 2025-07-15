@@ -10,7 +10,8 @@ exports.getAll = async (req, res) => {
       .populate('productLabels')
       .populate('unit')
       .populate('store', 'name domain')
-      .populate('specifications');
+      .populate('specifications')
+      .populate('variants');
       
     res.json({
       success: true,
@@ -40,7 +41,8 @@ exports.getById = async (req, res) => {
       .populate('colors')
       .populate('images')
       .populate('mainImage')
-      .populate('store', 'name domain');
+      .populate('store', 'name domain')
+      .populate('variants');
       
     if (!product) {
       return res.status(404).json({ 
@@ -65,7 +67,7 @@ exports.create = async (req, res) => {
   try {
     console.log('Create product - Request body:', req.body);
     
-    const { nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, storeId, barcode } = req.body;
+    const { nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, storeId, barcodes, hasVariants } = req.body;
     
     if (!nameAr || !nameEn || !descriptionAr || !descriptionEn || !price || !category || !unit) {
       return res.status(400).json({ 
@@ -92,22 +94,29 @@ exports.create = async (req, res) => {
       });
     }
 
-    // Check if barcode already exists (if provided)
-    if (barcode) {
-      const existingProduct = await Product.findOne({ barcode });
-      if (existingProduct) {
-        return res.status(400).json({ 
-          success: false,
-          error: 'Barcode already exists',
-          message: 'A product with this barcode already exists'
-        });
+    // Check if barcodes already exist (if provided)
+    if (barcodes && Array.isArray(barcodes) && barcodes.length > 0) {
+      for (const barcode of barcodes) {
+        const existingProduct = await Product.findOne({ barcodes: barcode });
+        if (existingProduct) {
+          return res.status(400).json({ 
+            success: false,
+            error: 'Barcode already exists',
+            message: `A product with barcode "${barcode}" already exists`
+          });
+        }
       }
     }
+
+
 
     // Add store to product data
     const productData = {
       ...req.body,
-      store: storeId
+      store: storeId,
+      barcodes: barcodes || [],
+      hasVariants: hasVariants || false,
+      variants: [] // Will be populated when variants are added
     };
 
     // معالجة الصور: حفظ الروابط مباشرة كـ strings
@@ -124,13 +133,15 @@ exports.create = async (req, res) => {
     const product = new Product(productData);
     await product.save();
     
+
     
     const populatedProduct = await Product.findById(product._id)
       .populate('category')
       .populate('productLabels')
       .populate('specifications')
       .populate('unit')
-      .populate('store', 'name domain');
+      .populate('store', 'name domain')
+      .populate('variants');
       
       
     res.status(201).json({
@@ -165,7 +176,7 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { storeId } = req.body;
+    const { storeId, barcodes, hasVariants, ...updateData } = req.body;
     
     console.log('Update product - ID:', id);
     console.log('Update product - Request body:', req.body);
@@ -179,9 +190,24 @@ exports.update = async (req, res) => {
       });
     }
 
+    // Check if barcodes already exist (if provided)
+    if (barcodes && Array.isArray(barcodes) && barcodes.length > 0) {
+      for (const barcode of barcodes) {
+        const existingProduct = await Product.findOne({ 
+          barcodes: barcode, 
+          _id: { $ne: id } 
+        });
+        if (existingProduct) {
+          return res.status(400).json({ 
+            success: false,
+            error: 'Barcode already exists',
+            message: `A product with barcode "${barcode}" already exists`
+          });
+        }
+      }
+    }
+
     // معالجة الصور: حفظ الروابط مباشرة كـ strings
-    const updateData = { ...req.body };
-    
     if (req.body.mainImage && typeof req.body.mainImage === 'string') {
       updateData.mainImage = req.body.mainImage;
     }
@@ -200,7 +226,8 @@ exports.update = async (req, res) => {
      .populate('productLabels')
      .populate('specifications')
      .populate('unit')
-     .populate('store', 'name domain');
+     .populate('store', 'name domain')
+     .populate('variants');
      
     if (!product) {
       return res.status(404).json({ 
@@ -241,14 +268,161 @@ exports.delete = async (req, res) => {
   try {
     const query = addStoreFilter(req, { _id: req.params.id });
     
-    const product = await Product.findOneAndDelete(query);
+    const product = await Product.findOne(query);
     if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Product not found' 
+      });
     }
+
+
+
+    // Delete the product
+    await Product.findByIdAndDelete(product._id);
     
-    res.json({ message: 'Product deleted successfully' });
+    res.json({ 
+      success: true,
+      message: 'Product deleted successfully' 
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+// Create variant product
+exports.createVariant = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { storeId, ...variantData } = req.body;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in request body'
+      });
+    }
+
+    // Check if parent product exists and belongs to store
+    const parentProduct = await Product.findOne({ _id: productId, store: storeId });
+    if (!parentProduct) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Parent product not found' 
+      });
+    }
+
+    // Validate required fields for variant
+    if (!variantData.nameAr || !variantData.nameEn || !variantData.price) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Missing required variant fields',
+        details: {
+          nameAr: !variantData.nameAr ? 'Arabic name is required' : null,
+          nameEn: !variantData.nameEn ? 'English name is required' : null,
+          price: !variantData.price ? 'Price is required' : null
+        }
+      });
+    }
+
+    // Check variant barcodes uniqueness
+    if (variantData.barcodes && Array.isArray(variantData.barcodes)) {
+      for (const barcode of variantData.barcodes) {
+        const existingProduct = await Product.findOne({ barcodes: barcode });
+        if (existingProduct) {
+          return res.status(400).json({ 
+            success: false,
+            error: 'Variant barcode already exists',
+            message: `A product with barcode "${barcode}" already exists`
+          });
+        }
+      }
+    }
+
+    // Create variant product
+    const variantProduct = new Product({
+      ...variantData,
+      store: storeId,
+      category: parentProduct.category, // Inherit category from parent
+      unit: parentProduct.unit, // Inherit unit from parent
+      hasVariants: false, // Variants cannot have their own variants
+      variants: []
+    });
+
+    await variantProduct.save();
+
+    // Add variant to parent's variants array
+    await Product.findByIdAndUpdate(productId, {
+      $push: { variants: variantProduct._id },
+      $set: { hasVariants: true }
+    });
+
+    const populatedVariant = await Product.findById(variantProduct._id)
+      .populate('category')
+      .populate('productLabels')
+      .populate('specifications')
+      .populate('unit')
+      .populate('store', 'name domain');
+
+    res.status(201).json({
+      success: true,
+      message: 'Variant created successfully',
+      data: populatedVariant
+    });
+  } catch (err) {
+    console.error('Create variant error:', err);
+    res.status(400).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+// Get variants of a product
+exports.getVariants = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in query parameters'
+      });
+    }
+
+    // Check if product exists and belongs to store
+    const product = await Product.findOne({ _id: productId, store: storeId });
+    if (!product) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Product not found' 
+      });
+    }
+
+    // Get variants with full population
+    const variants = await Product.find({ _id: { $in: product.variants } })
+      .populate('category')
+      .populate('productLabels')
+      .populate('specifications')
+      .populate('unit')
+      .populate('store', 'name domain');
+
+    res.json({
+      success: true,
+      data: variants,
+      count: variants.length
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
   }
 };
 
@@ -261,11 +435,19 @@ exports.getByCategory = async (req, res) => {
     const products = await Product.find(query)
       .populate('category')
       .populate('productLabel')
-      .populate('unit');
+      .populate('unit')
+      .populate('variants');
       
-    res.json(products);
+    res.json({
+      success: true,
+      data: products,
+      count: products.length
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
   }
 };
 
@@ -278,6 +460,8 @@ exports.getWithFilters = async (req, res) => {
       maxPrice, 
       isActive, 
       isFeatured,
+      hasVariants,
+      isVariant,
       search,
       sortBy = 'createdAt',
       sortOrder = 'desc',
@@ -291,6 +475,8 @@ exports.getWithFilters = async (req, res) => {
     if (category) query.category = category;
     if (isActive !== undefined) query.isActive = isActive === 'true';
     if (isFeatured !== undefined) query.isFeatured = isFeatured === 'true';
+    if (hasVariants !== undefined) query.hasVariants = hasVariants === 'true';
+
     if (minPrice || maxPrice) {
       query.price = {};
       if (minPrice) query.price.$gte = parseFloat(minPrice);
@@ -307,6 +493,7 @@ exports.getWithFilters = async (req, res) => {
       .populate('category')
       .populate('productLabel')
       .populate('unit')
+      .populate('variants')
       .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -314,7 +501,8 @@ exports.getWithFilters = async (req, res) => {
     const total = await Product.countDocuments(query);
     
     res.json({
-      products,
+      success: true,
+      data: products,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -323,6 +511,58 @@ exports.getWithFilters = async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+// Get products with variants
+exports.getWithVariants = async (req, res) => {
+  try {
+    const query = addStoreFilter(req, { hasVariants: true });
+    
+    const products = await Product.find(query)
+      .populate('category')
+      .populate('productLabels')
+      .populate('unit')
+      .populate('store', 'name domain')
+      .populate('variants');
+      
+    res.json({
+      success: true,
+      data: products,
+      count: products.length
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+// Get variant products
+exports.getVariantsOnly = async (req, res) => {
+  try {
+    const query = addStoreFilter(req, { hasVariants: true });
+    
+    const variants = await Product.find(query)
+      .populate('category')
+      .populate('productLabels')
+      .populate('unit')
+      .populate('store', 'name domain');
+      
+    res.json({
+      success: true,
+      data: variants,
+      count: variants.length
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
   }
 }; 
