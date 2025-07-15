@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const StoreController = require('../Controllers/StoreController');
 const { protect, authorize, isActive } = require('../middleware/auth');
+const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 const { 
   hasStoreAccess, 
   hasPermission, 
@@ -787,5 +788,253 @@ router.put('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('man
  *               $ref: '#/components/schemas/Error'
  */
 router.delete('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('manage_users'), StoreController.deleteCustomer);
+
+/**
+ * @swagger
+ * /api/stores/upload-image:
+ *   post:
+ *     summary: Upload image to Cloudflare R2
+ *     tags: [Stores]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - image
+ *               - storeId
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: "Image file to upload"
+ *               storeId:
+ *                 type: string
+ *                 example: "507f1f77bcf86cd799439012"
+ *                 description: "Store ID for organizing images"
+ *               folder:
+ *                 type: string
+ *                 example: "products"
+ *                 description: "Optional folder name (default: '')"
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     url:
+ *                       type: string
+ *                       example: "https://pub-237eec0793554bacb7debfc287be3b32.r2.dev/products/1234567890-123456789.png"
+ *                     key:
+ *                       type: string
+ *                       example: "products/1234567890-123456789.png"
+ *       400:
+ *         description: Invalid file or missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Upload failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post('/upload-image', protect, isActive, upload.single('image'), async (req, res) => {
+  try {
+    // التحقق من وجود الملف
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No image file provided'
+      });
+    }
+
+    // التحقق من وجود storeId
+    if (!req.body.storeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Store ID is required'
+      });
+    }
+
+    const { storeId } = req.body;
+    const folder = req.body.folder || 'general'; // مجلد افتراضي إذا لم يتم تحديده
+
+    // رفع الصورة إلى Cloudflare
+    const result = await uploadToCloudflare(
+      req.file.buffer,
+      req.file.originalname,
+      `${storeId}/${folder}`
+    );
+
+    console.log('✅ Image uploaded successfully:', result);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        url: result.url,
+        key: result.key,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error uploading image:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload image',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/stores/upload-multiple-images:
+ *   post:
+ *     summary: Upload multiple images to Cloudflare R2
+ *     tags: [Stores]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - images
+ *               - storeId
+ *             properties:
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: "Multiple image files to upload"
+ *               storeId:
+ *                 type: string
+ *                 example: "507f1f77bcf86cd799439012"
+ *                 description: "Store ID for organizing images"
+ *               folder:
+ *                 type: string
+ *                 example: "products"
+ *                 description: "Optional folder name (default: '')"
+ *     responses:
+ *       200:
+ *         description: Images uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       url:
+ *                         type: string
+ *                         example: "https://pub-237eec0793554bacb7debfc287be3b32.r2.dev/products/1234567890-123456789.png"
+ *                       key:
+ *                         type: string
+ *                         example: "products/1234567890-123456789.png"
+ *                       originalName:
+ *                         type: string
+ *                         example: "product1.png"
+ *                       size:
+ *                         type: number
+ *                         example: 1024000
+ *                       mimetype:
+ *                         type: string
+ *                         example: "image/png"
+ *       400:
+ *         description: Invalid files or missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Upload failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post('/upload-multiple-images', protect, isActive, upload.array('images', 10), async (req, res) => {
+  try {
+    // التحقق من وجود الملفات
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No image files provided'
+      });
+    }
+
+    // التحقق من وجود storeId
+    if (!req.body.storeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Store ID is required'
+      });
+    }
+
+    const { storeId } = req.body;
+    const folder = req.body.folder || 'general'; // مجلد افتراضي إذا لم يتم تحديده
+
+    // رفع جميع الصور
+    const uploadPromises = req.files.map(file => 
+      uploadToCloudflare(
+        file.buffer,
+        file.originalname,
+        `${storeId}/${folder}`
+      )
+    );
+
+    const results = await Promise.all(uploadPromises);
+
+    // تنسيق النتائج
+    const formattedResults = results.map((result, index) => ({
+      url: result.url,
+      key: result.key,
+      originalName: req.files[index].originalname,
+      size: req.files[index].size,
+      mimetype: req.files[index].mimetype
+    }));
+
+    console.log('✅ Multiple images uploaded successfully:', formattedResults.length);
+
+    res.status(200).json({
+      success: true,
+      data: formattedResults
+    });
+
+  } catch (error) {
+    console.error('❌ Error uploading multiple images:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload images',
+      details: error.message
+    });
+  }
+});
 
 module.exports = router; 
