@@ -277,14 +277,14 @@ const getStoreSliderById = async (req, res) => {
 const createStoreSlider = async (req, res) => {
   try {
     // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
+    // const errors = validationResult(req);
+    // if (!errors.isEmpty()) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'Validation failed',
+    //     errors: errors.array()
+    //   });
+    // }
     
 
     // Add store to the request body
