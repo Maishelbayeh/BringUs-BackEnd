@@ -285,6 +285,7 @@ const createStoreSlider = async (req, res) => {
         errors: errors.array()
       });
     }
+    
 
     // Add store to the request body
     const sliderData = {
