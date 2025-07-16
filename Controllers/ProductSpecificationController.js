@@ -121,7 +121,7 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { titleAr, titleEn, values, category, storeId } = req.body;
+    const { titleAr, titleEn, values, category, storeId, isActive } = req.body;
     
     if (!storeId) {
       return res.status(400).json({ 
@@ -148,7 +148,7 @@ exports.update = async (req, res) => {
       }
     }
 
-    const updateData = { titleAr, titleEn, values, category };
+    const updateData = { titleAr, titleEn, values, category , isActive};
     
     const spec = await ProductSpecification.findOneAndUpdate(
       { _id: id, store: storeId }, 
