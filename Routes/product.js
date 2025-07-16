@@ -3,6 +3,7 @@ const { body, validationResult, query } = require('express-validator');
 const Product = require('../Models/Product');
 const Category = require('../Models/Category');
 const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
 const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 const ProductController = require('../Controllers/ProductController');
 
@@ -577,135 +578,14 @@ router.get('/:id', [
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', [
-  body('nameAr').trim().isLength({ min: 1, max: 100 }).withMessage('Arabic product name is required and must be less than 100 characters'),
-  body('nameEn').trim().isLength({ min: 1, max: 100 }).withMessage('English product name is required and must be less than 100 characters'),
-  body('descriptionAr').trim().isLength({ min: 1, max: 2000 }).withMessage('Arabic description is required and must be less than 2000 characters'),
-  body('descriptionEn').trim().isLength({ min: 1, max: 2000 }).withMessage('English description is required and must be less than 2000 characters'),
-  body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number'),
-  body('category').isMongoId().withMessage('Valid category ID is required'),
-  body('unit').isMongoId().withMessage('Valid unit ID is required'),
-  body('storeId').isMongoId().withMessage('Valid store ID is required'),
-  body('availableQuantity').optional().isInt({ min: 0 }).withMessage('Available quantity must be a non-negative integer'),
-  body('stock').optional().isInt({ min: 0 }).withMessage('Stock must be a non-negative integer'),
-  body('productLabels').optional().isArray().withMessage('Product labels must be an array'),
-  body('colors').optional().isArray().withMessage('Colors must be an array'),
-  body('specifications').optional().isArray().withMessage('Specifications must be an array')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
-
-    const {
-      nameAr,
-      nameEn,
-      descriptionAr,
-      descriptionEn,
-      price,
-      category,
-      unit,
-      storeId,
-      availableQuantity = 0,
-      stock = 0,
-      productLabels = [],
-      colors = [],
-      images = [],
-      mainImage,
-      barcode,
-      compareAtPrice,
-      costPrice,
-      productOrder = 0,
-      visibility = true,
-      isActive = true,
-      isFeatured = false,
-      isOnSale = false,
-      salePercentage = 0,
-      attributes = [],
-      specifications = [],
-      tags = [],
-      weight,
-      dimensions,
-      rating = 0,
-      numReviews = 0,
-      views = 0,
-      soldCount = 0,
-      seo
-    } = req.body;
-
-    // Check if category exists
-    const categoryExists = await Category.findById(category);
-    if (!categoryExists) {
-      return res.status(400).json({
-        success: false,
-        message: 'Category not found'
-      });
-    }
-
-    // Create product data
-    const productData = {
-      nameAr,
-      nameEn,
-      descriptionAr,
-      descriptionEn,
-      price,
-      category,
-      unit,
-      store: storeId,
-      availableQuantity,
-      stock,
-      productLabels,
-      colors,
-      images,
-      mainImage,
-      barcode,
-      compareAtPrice,
-      costPrice,
-      productOrder,
-      visibility,
-      isActive,
-      isFeatured,
-      isOnSale,
-      salePercentage,
-      attributes,
-      specifications,
-      tags,
-      weight,
-      dimensions,
-      rating,
-      numReviews,
-      views,
-      soldCount,
-      seo
-    };
-
-    const product = await Product.create(productData);
-
-    const populatedProduct = await Product.findById(product._id)
-      .populate('category', 'nameAr nameEn')
-      .populate('productLabels', 'nameAr nameEn color')
-      .populate('specifications', 'descriptionAr descriptionEn')
-      .populate('unit', 'nameAr nameEn symbol')
-      .populate('store', 'name domain');
-
-    res.status(201).json({
-      success: true,
-      message: 'Product created successfully',
-      data: populatedProduct
-    });
-  } catch (error) {
-    console.error('Create product error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error creating product',
-      error: error.message
-    });
-  }
-});
+router.post(
+  '/',
+  upload.fields([
+    { name: 'mainImage', maxCount: 1 },
+    { name: 'images', maxCount: 10 }
+  ]),
+  ProductController.create
+);
 
 /**
  * @swagger
@@ -951,87 +831,14 @@ router.post('/', [
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', [
-  body('nameAr').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Arabic product name must be less than 100 characters'),
-  body('nameEn').optional().trim().isLength({ min: 1, max: 100 }).withMessage('English product name must be less than 100 characters'),
-  body('descriptionAr').optional().trim().isLength({ min: 1, max: 2000 }).withMessage('Arabic description must be less than 2000 characters'),
-  body('descriptionEn').optional().trim().isLength({ min: 1, max: 2000 }).withMessage('English description must be less than 2000 characters'),
-  body('price').optional().isFloat({ min: 0 }).withMessage('Price must be a positive number'),
-  body('category').optional().isMongoId().withMessage('Valid category ID is required'),
-  body('unit').optional().isMongoId().withMessage('Valid unit ID is required'),
-  body('storeId').optional().isMongoId().withMessage('Valid store ID is required'),
-  body('availableQuantity').optional().isInt({ min: 0 }).withMessage('Available quantity must be a non-negative integer'),
-  body('stock').optional().isInt({ min: 0 }).withMessage('Stock must be a non-negative integer'),
-  body('productLabels').optional().isArray().withMessage('Product labels must be an array'),
-  body('colors').optional().isArray().withMessage('Colors must be an array')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
-
-    const { storeId } = req.body;
-    
-    // Build update filter
-    const filter = { _id: req.params.id };
-    if (storeId) {
-      filter.store = storeId;
-    }
-
-    const product = await Product.findOne(filter);
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    // Check if category exists if provided
-    if (req.body.category) {
-      const categoryExists = await Category.findById(req.body.category);
-      if (!categoryExists) {
-        return res.status(400).json({
-          success: false,
-          message: 'Category not found'
-        });
-      }
-    }
-
-    // Prepare update data
-    const updateData = { ...req.body };
-    if (storeId) {
-      updateData.store = storeId;
-      delete updateData.storeId;
-    }
-
-    const updatedProduct = await Product.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('category', 'nameAr nameEn')
-     .populate('productLabels', 'nameAr nameEn color')
-     .populate('specifications', 'descriptionAr descriptionEn')
-     .populate('unit', 'nameAr nameEn symbol')
-     .populate('store', 'name domain');
-
-    res.status(200).json({
-      success: true,
-      message: 'Product updated successfully',
-      data: updatedProduct
-    });
-  } catch (error) {
-    console.error('Update product error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating product',
-      error: error.message
-    });
-  }
-});
+router.put(
+  '/:id',
+  upload.fields([
+    { name: 'mainImage', maxCount: 1 },
+    { name: 'images', maxCount: 10 }
+  ]),
+  ProductController.update
+);
 
 /**
  * @swagger
