@@ -39,7 +39,16 @@ const productSchema = new mongoose.Schema({
 
   barcodes: [{
     type: String,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function(barcode) {
+        console.log('🔍 Validating barcode:', barcode);
+        const isValid = barcode && barcode.trim().length > 0;
+        console.log('🔍 Barcode validation result:', isValid);
+        return isValid;
+      },
+      message: 'Barcode cannot be empty'
+    }
   }],
   category: {
     type: mongoose.Schema.Types.ObjectId,
@@ -346,6 +355,14 @@ productSchema.virtual('isParent').get(function() {
 productSchema.set('toJSON', { virtuals: true });
 productSchema.set('toObject', { virtuals: true });
 
+// Add pre-save middleware to log barcodes
+productSchema.pre('save', function(next) {
+  console.log('🔍 Pre-save - barcodes:', this.barcodes);
+  console.log('🔍 Pre-save - barcodes type:', typeof this.barcodes);
+  console.log('🔍 Pre-save - barcodes is array:', Array.isArray(this.barcodes));
+  next();
+});
+
 productSchema.pre('remove', async function(next) {
   try {
     await mongoose.model('Like').deleteMany({ product: this._id });
@@ -353,6 +370,17 @@ productSchema.pre('remove', async function(next) {
   } catch (err) {
     next(err);
   }
+});
+
+// Add pre-findOneAndUpdate middleware to log barcodes
+productSchema.pre('findOneAndUpdate', function(next) {
+  console.log('🔍 Pre-findOneAndUpdate - update data:', this._update);
+  if (this._update.barcodes) {
+    console.log('🔍 Pre-findOneAndUpdate - barcodes:', this._update.barcodes);
+    console.log('🔍 Pre-findOneAndUpdate - barcodes type:', typeof this._update.barcodes);
+    console.log('🔍 Pre-findOneAndUpdate - barcodes is array:', Array.isArray(this._update.barcodes));
+  }
+  next();
 });
 
 module.exports = mongoose.model('Product', productSchema); 

@@ -12,6 +12,13 @@ exports.getAll = async (req, res) => {
       .populate('store', 'name domain')
       .populate('specifications')
       .populate('variants');
+    
+    // Log barcodes for debugging
+    products.forEach((product, index) => {
+      console.log(`🔍 Product ${index + 1} barcodes:`, product.barcodes);
+      console.log(`🔍 Product ${index + 1} barcodes type:`, typeof product.barcodes);
+      console.log(`🔍 Product ${index + 1} barcodes is array:`, Array.isArray(product.barcodes));
+    });
       
     res.json({
       success: true,
@@ -51,6 +58,11 @@ exports.getById = async (req, res) => {
       });
     }
     
+    // Log barcodes for debugging
+    console.log('🔍 getById - product barcodes:', product.barcodes);
+    console.log('🔍 getById - product barcodes type:', typeof product.barcodes);
+    console.log('🔍 getById - product barcodes is array:', Array.isArray(product.barcodes));
+    
     res.json({
       success: true,
       data: product
@@ -66,6 +78,10 @@ exports.getById = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     console.log('Create product - Request body:', req.body);
+    console.log('Create product - barcodes:', req.body.barcodes);
+    console.log('Create product - barcodes type:', typeof req.body.barcodes);
+    console.log('Create product - barcodes is array:', Array.isArray(req.body.barcodes));
+    console.log('Create product - barcodes length:', Array.isArray(req.body.barcodes) ? req.body.barcodes.length : 'N/A');
     console.log('Create product - specificationValues:', req.body.specificationValues);
     console.log('Create product - specifications:', req.body.specifications);
     
@@ -120,6 +136,10 @@ exports.create = async (req, res) => {
       hasVariants: hasVariants || false,
       variants: [] // Will be populated when variants are added
     };
+    
+    console.log('🔍 productData.barcodes:', productData.barcodes);
+    console.log('🔍 productData.barcodes type:', typeof productData.barcodes);
+    console.log('🔍 productData.barcodes is array:', Array.isArray(productData.barcodes));
 
     // معالجة الصور: حفظ الروابط مباشرة كـ strings
     if (req.body.mainImage && typeof req.body.mainImage === 'string') {
@@ -131,6 +151,10 @@ exports.create = async (req, res) => {
     }
     
     console.log('Create product - Final productData:', productData);
+    console.log('Create product - Final productData.barcodes:', productData.barcodes);
+    console.log('Create product - Final productData.barcodes type:', typeof productData.barcodes);
+    console.log('Create product - Final productData.barcodes is array:', Array.isArray(productData.barcodes));
+    console.log('Create product - Final productData.barcodes length:', Array.isArray(productData.barcodes) ? productData.barcodes.length : 'N/A');
 
     const product = new Product(productData);
     await product.save();
@@ -182,6 +206,10 @@ exports.update = async (req, res) => {
     
     console.log('Update product - ID:', id);
     console.log('Update product - Request body:', req.body);
+    console.log('Update product - barcodes:', req.body.barcodes);
+    console.log('Update product - barcodes type:', typeof req.body.barcodes);
+    console.log('Update product - barcodes is array:', Array.isArray(req.body.barcodes));
+    console.log('Update product - barcodes length:', Array.isArray(req.body.barcodes) ? req.body.barcodes.length : 'N/A');
     console.log('Update product - StoreId:', storeId);
     console.log('Update product - specificationValues:', req.body.specificationValues);
     console.log('Update product - specifications:', req.body.specifications);
@@ -220,7 +248,18 @@ exports.update = async (req, res) => {
       updateData.images = req.body.images.filter(img => typeof img === 'string');
     }
     
+    // إضافة الباركودات إلى updateData
+    updateData.barcodes = barcodes || [];
+    
+    console.log('🔍 updateData.barcodes:', updateData.barcodes);
+    console.log('🔍 updateData.barcodes type:', typeof updateData.barcodes);
+    console.log('🔍 updateData.barcodes is array:', Array.isArray(updateData.barcodes));
+    
     console.log('Update product - Final updateData:', updateData);
+    console.log('Update product - Final updateData.barcodes:', updateData.barcodes);
+    console.log('Update product - Final updateData.barcodes type:', typeof updateData.barcodes);
+    console.log('Update product - Final updateData.barcodes is array:', Array.isArray(updateData.barcodes));
+    console.log('Update product - Final updateData.barcodes length:', Array.isArray(updateData.barcodes) ? updateData.barcodes.length : 'N/A');
     
     const product = await Product.findOneAndUpdate(
       { _id: id, store: storeId }, 
