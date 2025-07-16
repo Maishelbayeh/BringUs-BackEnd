@@ -31,6 +31,7 @@ const techStoreCustomers = [
       url: 'https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg'
     }
   },
+  
   {
     firstName: 'فاطمة',
     lastName: 'علي',
