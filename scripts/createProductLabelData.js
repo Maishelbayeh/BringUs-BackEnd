@@ -87,28 +87,28 @@ const productLabels = [
 
 async function createProductLabelData() {
   try {
-    console.log('Starting to create product label data...');
+    //CONSOLE.log('Starting to create product label data...');
     
     // Clear existing product labels for this store
     await ProductLabel.deleteMany({ store: storeId });
-    console.log(`Cleared existing product labels for store: ${storeId}`);
+    //CONSOLE.log(`Cleared existing product labels for store: ${storeId}`);
     
     // Insert new product labels
     const createdLabels = await ProductLabel.insertMany(productLabels);
-    console.log(`Successfully created ${createdLabels.length} product labels for store: ${storeId}`);
+    //CONSOLE.log(`Successfully created ${createdLabels.length} product labels for store: ${storeId}`);
     
     // Display created labels
     createdLabels.forEach((label, index) => {
-      console.log(`${index + 1}. ${label.nameEn} (${label.nameAr}) - ${label.descriptionEn}`);
+      //CONSOLE.log(`${index + 1}. ${label.nameEn} (${label.nameAr}) - ${label.descriptionEn}`);
     });
     
-    console.log('\nProduct label data creation completed successfully!');
+    //CONSOLE.log('\nProduct label data creation completed successfully!');
     
   } catch (error) {
-    console.error('Error creating product label data:', error);
+    //CONSOLE.error('Error creating product label data:', error);
   } finally {
     mongoose.connection.close();
-    console.log('Database connection closed.');
+    //CONSOLE.log('Database connection closed.');
   }
 }
 

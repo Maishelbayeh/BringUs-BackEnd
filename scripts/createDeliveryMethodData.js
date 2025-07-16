@@ -6,8 +6,8 @@ const Store = require('../Models/Store');
 const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4mdpc.mongodb.net/bringus?retryWrites=true&w=majority&appName=Cluster0';
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+  .then(() => //CONSOLE.log('✅ Connected to MongoDB'))
+  .catch(err => //CONSOLE.error('❌ MongoDB connection error:', err));
 
 // Store ID for which we're creating delivery methods
 const STORE_ID = '687505893fbf3098648bfe16';
@@ -138,19 +138,19 @@ const deliveryMethodsData = [
 
 async function createDeliveryMethodData() {
   try {
-    console.log('🚀 Starting delivery method data creation...');
+    //CONSOLE.log('🚀 Starting delivery method data creation...');
 
     // Verify store exists
     const store = await Store.findById(STORE_ID);
     if (!store) {
-      console.error(`❌ Store with ID ${STORE_ID} not found`);
+      //CONSOLE.error(`❌ Store with ID ${STORE_ID} not found`);
       process.exit(1);
     }
-    console.log(`✅ Found store: ${store.nameEn} (${store.nameAr})`);
+    //CONSOLE.log(`✅ Found store: ${store.nameEn} (${store.nameAr})`);
 
     // Clear existing delivery methods for this store
     const deletedCount = await DeliveryMethod.deleteMany({ store: STORE_ID });
-    console.log(`🗑️  Deleted ${deletedCount.deletedCount} existing delivery methods`);
+    //CONSOLE.log(`🗑️  Deleted ${deletedCount.deletedCount} existing delivery methods`);
 
     // Create new delivery methods
     const deliveryMethods = deliveryMethodsData.map(method => ({
@@ -159,26 +159,26 @@ async function createDeliveryMethodData() {
     }));
 
     const createdMethods = await DeliveryMethod.insertMany(deliveryMethods);
-    console.log(`✅ Created ${createdMethods.length} delivery methods`);
+    //CONSOLE.log(`✅ Created ${createdMethods.length} delivery methods`);
 
     // Display created methods
-    console.log('\n📋 Created Delivery Methods:');
+    //CONSOLE.log('\n📋 Created Delivery Methods:');
     createdMethods.forEach((method, index) => {
-      console.log(`${index + 1}. ${method.locationEn} (${method.locationAr})`);
-      console.log(`   Price: ${method.price} ILS`);
-      console.log(`   WhatsApp: ${method.whatsappNumber}`);
-      console.log(`   Estimated Days: ${method.estimatedDays}`);
-      console.log(`   Default: ${method.isDefault ? 'Yes' : 'No'}`);
-      console.log(`   Active: ${method.isActive ? 'Yes' : 'No'}`);
-      console.log(`   Priority: ${method.priority}`);
-      console.log('');
+      //CONSOLE.log(`${index + 1}. ${method.locationEn} (${method.locationAr})`);
+      //CONSOLE.log(`   Price: ${method.price} ILS`);
+      //CONSOLE.log(`   WhatsApp: ${method.whatsappNumber}`);
+      //CONSOLE.log(`   Estimated Days: ${method.estimatedDays}`);
+      //CONSOLE.log(`   Default: ${method.isDefault ? 'Yes' : 'No'}`);
+      //CONSOLE.log(`   Active: ${method.isActive ? 'Yes' : 'No'}`);
+      //CONSOLE.log(`   Priority: ${method.priority}`);
+      //CONSOLE.log('');
     });
 
-    console.log('🎉 Delivery method data creation completed successfully!');
+    //CONSOLE.log('🎉 Delivery method data creation completed successfully!');
     process.exit(0);
 
   } catch (error) {
-    console.error('❌ Error creating delivery method data:', error);
+    //CONSOLE.error('❌ Error creating delivery method data:', error);
     process.exit(1);
   }
 }

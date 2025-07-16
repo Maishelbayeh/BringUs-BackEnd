@@ -81,7 +81,7 @@ const getTermsByStore = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Get terms by store error:', err);
+    //CONSOLE.error('Get terms by store error:', err);
     return error(res, { message: 'Failed to fetch terms & conditions', statusCode: 500 });
   }
 };
@@ -114,7 +114,7 @@ const createTerms = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Create terms error:', err);
+    //CONSOLE.error('Create terms error:', err);
     
     if (err.name === 'ValidationError') {
       const errors = Object.values(err.errors).map(e => e.message);
@@ -158,7 +158,7 @@ const updateTerms = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Update terms error:', err);
+    //CONSOLE.error('Update terms error:', err);
     
     if (err.name === 'ValidationError') {
       const errors = Object.values(err.errors).map(e => e.message);

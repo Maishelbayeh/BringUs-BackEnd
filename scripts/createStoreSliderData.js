@@ -6,8 +6,8 @@ const Store = require('../Models/Store');
 const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4mdpc.mongodb.net/bringus?retryWrites=true&w=majority&appName=Cluster0';
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB Atlas'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+  .then(() => //CONSOLE.log('✅ Connected to MongoDB Atlas'))
+  .catch(err => //CONSOLE.error('❌ MongoDB connection error:', err));
 
 // Store slider data for TechStore
 const techStoreSliders = [
@@ -107,14 +107,14 @@ const fashionStoreSliders = [
 
 async function createStoreSliderData() {
   try {
-    console.log('🚀 Creating store slider test data...\n');
+    //CONSOLE.log('🚀 Creating store slider test data...\n');
 
     // Get store IDs
     const techStore = await Store.findOne({ name: 'TechStore' });
     const fashionStore = await Store.findOne({ name: 'FashionStore' });
 
     if (!techStore || !fashionStore) {
-      console.log('❌ Stores not found. Creating stores first...');
+      //CONSOLE.log('❌ Stores not found. Creating stores first...');
       
       // Create stores if they don't exist
       const newTechStore = await Store.create({
@@ -139,13 +139,13 @@ async function createStoreSliderData() {
         }
       });
       
-      console.log('✅ Created stores');
-      console.log(`   - TechStore: ${newTechStore._id}`);
-      console.log(`   - FashionStore: ${newFashionStore._id}\n`);
+      //CONSOLE.log('✅ Created stores');
+      //CONSOLE.log(`   - TechStore: ${newTechStore._id}`);
+      //CONSOLE.log(`   - FashionStore: ${newFashionStore._id}\n`);
     } else {
-      console.log(`📦 Found stores:`);
-      console.log(`   - TechStore: ${techStore._id}`);
-      console.log(`   - FashionStore: ${fashionStore._id}\n`);
+      //CONSOLE.log(`📦 Found stores:`);
+      //CONSOLE.log(`   - TechStore: ${techStore._id}`);
+      //CONSOLE.log(`   - FashionStore: ${fashionStore._id}\n`);
     }
 
     const finalTechStore = techStore || await Store.findOne({ name: 'TechStore' });
@@ -155,10 +155,10 @@ async function createStoreSliderData() {
     await StoreSlider.deleteMany({
       store: { $in: [finalTechStore._id, finalFashionStore._id] }
     });
-    console.log('🧹 Cleared existing store slider test data\n');
+    //CONSOLE.log('🧹 Cleared existing store slider test data\n');
 
     // Create TechStore sliders
-    console.log('🛠️ Creating TechStore sliders...');
+    //CONSOLE.log('🛠️ Creating TechStore sliders...');
     const techSliders = [];
     for (const sliderData of techStoreSliders) {
       const slider = await StoreSlider.create({
@@ -166,11 +166,11 @@ async function createStoreSliderData() {
         store: finalTechStore._id
       });
       techSliders.push(slider);
-      console.log(`   ✅ Created: ${slider.title} (${slider.type}) - ${slider.isActive ? 'Active' : 'Inactive'}`);
+      //CONSOLE.log(`   ✅ Created: ${slider.title} (${slider.type}) - ${slider.isActive ? 'Active' : 'Inactive'}`);
     }
 
     // Create FashionStore sliders
-    console.log('\n👗 Creating FashionStore sliders...');
+    //CONSOLE.log('\n👗 Creating FashionStore sliders...');
     const fashionSliders = [];
     for (const sliderData of fashionStoreSliders) {
       const slider = await StoreSlider.create({
@@ -178,17 +178,17 @@ async function createStoreSliderData() {
         store: finalFashionStore._id
       });
       fashionSliders.push(slider);
-      console.log(`   ✅ Created: ${slider.title} (${slider.type}) - ${slider.isActive ? 'Active' : 'Inactive'}`);
+      //CONSOLE.log(`   ✅ Created: ${slider.title} (${slider.type}) - ${slider.isActive ? 'Active' : 'Inactive'}`);
     }
 
     // Verify isolation
-    console.log('\n🔍 Verifying data isolation...');
+    //CONSOLE.log('\n🔍 Verifying data isolation...');
     
     const techSliderCount = await StoreSlider.countDocuments({ store: finalTechStore._id });
     const fashionSliderCount = await StoreSlider.countDocuments({ store: finalFashionStore._id });
     
-    console.log(`   - TechStore sliders: ${techSliderCount}`);
-    console.log(`   - FashionStore sliders: ${fashionSliderCount}`);
+    //CONSOLE.log(`   - TechStore sliders: ${techSliderCount}`);
+    //CONSOLE.log(`   - FashionStore sliders: ${fashionSliderCount}`);
 
     // Test cross-store access
     const techSliderInFashion = await StoreSlider.findOne({ 
@@ -202,75 +202,75 @@ async function createStoreSliderData() {
     });
 
     if (!techSliderInFashion && !fashionSliderInTech) {
-      console.log('   ✅ Store slider isolation verified');
+      //CONSOLE.log('   ✅ Store slider isolation verified');
     } else {
-      console.log('   ❌ Store slider isolation failed');
+      //CONSOLE.log('   ❌ Store slider isolation failed');
     }
 
     // Test YouTube ID extraction
-    console.log('\n🎥 Testing YouTube integration...');
+    //CONSOLE.log('\n🎥 Testing YouTube integration...');
     const videoSliders = await StoreSlider.find({ type: 'video' });
     videoSliders.forEach(slider => {
-      console.log(`   - ${slider.title}: YouTube ID = ${slider.youtubeId}`);
-      console.log(`     Thumbnail: ${slider.thumbnailUrl}`);
+      //CONSOLE.log(`   - ${slider.title}: YouTube ID = ${slider.youtubeId}`);
+      //CONSOLE.log(`     Thumbnail: ${slider.thumbnailUrl}`);
     });
 
-    console.log('\n🎉 Store slider test data created successfully!');
-    console.log('\n📊 Summary:');
-    console.log(`- TechStore sliders: ${techSliderCount}`);
-    console.log(`- FashionStore sliders: ${fashionSliderCount}`);
-    console.log('- Total sliders:', techSliderCount + fashionSliderCount);
-    console.log('- Data isolation: Verified ✅');
-    console.log('- YouTube integration: Working ✅');
+    //CONSOLE.log('\n🎉 Store slider test data created successfully!');
+    //CONSOLE.log('\n📊 Summary:');
+    //CONSOLE.log(`- TechStore sliders: ${techSliderCount}`);
+    //CONSOLE.log(`- FashionStore sliders: ${fashionSliderCount}`);
+    //CONSOLE.log('- Total sliders:', techSliderCount + fashionSliderCount);
+    //CONSOLE.log('- Data isolation: Verified ✅');
+    //CONSOLE.log('- YouTube integration: Working ✅');
     
-    console.log('\n📋 Data Details:');
-    console.log('\n🛠️ TechStore Sliders:');
+    //CONSOLE.log('\n📋 Data Details:');
+    //CONSOLE.log('\n🛠️ TechStore Sliders:');
     techStoreSliders.forEach((slider, index) => {
-      console.log(`   ${index + 1}. ${slider.title}`);
-      console.log(`      📝 Description: ${slider.description}`);
-      console.log(`      🎯 Type: ${slider.type}`);
+      //CONSOLE.log(`   ${index + 1}. ${slider.title}`);
+      //CONSOLE.log(`      📝 Description: ${slider.description}`);
+      //CONSOLE.log(`      🎯 Type: ${slider.type}`);
       if (slider.type === 'slider') {
-        console.log(`      🖼️ Image: ${slider.imageUrl}`);
+        //CONSOLE.log(`      🖼️ Image: ${slider.imageUrl}`);
       } else {
-        console.log(`      🎥 Video: ${slider.videoUrl}`);
+        //CONSOLE.log(`      🎥 Video: ${slider.videoUrl}`);
       }
-      console.log(`      📍 Order: ${slider.order}`);
-      console.log(`      📍 Status: ${slider.isActive ? 'Active' : 'Inactive'}`);
+      //CONSOLE.log(`      📍 Order: ${slider.order}`);
+      //CONSOLE.log(`      📍 Status: ${slider.isActive ? 'Active' : 'Inactive'}`);
     });
 
-    console.log('\n👗 FashionStore Sliders:');
+    //CONSOLE.log('\n👗 FashionStore Sliders:');
     fashionStoreSliders.forEach((slider, index) => {
-      console.log(`   ${index + 1}. ${slider.title}`);
-      console.log(`      📝 Description: ${slider.description}`);
-      console.log(`      🎯 Type: ${slider.type}`);
+      //CONSOLE.log(`   ${index + 1}. ${slider.title}`);
+      //CONSOLE.log(`      📝 Description: ${slider.description}`);
+      //CONSOLE.log(`      🎯 Type: ${slider.type}`);
       if (slider.type === 'slider') {
-        console.log(`      🖼️ Image: ${slider.imageUrl}`);
+        //CONSOLE.log(`      🖼️ Image: ${slider.imageUrl}`);
       } else {
-        console.log(`      🎥 Video: ${slider.videoUrl}`);
+        //CONSOLE.log(`      🎥 Video: ${slider.videoUrl}`);
       }
-      console.log(`      📍 Order: ${slider.order}`);
-      console.log(`      📍 Status: ${slider.isActive ? 'Active' : 'Inactive'}`);
+      //CONSOLE.log(`      📍 Order: ${slider.order}`);
+      //CONSOLE.log(`      📍 Status: ${slider.isActive ? 'Active' : 'Inactive'}`);
     });
 
-    console.log('\n🔗 Store IDs for CURL Testing:');
-    console.log(`TechStore ID: ${finalTechStore._id}`);
-    console.log(`FashionStore ID: ${finalFashionStore._id}`);
+    //CONSOLE.log('\n🔗 Store IDs for CURL Testing:');
+    //CONSOLE.log(`TechStore ID: ${finalTechStore._id}`);
+    //CONSOLE.log(`FashionStore ID: ${finalFashionStore._id}`);
 
-    console.log('\n🧪 Testing Endpoints:');
-    console.log('1. Get all sliders: GET /api/store-sliders');
-    console.log('2. Get by type: GET /api/store-sliders?type=slider');
-    console.log('3. Get active by type: GET /api/store-sliders/active/video');
-    console.log('4. Create slider: POST /api/store-sliders');
-    console.log('5. Update slider: PUT /api/store-sliders/<ID>');
-    console.log('6. Toggle status: PATCH /api/store-sliders/<ID>/toggle-active');
-    console.log('7. Increment views: PATCH /api/store-sliders/<ID>/increment-views');
-    console.log('8. Increment clicks: PATCH /api/store-sliders/<ID>/increment-clicks');
+    //CONSOLE.log('\n🧪 Testing Endpoints:');
+    //CONSOLE.log('1. Get all sliders: GET /api/store-sliders');
+    //CONSOLE.log('2. Get by type: GET /api/store-sliders?type=slider');
+    //CONSOLE.log('3. Get active by type: GET /api/store-sliders/active/video');
+    //CONSOLE.log('4. Create slider: POST /api/store-sliders');
+    //CONSOLE.log('5. Update slider: PUT /api/store-sliders/<ID>');
+    //CONSOLE.log('6. Toggle status: PATCH /api/store-sliders/<ID>/toggle-active');
+    //CONSOLE.log('7. Increment views: PATCH /api/store-sliders/<ID>/increment-views');
+    //CONSOLE.log('8. Increment clicks: PATCH /api/store-sliders/<ID>/increment-clicks');
 
   } catch (error) {
-    console.error('❌ Error creating store slider data:', error);
+    //CONSOLE.error('❌ Error creating store slider data:', error);
   } finally {
     mongoose.connection.close();
-    console.log('\n🔌 Database connection closed');
+    //CONSOLE.log('\n🔌 Database connection closed');
   }
 }
 

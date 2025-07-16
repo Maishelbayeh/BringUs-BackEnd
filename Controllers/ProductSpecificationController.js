@@ -96,7 +96,7 @@ exports.create = async (req, res) => {
       data: populatedSpec
     });
   } catch (err) {
-    console.error('Product specification creation error:', err);
+    //CONSOLE.error('Product specification creation error:', err);
     
     if (err.name === 'ValidationError') {
       const validationErrors = {};
@@ -169,7 +169,7 @@ exports.update = async (req, res) => {
       data: spec
     });
   } catch (err) {
-    console.error('Update product specification error:', err);
+    //CONSOLE.error('Update product specification error:', err);
     
     if (err.name === 'ValidationError') {
       const validationErrors = {};

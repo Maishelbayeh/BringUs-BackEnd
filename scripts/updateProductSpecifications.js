@@ -144,29 +144,29 @@ const newSpecifications = [
 
 async function updateProductSpecifications() {
   try {
-    console.log('🔄 Starting ProductSpecification update process...');
+    //CONSOLE.log('🔄 Starting ProductSpecification update process...');
     
     // حذف جميع البيانات الحالية
-    console.log('🗑️ Deleting existing specifications...');
+    //CONSOLE.log('🗑️ Deleting existing specifications...');
     await ProductSpecification.deleteMany({});
-    console.log('✅ All existing specifications deleted');
+    //CONSOLE.log('✅ All existing specifications deleted');
     
     // الحصول على جميع المتاجر من قاعدة البيانات
     const Store = require('../Models/Store');
     const stores = await Store.find({});
     
     if (stores.length === 0) {
-      console.log('⚠️ No stores found. Please create stores first.');
+      //CONSOLE.log('⚠️ No stores found. Please create stores first.');
       return;
     }
     
-    console.log(`📊 Found ${stores.length} stores`);
+    //CONSOLE.log(`📊 Found ${stores.length} stores`);
     
     // إضافة المواصفات الجديدة لكل متجر
     let totalCreated = 0;
     
     for (const store of stores) {
-      console.log(`🏪 Creating specifications for store: ${store.name} (${store._id})`);
+      //CONSOLE.log(`🏪 Creating specifications for store: ${store.name} (${store._id})`);
       
       for (const spec of newSpecifications) {
         const newSpec = new ProductSpecification({
@@ -178,20 +178,20 @@ async function updateProductSpecifications() {
         totalCreated++;
       }
       
-      console.log(`✅ Created ${newSpecifications.length} specifications for store: ${store.name}`);
+      //CONSOLE.log(`✅ Created ${newSpecifications.length} specifications for store: ${store.name}`);
     }
     
-    console.log(`🎉 Successfully created ${totalCreated} specifications across ${stores.length} stores`);
+    //CONSOLE.log(`🎉 Successfully created ${totalCreated} specifications across ${stores.length} stores`);
     
     // عرض إحصائيات
     const totalSpecs = await ProductSpecification.countDocuments();
-    console.log(`📈 Total specifications in database: ${totalSpecs}`);
+    //CONSOLE.log(`📈 Total specifications in database: ${totalSpecs}`);
     
   } catch (error) {
-    console.error('❌ Error updating product specifications:', error);
+    //CONSOLE.error('❌ Error updating product specifications:', error);
   } finally {
     mongoose.connection.close();
-    console.log('🔌 Database connection closed');
+    //CONSOLE.log('🔌 Database connection closed');
   }
 }
 
@@ -202,11 +202,11 @@ if (require.main === module) {
   
   mongoose.connect(MONGODB_URI)
     .then(() => {
-      console.log('🔗 Connected to MongoDB');
+      //CONSOLE.log('🔗 Connected to MongoDB');
       updateProductSpecifications();
     })
     .catch(err => {
-      console.error('❌ Database connection error:', err);
+      //CONSOLE.error('❌ Database connection error:', err);
       process.exit(1);
     });
 }

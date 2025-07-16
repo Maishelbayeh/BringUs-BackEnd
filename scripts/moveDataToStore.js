@@ -5,19 +5,19 @@ const TARGET_STORE_ID = '687505893fbf3098648bfe16';
 
 async function moveDataToStore() {
   try {
-    console.log('🔄 Starting data migration to target store...');
-    console.log(`📝 Target Store ID: ${TARGET_STORE_ID}`);
+    //CONSOLE.log('🔄 Starting data migration to target store...');
+    //CONSOLE.log(`📝 Target Store ID: ${TARGET_STORE_ID}`);
     
     // التحقق من وجود المتجر المستهدف
     const Store = require('../Models/Store');
     const targetStore = await Store.findById(TARGET_STORE_ID);
     
     if (!targetStore) {
-      console.log('❌ Target store not found. Please create the store first.');
+      //CONSOLE.log('❌ Target store not found. Please create the store first.');
       return;
     }
     
-    console.log(`✅ Found target store: ${targetStore.nameAr} (${targetStore.nameEn})`);
+    //CONSOLE.log(`✅ Found target store: ${targetStore.nameAr} (${targetStore.nameEn})`);
     
     // نقل ProductSpecifications
     const ProductSpecification = require('../Models/ProductSpecification');
@@ -25,7 +25,7 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${specResult.modifiedCount} product specifications to target store`);
+    //CONSOLE.log(`📊 Moved ${specResult.modifiedCount} product specifications to target store`);
     
     // نقل Products
     const Product = require('../Models/Product');
@@ -33,7 +33,7 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${productResult.modifiedCount} products to target store`);
+    //CONSOLE.log(`📊 Moved ${productResult.modifiedCount} products to target store`);
     
     // نقل Categories
     const Category = require('../Models/Category');
@@ -41,7 +41,7 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${categoryResult.modifiedCount} categories to target store`);
+    //CONSOLE.log(`📊 Moved ${categoryResult.modifiedCount} categories to target store`);
     
     // نقل Units
     const Unit = require('../Models/Unit');
@@ -49,7 +49,7 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${unitResult.modifiedCount} units to target store`);
+    //CONSOLE.log(`📊 Moved ${unitResult.modifiedCount} units to target store`);
     
     // نقل ProductLabels
     const ProductLabel = require('../Models/ProductLabel');
@@ -57,7 +57,7 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${labelResult.modifiedCount} product labels to target store`);
+    //CONSOLE.log(`📊 Moved ${labelResult.modifiedCount} product labels to target store`);
     
     // نقل DeliveryMethods
     const DeliveryMethod = require('../Models/DeliveryMethod');
@@ -65,7 +65,7 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${deliveryResult.modifiedCount} delivery methods to target store`);
+    //CONSOLE.log(`📊 Moved ${deliveryResult.modifiedCount} delivery methods to target store`);
     
     // نقل PaymentMethods
     const PaymentMethod = require('../Models/PaymentMethod');
@@ -73,7 +73,7 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${paymentResult.modifiedCount} payment methods to target store`);
+    //CONSOLE.log(`📊 Moved ${paymentResult.modifiedCount} payment methods to target store`);
     
     // نقل Advertisements
     const Advertisement = require('../Models/Advertisement');
@@ -81,7 +81,7 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${adResult.modifiedCount} advertisements to target store`);
+    //CONSOLE.log(`📊 Moved ${adResult.modifiedCount} advertisements to target store`);
     
     // نقل StoreSliders
     const StoreSlider = require('../Models/StoreSlider');
@@ -89,7 +89,7 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${sliderResult.modifiedCount} store sliders to target store`);
+    //CONSOLE.log(`📊 Moved ${sliderResult.modifiedCount} store sliders to target store`);
     
     // نقل TermsConditions
     const TermsConditions = require('../Models/TermsConditions');
@@ -97,7 +97,7 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${termsResult.modifiedCount} terms & conditions to target store`);
+    //CONSOLE.log(`📊 Moved ${termsResult.modifiedCount} terms & conditions to target store`);
     
     // نقل Wholesalers
     const Wholesaler = require('../Models/Wholesaler');
@@ -105,7 +105,7 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${wholesalerResult.modifiedCount} wholesalers to target store`);
+    //CONSOLE.log(`📊 Moved ${wholesalerResult.modifiedCount} wholesalers to target store`);
     
     // نقل Affiliations
     const Affiliation = require('../Models/Affiliation');
@@ -113,7 +113,7 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${affiliationResult.modifiedCount} affiliations to target store`);
+    //CONSOLE.log(`📊 Moved ${affiliationResult.modifiedCount} affiliations to target store`);
     
     // نقل AffiliatePayments
     const AffiliatePayment = require('../Models/AffiliatePayment');
@@ -121,9 +121,9 @@ async function moveDataToStore() {
       { store: { $ne: TARGET_STORE_ID } },
       { store: TARGET_STORE_ID }
     );
-    console.log(`📊 Moved ${paymentAffResult.modifiedCount} affiliate payments to target store`);
+    //CONSOLE.log(`📊 Moved ${paymentAffResult.modifiedCount} affiliate payments to target store`);
     
-    console.log('🎉 Data migration completed successfully!');
+    //CONSOLE.log('🎉 Data migration completed successfully!');
     
     // عرض إحصائيات نهائية
     const totalSpecs = await ProductSpecification.countDocuments({ store: TARGET_STORE_ID });
@@ -136,22 +136,22 @@ async function moveDataToStore() {
     const totalWholesalers = await Wholesaler.countDocuments({ store: TARGET_STORE_ID });
     const totalAffiliations = await Affiliation.countDocuments({ store: TARGET_STORE_ID });
     
-    console.log('\n📈 Final Statistics for Target Store:');
-    console.log(`- Product Specifications: ${totalSpecs}`);
-    console.log(`- Products: ${totalProducts}`);
-    console.log(`- Categories: ${totalCategories}`);
-    console.log(`- Product Labels: ${totalLabels}`);
-    console.log(`- Delivery Methods: ${totalDeliveries}`);
-    console.log(`- Advertisements: ${totalAds}`);
-    console.log(`- Terms & Conditions: ${totalTerms}`);
-    console.log(`- Wholesalers: ${totalWholesalers}`);
-    console.log(`- Affiliations: ${totalAffiliations}`);
+    //CONSOLE.log('\n📈 Final Statistics for Target Store:');
+    //CONSOLE.log(`- Product Specifications: ${totalSpecs}`);
+    //CONSOLE.log(`- Products: ${totalProducts}`);
+    //CONSOLE.log(`- Categories: ${totalCategories}`);
+    //CONSOLE.log(`- Product Labels: ${totalLabels}`);
+    //CONSOLE.log(`- Delivery Methods: ${totalDeliveries}`);
+    //CONSOLE.log(`- Advertisements: ${totalAds}`);
+    //CONSOLE.log(`- Terms & Conditions: ${totalTerms}`);
+    //CONSOLE.log(`- Wholesalers: ${totalWholesalers}`);
+    //CONSOLE.log(`- Affiliations: ${totalAffiliations}`);
     
   } catch (error) {
-    console.error('❌ Error moving data to target store:', error);
+    //CONSOLE.error('❌ Error moving data to target store:', error);
   } finally {
     mongoose.connection.close();
-    console.log('🔌 Database connection closed');
+    //CONSOLE.log('🔌 Database connection closed');
   }
 }
 
@@ -161,11 +161,11 @@ if (require.main === module) {
   
   mongoose.connect(MONGODB_URI)
     .then(() => {
-      console.log('🔗 Connected to MongoDB');
+      //CONSOLE.log('🔗 Connected to MongoDB');
       moveDataToStore();
     })
     .catch(err => {
-      console.error('❌ Database connection error:', err);
+      //CONSOLE.error('❌ Database connection error:', err);
       process.exit(1);
     });
 }

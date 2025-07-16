@@ -411,7 +411,7 @@ router.post('/upload-image', protect, authorize('admin', 'superadmin'), verifySt
       imageUrl: result.url 
     });
   } catch (err) {
-    console.error('Upload slider image error:', err);
+    //CONSOLE.error('Upload slider image error:', err);
     res.status(500).json({ 
       success: false, 
       error: 'Upload failed',

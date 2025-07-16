@@ -468,7 +468,7 @@ const completeProducts = [
 
 async function createCompleteProductData() {
   try {
-    console.log('=== Creating Complete Product Data ===\n');
+    //CONSOLE.log('=== Creating Complete Product Data ===\n');
     
     // Wait for connection to be ready
     await mongoose.connection.asPromise();
@@ -491,9 +491,9 @@ async function createCompleteProductData() {
         isActive: true
       });
       await testCategory.save();
-      console.log('✅ Created test category:', testCategory._id);
+      //CONSOLE.log('✅ Created test category:', testCategory._id);
     } else {
-      console.log('✅ Using existing test category:', testCategory._id);
+      //CONSOLE.log('✅ Using existing test category:', testCategory._id);
     }
     
     // Get or create test unit
@@ -509,9 +509,9 @@ async function createCompleteProductData() {
         isActive: true
       });
       await testUnit.save();
-      console.log('✅ Created test unit:', testUnit._id);
+      //CONSOLE.log('✅ Created test unit:', testUnit._id);
     } else {
-      console.log('✅ Using existing test unit:', testUnit._id);
+      //CONSOLE.log('✅ Using existing test unit:', testUnit._id);
     }
     
     // Get or create multiple product labels
@@ -545,9 +545,9 @@ async function createCompleteProductData() {
         
         label = new ProductLabel(labelData);
         await label.save();
-        console.log(`✅ Created product label: ${labelName} (${label._id})`);
+        //CONSOLE.log(`✅ Created product label: ${labelName} (${label._id})`);
       } else {
-        console.log(`✅ Using existing product label: ${labelName} (${label._id})`);
+        //CONSOLE.log(`✅ Using existing product label: ${labelName} (${label._id})`);
       }
       
       productLabels.push(label._id);
@@ -555,15 +555,15 @@ async function createCompleteProductData() {
     
     // Get product specifications for this store
     const productSpecifications = await ProductSpecification.find({ store: storeId });
-    console.log(`✅ Found ${productSpecifications.length} product specifications for store`);
+    //CONSOLE.log(`✅ Found ${productSpecifications.length} product specifications for store`);
     
     if (productSpecifications.length === 0) {
-      console.log('⚠️ No product specifications found. Please run addProductSpecsToStore.js first.');
+      //CONSOLE.log('⚠️ No product specifications found. Please run addProductSpecsToStore.js first.');
     }
     
     // Clear ALL existing products for this store
     await Product.deleteMany({ store: storeId });
-    console.log('✅ Cleared ALL existing products for store');
+    //CONSOLE.log('✅ Cleared ALL existing products for store');
     
     // Update products with real IDs and multiple labels
     const productsWithRealIds = completeProducts.map((product, index) => {
@@ -599,37 +599,37 @@ async function createCompleteProductData() {
     
     // Create all products
     const createdProducts = await Product.insertMany(productsWithRealIds);
-    console.log(`✅ Successfully created ${createdProducts.length} complete products`);
+    //CONSOLE.log(`✅ Successfully created ${createdProducts.length} complete products`);
     
     // Display created products summary
     createdProducts.forEach((product, index) => {
-      console.log(`\n${index + 1}. ${product.nameEn} (${product.nameAr}):`);
-      console.log(`   Price: $${product.price}`);
-      console.log(`   Barcodes: ${product.barcodes.join(', ')}`);
-      console.log(`   Colors: ${product.colorOptionsCount} options`);
-      console.log(`   Stock: ${product.stock}`);
-      console.log(`   Rating: ${product.rating}/5 (${product.numReviews} reviews)`);
-      console.log(`   Labels: ${product.productLabels.length} labels`);
-      console.log(`   Specifications: ${product.specifications.length} specifications`);
-      console.log(`   ID: ${product._id}`);
+      //CONSOLE.log(`\n${index + 1}. ${product.nameEn} (${product.nameAr}):`);
+      //CONSOLE.log(`   Price: $${product.price}`);
+      //CONSOLE.log(`   Barcodes: ${product.barcodes.join(', ')}`);
+      //CONSOLE.log(`   Colors: ${product.colorOptionsCount} options`);
+      //CONSOLE.log(`   Stock: ${product.stock}`);
+      //CONSOLE.log(`   Rating: ${product.rating}/5 (${product.numReviews} reviews)`);
+      //CONSOLE.log(`   Labels: ${product.productLabels.length} labels`);
+      //CONSOLE.log(`   Specifications: ${product.specifications.length} specifications`);
+      //CONSOLE.log(`   ID: ${product._id}`);
     });
     
-    console.log('\n=== Complete Product Data Summary ===');
-    console.log(`✅ Store ID: ${storeId}`);
-    console.log(`✅ Category ID: ${testCategory._id}`);
-    console.log(`✅ Unit ID: ${testUnit._id}`);
-    console.log(`✅ Product Labels: ${productLabels.length} labels created`);
-    console.log(`✅ Total Products: ${createdProducts.length}`);
-    console.log(`✅ All products include complete data with new structure`);
+    //CONSOLE.log('\n=== Complete Product Data Summary ===');
+    //CONSOLE.log(`✅ Store ID: ${storeId}`);
+    //CONSOLE.log(`✅ Category ID: ${testCategory._id}`);
+    //CONSOLE.log(`✅ Unit ID: ${testUnit._id}`);
+    //CONSOLE.log(`✅ Product Labels: ${productLabels.length} labels created`);
+    //CONSOLE.log(`✅ Total Products: ${createdProducts.length}`);
+    //CONSOLE.log(`✅ All products include complete data with new structure`);
     
     return createdProducts;
     
   } catch (error) {
-    console.error('❌ Error creating complete product data:', error);
+    //CONSOLE.error('❌ Error creating complete product data:', error);
     throw error;
   } finally {
     mongoose.connection.close();
-    console.log('Database connection closed.');
+    //CONSOLE.log('Database connection closed.');
   }
 }
 
@@ -637,10 +637,10 @@ async function createCompleteProductData() {
 if (require.main === module) {
   createCompleteProductData()
     .then(() => {
-      console.log('\n✅ Complete product data creation completed successfully!');
+      //CONSOLE.log('\n✅ Complete product data creation completed successfully!');
     })
     .catch((error) => {
-      console.error('❌ Failed to create complete product data:', error);
+      //CONSOLE.error('❌ Failed to create complete product data:', error);
       process.exit(1);
     });
 }

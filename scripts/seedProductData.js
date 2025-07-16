@@ -14,7 +14,7 @@ mongoose.connect('mongodb://localhost:27017/bringus', {
 
 const seedData = async () => {
   try {
-    console.log('Starting to seed product data...');
+    //CONSOLE.log('Starting to seed product data...');
 
     // Clear existing data
     await Category.deleteMany({});
@@ -24,7 +24,7 @@ const seedData = async () => {
     await Product.deleteMany({});
     await ProductVariant.deleteMany({});
 
-    console.log('Cleared existing data');
+    //CONSOLE.log('Cleared existing data');
 
     // Seed Product Labels
     const productLabels = await ProductLabel.insertMany([
@@ -33,7 +33,7 @@ const seedData = async () => {
       { nameAr: 'مميز', nameEn: 'Featured', color: '#F59E0B', sortOrder: 3 },
       { nameAr: 'جديد', nameEn: 'New', color: '#10B981', sortOrder: 4 }
     ]);
-    console.log('Product labels seeded');
+    //CONSOLE.log('Product labels seeded');
 
     // Seed Units
     const units = await Unit.insertMany([
@@ -60,7 +60,7 @@ const seedData = async () => {
       { nameAr: 'لعبة', nameEn: 'Toy', symbol: 'toy', sortOrder: 21 },
       { nameAr: 'قطعة', nameEn: 'Unit', symbol: 'unit', sortOrder: 22 }
     ]);
-    console.log('Units seeded');
+    //CONSOLE.log('Units seeded');
 
     // Seed Categories (hierarchical structure)
     const categories = await Category.insertMany([
@@ -283,7 +283,7 @@ const seedData = async () => {
       }
     ]);
 
-    console.log('Categories seeded');
+    //CONSOLE.log('Categories seeded');
 
     // Seed Product Specifications
     const specifications = await ProductSpecification.insertMany([
@@ -298,7 +298,7 @@ const seedData = async () => {
       { descriptionAr: 'عريض', descriptionEn: 'Wide', category: menClothes._id, sortOrder: 9 },
       { descriptionAr: 'ضيق', descriptionEn: 'Narrow', category: menClothes._id, sortOrder: 10 }
     ]);
-    console.log('Product specifications seeded');
+    //CONSOLE.log('Product specifications seeded');
 
     // Get specific categories and units for products
     const android = subSubcategories.find(c => c.slug === 'android-phones');
@@ -460,7 +460,7 @@ const seedData = async () => {
       }
     ]);
 
-    console.log('Products seeded');
+    //CONSOLE.log('Products seeded');
 
     // Seed Product Variants
     const variants = await ProductVariant.insertMany([
@@ -500,19 +500,19 @@ const seedData = async () => {
       }
     ]);
 
-    console.log('Product variants seeded');
+    //CONSOLE.log('Product variants seeded');
 
-    console.log('✅ All product data seeded successfully!');
-    console.log(`📊 Summary:`);
-    console.log(`   - Product Labels: ${productLabels.length}`);
-    console.log(`   - Units: ${units.length}`);
-    console.log(`   - Categories: ${categories.length + subcategories.length + subSubcategories.length}`);
-    console.log(`   - Product Specifications: ${specifications.length}`);
-    console.log(`   - Products: ${products.length}`);
-    console.log(`   - Product Variants: ${variants.length}`);
+    //CONSOLE.log('✅ All product data seeded successfully!');
+    //CONSOLE.log(`📊 Summary:`);
+    //CONSOLE.log(`   - Product Labels: ${productLabels.length}`);
+    //CONSOLE.log(`   - Units: ${units.length}`);
+    //CONSOLE.log(`   - Categories: ${categories.length + subcategories.length + subSubcategories.length}`);
+    //CONSOLE.log(`   - Product Specifications: ${specifications.length}`);
+    //CONSOLE.log(`   - Products: ${products.length}`);
+    //CONSOLE.log(`   - Product Variants: ${variants.length}`);
 
   } catch (error) {
-    console.error('❌ Error seeding data:', error);
+    //CONSOLE.error('❌ Error seeding data:', error);
   } finally {
     mongoose.connection.close();
   }

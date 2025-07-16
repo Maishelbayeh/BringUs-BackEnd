@@ -251,6 +251,21 @@ const ProductController = require('../Controllers/ProductController');
  *     responses:
  *       200:
  *         description: List of product specifications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ProductSpecification'
+ *                 count:
+ *                   type: number
+ *                   example: 5
  *   post:
  *     summary: Create a new product specification
  *     tags: [ProductSpecifications]
@@ -259,10 +274,105 @@ const ProductController = require('../Controllers/ProductController');
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ProductSpecification'
+ *             type: object
+ *             required:
+ *               - titleAr
+ *               - titleEn
+ *               - values
+ *               - storeId
+ *             properties:
+ *               titleAr:
+ *                 type: string
+ *                 example: "اللون"
+ *                 maxLength: 100
+ *                 description: Arabic title of the specification
+ *               titleEn:
+ *                 type: string
+ *                 example: "Color"
+ *                 maxLength: 100
+ *                 description: English title of the specification
+ *               values:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - valueAr
+ *                     - valueEn
+ *                   properties:
+ *                     valueAr:
+ *                       type: string
+ *                       example: "أحمر"
+ *                       maxLength: 200
+ *                       description: Arabic value of the specification option
+ *                     valueEn:
+ *                       type: string
+ *                       example: "Red"
+ *                       maxLength: 200
+ *                       description: English value of the specification option
+ *                 example:
+ *                   - valueAr: "أحمر"
+ *                     valueEn: "Red"
+ *                   - valueAr: "أزرق"
+ *                     valueEn: "Blue"
+ *                   - valueAr: "أخضر"
+ *                     valueEn: "Green"
+ *               category:
+ *                 type: string
+ *                 example: "507f1f77bcf86cd799439014"
+ *                 description: Category ID (optional)
+ *               storeId:
+ *                 type: string
+ *                 example: "507f1f77bcf86cd799439012"
+ *                 description: Store ID (required)
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
+ *                 default: true
+ *               sortOrder:
+ *                 type: number
+ *                 example: 1
+ *                 default: 0
  *     responses:
  *       201:
- *         description: Product specification created
+ *         description: Product specification created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Product specification created successfully"
+ *                 data:
+ *                   $ref: '#/components/schemas/ProductSpecification'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Missing required fields"
+ *                 details:
+ *                   type: object
+ *                   properties:
+ *                     titleAr:
+ *                       type: string
+ *                       example: "Arabic title is required"
+ *                     titleEn:
+ *                       type: string
+ *                       example: "English title is required"
+ *                     values:
+ *                       type: string
+ *                       example: "Values array is required and must not be empty"
  */
 /**
  * @swagger
@@ -276,11 +386,33 @@ const ProductController = require('../Controllers/ProductController');
  *         required: true
  *         schema:
  *           type: string
+ *         description: Product specification ID
  *     responses:
  *       200:
  *         description: Product specification found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/ProductSpecification'
  *       404:
  *         description: Product specification not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Product specification not found"
  *   put:
  *     summary: Update product specification by ID
  *     tags: [ProductSpecifications]
@@ -290,17 +422,107 @@ const ProductController = require('../Controllers/ProductController');
  *         required: true
  *         schema:
  *           type: string
+ *         description: Product specification ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ProductSpecification'
+ *             type: object
+ *             required:
+ *               - storeId
+ *             properties:
+ *               titleAr:
+ *                 type: string
+ *                 example: "اللون"
+ *                 maxLength: 100
+ *                 description: Arabic title of the specification
+ *               titleEn:
+ *                 type: string
+ *                 example: "Color"
+ *                 maxLength: 100
+ *                 description: English title of the specification
+ *               values:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - valueAr
+ *                     - valueEn
+ *                   properties:
+ *                     valueAr:
+ *                       type: string
+ *                       example: "أحمر"
+ *                       maxLength: 200
+ *                       description: Arabic value of the specification option
+ *                     valueEn:
+ *                       type: string
+ *                       example: "Red"
+ *                       maxLength: 200
+ *                       description: English value of the specification option
+ *                 example:
+ *                   - valueAr: "أحمر"
+ *                     valueEn: "Red"
+ *                   - valueAr: "أزرق"
+ *                     valueEn: "Blue"
+ *                   - valueAr: "أخضر"
+ *                     valueEn: "Green"
+ *               category:
+ *                 type: string
+ *                 example: "507f1f77bcf86cd799439014"
+ *                 description: Category ID (optional)
+ *               storeId:
+ *                 type: string
+ *                 example: "507f1f77bcf86cd799439012"
+ *                 description: Store ID (required)
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
+ *               sortOrder:
+ *                 type: number
+ *                 example: 1
  *     responses:
  *       200:
- *         description: Product specification updated
+ *         description: Product specification updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Product specification updated successfully"
+ *                 data:
+ *                   $ref: '#/components/schemas/ProductSpecification'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Validation failed"
  *       404:
  *         description: Product specification not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Product specification not found"
  *   delete:
  *     summary: Delete product specification by ID
  *     tags: [ProductSpecifications]
@@ -310,11 +532,34 @@ const ProductController = require('../Controllers/ProductController');
  *         required: true
  *         schema:
  *           type: string
+ *         description: Product specification ID
  *     responses:
  *       200:
- *         description: Product specification deleted
+ *         description: Product specification deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Product specification deleted successfully"
  *       404:
  *         description: Product specification not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Product specification not found"
  */
 
 /**
@@ -330,11 +575,38 @@ const ProductController = require('../Controllers/ProductController');
  *         schema:
  *           type: string
  *         description: Store ID to filter product specifications
+ *         example: "507f1f77bcf86cd799439012"
  *     responses:
  *       200:
  *         description: List of product specifications for the store
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ProductSpecification'
+ *                 count:
+ *                   type: number
+ *                   example: 3
  *       400:
  *         description: storeId is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "storeId is required"
  */
 router.get('/product-specifications/by-store', require('../Controllers/ProductSpecificationController').getByStoreId);
 

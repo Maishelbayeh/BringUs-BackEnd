@@ -27,8 +27,8 @@ const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4md
 mongoose.connect(MONGODB_URI, {
   // Removed deprecated options for newer MongoDB driver
 })
-.then(() => console.log('✅ Connected to MongoDB Atlas'))
-.catch(err => console.error('❌ MongoDB connection error:', err));
+.then(() => //CONSOLE.log('✅ Connected to MongoDB Atlas'))
+.catch(err => //CONSOLE.error('❌ MongoDB connection error:', err));
 
 // Store IDs
 const STORE_IDS = {
@@ -390,29 +390,29 @@ const store3PaymentMethods = [
 
 async function createDeliveryPaymentForStores() {
   try {
-    console.log('🚀 Creating delivery and payment methods for specific stores...\n');
+    //CONSOLE.log('🚀 Creating delivery and payment methods for specific stores...\n');
 
     // Wait for connection to be established
     await mongoose.connection.asPromise();
 
     // Verify stores exist
-    console.log('🔍 Verifying stores exist...');
+    //CONSOLE.log('🔍 Verifying stores exist...');
     const store1 = await Store.findById(STORE_IDS.STORE_1);
     const store2 = await Store.findById(STORE_IDS.STORE_2);
     const store3 = await Store.findById(STORE_IDS.STORE_3);
 
     if (!store1 || !store2 || !store3) {
-      console.log('❌ One or more stores not found:');
-      console.log(`   Store 1 (${STORE_IDS.STORE_1}): ${store1 ? 'Found' : 'Not Found'}`);
-      console.log(`   Store 2 (${STORE_IDS.STORE_2}): ${store2 ? 'Found' : 'Not Found'}`);
-      console.log(`   Store 3 (${STORE_IDS.STORE_3}): ${store3 ? 'Found' : 'Not Found'}`);
+      //CONSOLE.log('❌ One or more stores not found:');
+      //CONSOLE.log(`   Store 1 (${STORE_IDS.STORE_1}): ${store1 ? 'Found' : 'Not Found'}`);
+      //CONSOLE.log(`   Store 2 (${STORE_IDS.STORE_2}): ${store2 ? 'Found' : 'Not Found'}`);
+      //CONSOLE.log(`   Store 3 (${STORE_IDS.STORE_3}): ${store3 ? 'Found' : 'Not Found'}`);
       return;
     }
 
-    console.log('✅ All stores found:');
-    console.log(`   Store 1: ${store1.name || 'Unknown'} (${STORE_IDS.STORE_1})`);
-    console.log(`   Store 2: ${store2.name || 'Unknown'} (${STORE_IDS.STORE_2})`);
-    console.log(`   Store 3: ${store3.name || 'Unknown'} (${STORE_IDS.STORE_3})\n`);
+    //CONSOLE.log('✅ All stores found:');
+    //CONSOLE.log(`   Store 1: ${store1.name || 'Unknown'} (${STORE_IDS.STORE_1})`);
+    //CONSOLE.log(`   Store 2: ${store2.name || 'Unknown'} (${STORE_IDS.STORE_2})`);
+    //CONSOLE.log(`   Store 3: ${store3.name || 'Unknown'} (${STORE_IDS.STORE_3})\n`);
 
     // Clear existing delivery and payment methods for these stores
     await DeliveryMethod.deleteMany({
@@ -421,10 +421,10 @@ async function createDeliveryPaymentForStores() {
     await PaymentMethod.deleteMany({
       store: { $in: [STORE_IDS.STORE_1, STORE_IDS.STORE_2, STORE_IDS.STORE_3] }
     });
-    console.log('🧹 Cleared existing delivery and payment methods for these stores\n');
+    //CONSOLE.log('🧹 Cleared existing delivery and payment methods for these stores\n');
 
     // Create delivery methods for Store 1
-    console.log('🛠️ Creating delivery methods for Store 1 (Tech/Electronics)...');
+    //CONSOLE.log('🛠️ Creating delivery methods for Store 1 (Tech/Electronics)...');
     const store1Delivery = [];
     for (const deliveryData of store1DeliveryMethods) {
       const deliveryMethod = await DeliveryMethod.create({
@@ -432,11 +432,11 @@ async function createDeliveryPaymentForStores() {
         store: STORE_IDS.STORE_1
       });
       store1Delivery.push(deliveryMethod);
-      console.log(`   ✅ Created: ${deliveryMethod.locationAr} (${deliveryMethod.locationEn}) - ${deliveryMethod.price} ILS`);
+      //CONSOLE.log(`   ✅ Created: ${deliveryMethod.locationAr} (${deliveryMethod.locationEn}) - ${deliveryMethod.price} ILS`);
     }
 
     // Create delivery methods for Store 2
-    console.log('\n👗 Creating delivery methods for Store 2 (Fashion/Clothing)...');
+    //CONSOLE.log('\n👗 Creating delivery methods for Store 2 (Fashion/Clothing)...');
     const store2Delivery = [];
     for (const deliveryData of store2DeliveryMethods) {
       const deliveryMethod = await DeliveryMethod.create({
@@ -444,11 +444,11 @@ async function createDeliveryPaymentForStores() {
         store: STORE_IDS.STORE_2
       });
       store2Delivery.push(deliveryMethod);
-      console.log(`   ✅ Created: ${deliveryMethod.locationAr} (${deliveryMethod.locationEn}) - ${deliveryMethod.price} SAR`);
+      //CONSOLE.log(`   ✅ Created: ${deliveryMethod.locationAr} (${deliveryMethod.locationEn}) - ${deliveryMethod.price} SAR`);
     }
 
     // Create delivery methods for Store 3
-    console.log('\n🛒 Creating delivery methods for Store 3 (Food/Grocery)...');
+    //CONSOLE.log('\n🛒 Creating delivery methods for Store 3 (Food/Grocery)...');
     const store3Delivery = [];
     for (const deliveryData of store3DeliveryMethods) {
       const deliveryMethod = await DeliveryMethod.create({
@@ -456,11 +456,11 @@ async function createDeliveryPaymentForStores() {
         store: STORE_IDS.STORE_3
       });
       store3Delivery.push(deliveryMethod);
-      console.log(`   ✅ Created: ${deliveryMethod.locationAr} (${deliveryMethod.locationEn}) - ${deliveryMethod.price} JOD`);
+      //CONSOLE.log(`   ✅ Created: ${deliveryMethod.locationAr} (${deliveryMethod.locationEn}) - ${deliveryMethod.price} JOD`);
     }
 
     // Create payment methods for Store 1
-    console.log('\n💳 Creating payment methods for Store 1 (Tech/Electronics)...');
+    //CONSOLE.log('\n💳 Creating payment methods for Store 1 (Tech/Electronics)...');
     const store1Payment = [];
     for (const paymentData of store1PaymentMethods) {
       const paymentMethod = await PaymentMethod.create({
@@ -468,11 +468,11 @@ async function createDeliveryPaymentForStores() {
         store: STORE_IDS.STORE_1
       });
       store1Payment.push(paymentMethod);
-      console.log(`   ✅ Created: ${paymentMethod.titleAr} (${paymentMethod.titleEn})`);
+      //CONSOLE.log(`   ✅ Created: ${paymentMethod.titleAr} (${paymentMethod.titleEn})`);
     }
 
     // Create payment methods for Store 2
-    console.log('\n💰 Creating payment methods for Store 2 (Fashion/Clothing)...');
+    //CONSOLE.log('\n💰 Creating payment methods for Store 2 (Fashion/Clothing)...');
     const store2Payment = [];
     for (const paymentData of store2PaymentMethods) {
       const paymentMethod = await PaymentMethod.create({
@@ -480,11 +480,11 @@ async function createDeliveryPaymentForStores() {
         store: STORE_IDS.STORE_2
       });
       store2Payment.push(paymentMethod);
-      console.log(`   ✅ Created: ${paymentMethod.titleAr} (${paymentMethod.titleEn})`);
+      //CONSOLE.log(`   ✅ Created: ${paymentMethod.titleAr} (${paymentMethod.titleEn})`);
     }
 
     // Create payment methods for Store 3
-    console.log('\n🍎 Creating payment methods for Store 3 (Food/Grocery)...');
+    //CONSOLE.log('\n🍎 Creating payment methods for Store 3 (Food/Grocery)...');
     const store3Payment = [];
     for (const paymentData of store3PaymentMethods) {
       const paymentMethod = await PaymentMethod.create({
@@ -492,11 +492,11 @@ async function createDeliveryPaymentForStores() {
         store: STORE_IDS.STORE_3
       });
       store3Payment.push(paymentMethod);
-      console.log(`   ✅ Created: ${paymentMethod.titleAr} (${paymentMethod.titleEn})`);
+      //CONSOLE.log(`   ✅ Created: ${paymentMethod.titleAr} (${paymentMethod.titleEn})`);
     }
 
     // Verify data creation
-    console.log('\n🔍 Verifying data creation...');
+    //CONSOLE.log('\n🔍 Verifying data creation...');
     
     const store1DeliveryCount = await DeliveryMethod.countDocuments({ store: STORE_IDS.STORE_1 });
     const store2DeliveryCount = await DeliveryMethod.countDocuments({ store: STORE_IDS.STORE_2 });
@@ -506,92 +506,92 @@ async function createDeliveryPaymentForStores() {
     const store2PaymentCount = await PaymentMethod.countDocuments({ store: STORE_IDS.STORE_2 });
     const store3PaymentCount = await PaymentMethod.countDocuments({ store: STORE_IDS.STORE_3 });
     
-    console.log(`   Store 1: ${store1DeliveryCount} delivery methods, ${store1PaymentCount} payment methods`);
-    console.log(`   Store 2: ${store2DeliveryCount} delivery methods, ${store2PaymentCount} payment methods`);
-    console.log(`   Store 3: ${store3DeliveryCount} delivery methods, ${store3PaymentCount} payment methods`);
+    //CONSOLE.log(`   Store 1: ${store1DeliveryCount} delivery methods, ${store1PaymentCount} payment methods`);
+    //CONSOLE.log(`   Store 2: ${store2DeliveryCount} delivery methods, ${store2PaymentCount} payment methods`);
+    //CONSOLE.log(`   Store 3: ${store3DeliveryCount} delivery methods, ${store3PaymentCount} payment methods`);
 
     // Test isolation
-    console.log('\n🔒 Testing data isolation...');
+    //CONSOLE.log('\n🔒 Testing data isolation...');
     const crossStoreDelivery = await DeliveryMethod.findOne({
       store: STORE_IDS.STORE_1,
       locationAr: { $in: store2DeliveryMethods.map(d => d.locationAr) }
     });
     
     if (!crossStoreDelivery) {
-      console.log('   ✅ Data isolation verified - no cross-store data found');
+      //CONSOLE.log('   ✅ Data isolation verified - no cross-store data found');
     } else {
-      console.log('   ❌ Data isolation failed - cross-store data found');
+      //CONSOLE.log('   ❌ Data isolation failed - cross-store data found');
     }
 
-    console.log('\n🎉 Delivery and payment methods created successfully!');
-    console.log('\n📊 Summary:');
-    console.log(`- Store 1 (${STORE_IDS.STORE_1}): ${store1DeliveryCount} delivery, ${store1PaymentCount} payment methods`);
-    console.log(`- Store 2 (${STORE_IDS.STORE_2}): ${store2DeliveryCount} delivery, ${store2PaymentCount} payment methods`);
-    console.log(`- Store 3 (${STORE_IDS.STORE_3}): ${store3DeliveryCount} delivery, ${store3PaymentCount} payment methods`);
-    console.log(`- Total delivery methods: ${store1DeliveryCount + store2DeliveryCount + store3DeliveryCount}`);
-    console.log(`- Total payment methods: ${store1PaymentCount + store2PaymentCount + store3PaymentCount}`);
+    //CONSOLE.log('\n🎉 Delivery and payment methods created successfully!');
+    //CONSOLE.log('\n📊 Summary:');
+    //CONSOLE.log(`- Store 1 (${STORE_IDS.STORE_1}): ${store1DeliveryCount} delivery, ${store1PaymentCount} payment methods`);
+    //CONSOLE.log(`- Store 2 (${STORE_IDS.STORE_2}): ${store2DeliveryCount} delivery, ${store2PaymentCount} payment methods`);
+    //CONSOLE.log(`- Store 3 (${STORE_IDS.STORE_3}): ${store3DeliveryCount} delivery, ${store3PaymentCount} payment methods`);
+    //CONSOLE.log(`- Total delivery methods: ${store1DeliveryCount + store2DeliveryCount + store3DeliveryCount}`);
+    //CONSOLE.log(`- Total payment methods: ${store1PaymentCount + store2PaymentCount + store3PaymentCount}`);
     
-    console.log('\n📋 Data Details:');
+    //CONSOLE.log('\n📋 Data Details:');
     
-    console.log('\n🛠️ Store 1 Delivery Methods (Tech/Electronics):');
+    //CONSOLE.log('\n🛠️ Store 1 Delivery Methods (Tech/Electronics):');
     store1DeliveryMethods.forEach((d, index) => {
-      console.log(`   ${index + 1}. ${d.locationAr} (${d.locationEn})`);
-      console.log(`      💰 Price: ${d.price} ILS`);
-      console.log(`      📱 WhatsApp: ${d.whatsappNumber}`);
-      console.log(`      ⏱️ Estimated: ${d.estimatedDays} day(s)`);
-      console.log(`      📍 Default: ${d.isDefault ? 'Yes' : 'No'}`);
+      //CONSOLE.log(`   ${index + 1}. ${d.locationAr} (${d.locationEn})`);
+      //CONSOLE.log(`      💰 Price: ${d.price} ILS`);
+      //CONSOLE.log(`      📱 WhatsApp: ${d.whatsappNumber}`);
+      //CONSOLE.log(`      ⏱️ Estimated: ${d.estimatedDays} day(s)`);
+      //CONSOLE.log(`      📍 Default: ${d.isDefault ? 'Yes' : 'No'}`);
     });
 
-    console.log('\n👗 Store 2 Delivery Methods (Fashion/Clothing):');
+    //CONSOLE.log('\n👗 Store 2 Delivery Methods (Fashion/Clothing):');
     store2DeliveryMethods.forEach((d, index) => {
-      console.log(`   ${index + 1}. ${d.locationAr} (${d.locationEn})`);
-      console.log(`      💰 Price: ${d.price} SAR`);
-      console.log(`      📱 WhatsApp: ${d.whatsappNumber}`);
-      console.log(`      ⏱️ Estimated: ${d.estimatedDays} day(s)`);
-      console.log(`      📍 Default: ${d.isDefault ? 'Yes' : 'No'}`);
+      //CONSOLE.log(`   ${index + 1}. ${d.locationAr} (${d.locationEn})`);
+      //CONSOLE.log(`      💰 Price: ${d.price} SAR`);
+      //CONSOLE.log(`      📱 WhatsApp: ${d.whatsappNumber}`);
+      //CONSOLE.log(`      ⏱️ Estimated: ${d.estimatedDays} day(s)`);
+      //CONSOLE.log(`      📍 Default: ${d.isDefault ? 'Yes' : 'No'}`);
     });
 
-    console.log('\n🛒 Store 3 Delivery Methods (Food/Grocery):');
+    //CONSOLE.log('\n🛒 Store 3 Delivery Methods (Food/Grocery):');
     store3DeliveryMethods.forEach((d, index) => {
-      console.log(`   ${index + 1}. ${d.locationAr} (${d.locationEn})`);
-      console.log(`      💰 Price: ${d.price} JOD`);
-      console.log(`      📱 WhatsApp: ${d.whatsappNumber}`);
-      console.log(`      ⏱️ Estimated: ${d.estimatedDays} day(s)`);
-      console.log(`      📍 Default: ${d.isDefault ? 'Yes' : 'No'}`);
+      //CONSOLE.log(`   ${index + 1}. ${d.locationAr} (${d.locationEn})`);
+      //CONSOLE.log(`      💰 Price: ${d.price} JOD`);
+      //CONSOLE.log(`      📱 WhatsApp: ${d.whatsappNumber}`);
+      //CONSOLE.log(`      ⏱️ Estimated: ${d.estimatedDays} day(s)`);
+      //CONSOLE.log(`      📍 Default: ${d.isDefault ? 'Yes' : 'No'}`);
     });
 
-    console.log('\n💳 Store 1 Payment Methods (Tech/Electronics):');
+    //CONSOLE.log('\n💳 Store 1 Payment Methods (Tech/Electronics):');
     store1PaymentMethods.forEach((p, index) => {
-      console.log(`   ${index + 1}. ${p.titleAr} (${p.titleEn})`);
-      console.log(`      💳 Type: ${p.methodType}`);
-      console.log(`      💰 Fee: ${p.processingFee}%`);
-      console.log(`      💵 Min: ${p.minimumAmount} ILS, Max: ${p.maximumAmount} ILS`);
-      console.log(`      📍 Default: ${p.isDefault ? 'Yes' : 'No'}`);
+      //CONSOLE.log(`   ${index + 1}. ${p.titleAr} (${p.titleEn})`);
+      //CONSOLE.log(`      💳 Type: ${p.methodType}`);
+      //CONSOLE.log(`      💰 Fee: ${p.processingFee}%`);
+      //CONSOLE.log(`      💵 Min: ${p.minimumAmount} ILS, Max: ${p.maximumAmount} ILS`);
+      //CONSOLE.log(`      📍 Default: ${p.isDefault ? 'Yes' : 'No'}`);
     });
 
-    console.log('\n💰 Store 2 Payment Methods (Fashion/Clothing):');
+    //CONSOLE.log('\n💰 Store 2 Payment Methods (Fashion/Clothing):');
     store2PaymentMethods.forEach((p, index) => {
-      console.log(`   ${index + 1}. ${p.titleAr} (${p.titleEn})`);
-      console.log(`      💳 Type: ${p.methodType}`);
-      console.log(`      💰 Fee: ${p.processingFee}%`);
-      console.log(`      💵 Min: ${p.minimumAmount} SAR, Max: ${p.maximumAmount} SAR`);
-      console.log(`      📍 Default: ${p.isDefault ? 'Yes' : 'No'}`);
+      //CONSOLE.log(`   ${index + 1}. ${p.titleAr} (${p.titleEn})`);
+      //CONSOLE.log(`      💳 Type: ${p.methodType}`);
+      //CONSOLE.log(`      💰 Fee: ${p.processingFee}%`);
+      //CONSOLE.log(`      💵 Min: ${p.minimumAmount} SAR, Max: ${p.maximumAmount} SAR`);
+      //CONSOLE.log(`      📍 Default: ${p.isDefault ? 'Yes' : 'No'}`);
     });
 
-    console.log('\n🍎 Store 3 Payment Methods (Food/Grocery):');
+    //CONSOLE.log('\n🍎 Store 3 Payment Methods (Food/Grocery):');
     store3PaymentMethods.forEach((p, index) => {
-      console.log(`   ${index + 1}. ${p.titleAr} (${p.titleEn})`);
-      console.log(`      💳 Type: ${p.methodType}`);
-      console.log(`      💰 Fee: ${p.processingFee}%`);
-      console.log(`      💵 Min: ${p.minimumAmount} JOD, Max: ${p.maximumAmount} JOD`);
-      console.log(`      📍 Default: ${p.isDefault ? 'Yes' : 'No'}`);
+      //CONSOLE.log(`   ${index + 1}. ${p.titleAr} (${p.titleEn})`);
+      //CONSOLE.log(`      💳 Type: ${p.methodType}`);
+      //CONSOLE.log(`      💰 Fee: ${p.processingFee}%`);
+      //CONSOLE.log(`      💵 Min: ${p.minimumAmount} JOD, Max: ${p.maximumAmount} JOD`);
+      //CONSOLE.log(`      📍 Default: ${p.isDefault ? 'Yes' : 'No'}`);
     });
 
   } catch (error) {
-    console.error('❌ Error creating delivery and payment data:', error);
+    //CONSOLE.error('❌ Error creating delivery and payment data:', error);
   } finally {
     await mongoose.connection.close();
-    console.log('\n🔌 Database connection closed');
+    //CONSOLE.log('\n🔌 Database connection closed');
   }
 }
 

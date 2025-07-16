@@ -207,7 +207,7 @@ const getAllPaymentMethods = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get all payment methods error:', error);
+    //CONSOLE.error('Get all payment methods error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching payment methods',
@@ -303,7 +303,7 @@ const getPaymentMethodById = async (req, res) => {
       data: paymentMethod
     });
   } catch (error) {
-    console.error('Get payment method by ID error:', error);
+    //CONSOLE.error('Get payment method by ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching payment method',
@@ -383,7 +383,7 @@ const createPaymentMethod = async (req, res) => {
       data: paymentMethod
     });
   } catch (error) {
-    console.error('Create payment method error:', error);
+    //CONSOLE.error('Create payment method error:', error);
     
     // Handle model validation errors
     if (error.message === 'Default payment method cannot be inactive') {
@@ -497,7 +497,7 @@ const updatePaymentMethod = async (req, res) => {
       data: paymentMethod
     });
   } catch (error) {
-    console.error('Update payment method error:', error);
+    //CONSOLE.error('Update payment method error:', error);
     
     // Handle model validation errors
     if (error.message === 'Default payment method cannot be inactive') {
@@ -582,7 +582,7 @@ const deletePaymentMethod = async (req, res) => {
       message: 'Payment method deleted successfully'
     });
   } catch (error) {
-    console.error('Delete payment method error:', error);
+    //CONSOLE.error('Delete payment method error:', error);
     res.status(500).json({
       success: false,
       message: 'Error deleting payment method',
@@ -660,7 +660,7 @@ const toggleActiveStatus = async (req, res) => {
       data: paymentMethod
     });
   } catch (error) {
-    console.error('Toggle payment method status error:', error);
+    //CONSOLE.error('Toggle payment method status error:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating payment method status',
@@ -748,7 +748,7 @@ const setAsDefault = async (req, res) => {
       data: paymentMethod
     });
   } catch (error) {
-    console.error('Set default payment method error:', error);
+    //CONSOLE.error('Set default payment method error:', error);
     res.status(500).json({
       success: false,
       message: 'Error setting default payment method',

@@ -77,7 +77,7 @@ const categoryStructure = [
 
 async function createFlexibleCategoryStructure() {
   try {
-    console.log('🌳 Creating flexible category structure...\n');
+    //CONSOLE.log('🌳 Creating flexible category structure...\n');
     
     const createdCategories = {};
     
@@ -92,28 +92,28 @@ async function createFlexibleCategoryStructure() {
         parent: parentId
       };
       
-      console.log(`📁 Creating category: ${categoryData.nameEn} (Level ${categoryData.level})`);
+      //CONSOLE.log(`📁 Creating category: ${categoryData.nameEn} (Level ${categoryData.level})`);
       
       const response = await axios.post(`${API_BASE_URL}/meta/categories`, categoryToCreate);
       const categoryId = response.data._id;
       createdCategories[categoryData.slug] = categoryId;
       
-      console.log(`✅ Created: ${categoryData.nameEn} (ID: ${categoryId})`);
+      //CONSOLE.log(`✅ Created: ${categoryData.nameEn} (ID: ${categoryId})`);
       
       // Create products for this category if any
       if (categoryData.products && categoryData.products.length > 0) {
-        console.log(`📦 Adding ${categoryData.products.length} products to ${categoryData.nameEn}...`);
+        //CONSOLE.log(`📦 Adding ${categoryData.products.length} products to ${categoryData.nameEn}...`);
         
         // Note: You would need to implement product creation here
         // For now, we'll just log the products
         categoryData.products.forEach(product => {
-          console.log(`   - ${product.nameEn} ($${product.price})`);
+          //CONSOLE.log(`   - ${product.nameEn} ($${product.price})`);
         });
       }
       
       // Create children categories
       if (categoryData.children && categoryData.children.length > 0) {
-        console.log(`👶 Creating ${categoryData.children.length} children for ${categoryData.nameEn}...`);
+        //CONSOLE.log(`👶 Creating ${categoryData.children.length} children for ${categoryData.nameEn}...`);
         
         for (const child of categoryData.children) {
           await createCategoryWithChildren(child, categoryId);
@@ -128,15 +128,15 @@ async function createFlexibleCategoryStructure() {
       await createCategoryWithChildren(category);
     }
     
-    console.log('\n🎉 Flexible category structure created successfully!');
+    //CONSOLE.log('\n🎉 Flexible category structure created successfully!');
     
     // Test the new endpoints
-    console.log('\n🧪 Testing new endpoints...');
+    //CONSOLE.log('\n🧪 Testing new endpoints...');
     
     // Test category details endpoint
     const firstCategoryId = Object.values(createdCategories)[0];
     const detailsResponse = await axios.get(`${API_BASE_URL}/meta/categories/${firstCategoryId}/details?includeProducts=true`);
-    console.log('✅ Category details:', {
+    //CONSOLE.log('✅ Category details:', {
       hasChildren: detailsResponse.data.hasChildren,
       hasProducts: detailsResponse.data.hasProducts,
       canHaveBoth: detailsResponse.data.canHaveBoth
@@ -144,18 +144,18 @@ async function createFlexibleCategoryStructure() {
     
     // Test category tree endpoint
     const treeResponse = await axios.get(`${API_BASE_URL}/meta/categories/tree?storeId=${STORE_ID}`);
-    console.log('✅ Category tree created with', treeResponse.data.length, 'root categories');
+    //CONSOLE.log('✅ Category tree created with', treeResponse.data.length, 'root categories');
     
   } catch (error) {
-    console.error('❌ Error:', error.response?.data || error.message);
+    //CONSOLE.error('❌ Error:', error.response?.data || error.message);
   }
 }
 
 // Instructions
-console.log('📝 Instructions:');
-console.log('1. Replace STORE_ID with your actual store ID');
-console.log('2. Make sure your backend server is running');
-console.log('3. Run: node examples/flexible-categories.js\n');
+//CONSOLE.log('📝 Instructions:');
+//CONSOLE.log('1. Replace STORE_ID with your actual store ID');
+//CONSOLE.log('2. Make sure your backend server is running');
+//CONSOLE.log('3. Run: node examples/flexible-categories.js\n');
 
 // Uncomment to run
 // createFlexibleCategoryStructure();

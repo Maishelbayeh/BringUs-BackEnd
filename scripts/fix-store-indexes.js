@@ -5,17 +5,17 @@ const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4md
 
 async function fixStoreIndexes() {
   try {
-    console.log('🔗 Connecting to MongoDB...');
+    //CONSOLE.log('🔗 Connecting to MongoDB...');
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
+    //CONSOLE.log('✅ Connected to MongoDB');
 
     const db = mongoose.connection.db;
     const storesCollection = db.collection('stores');
 
-    console.log('📋 Current indexes:');
+    //CONSOLE.log('📋 Current indexes:');
     const indexes = await storesCollection.indexes();
     indexes.forEach(index => {
-      console.log('  -', JSON.stringify(index.key), index.unique ? '(unique)' : '');
+      //CONSOLE.log('  -', JSON.stringify(index.key), index.unique ? '(unique)' : '');
     });
 
     // Check if domain index exists
@@ -24,11 +24,11 @@ async function fixStoreIndexes() {
     );
 
     if (domainIndex) {
-      console.log('🗑️  Dropping old domain index...');
+      //CONSOLE.log('🗑️  Dropping old domain index...');
       await storesCollection.dropIndex('domain_1');
-      console.log('✅ Domain index dropped');
+      //CONSOLE.log('✅ Domain index dropped');
     } else {
-      console.log('ℹ️  No domain index found');
+      //CONSOLE.log('ℹ️  No domain index found');
     }
 
     // Check if slug index exists
@@ -37,25 +37,25 @@ async function fixStoreIndexes() {
     );
 
     if (!slugIndex) {
-      console.log('📝 Creating slug index...');
+      //CONSOLE.log('📝 Creating slug index...');
       await storesCollection.createIndex({ slug: 1 }, { unique: true });
-      console.log('✅ Slug index created');
+      //CONSOLE.log('✅ Slug index created');
     } else {
-      console.log('ℹ️  Slug index already exists');
+      //CONSOLE.log('ℹ️  Slug index already exists');
     }
 
-    console.log('\n📋 Updated indexes:');
+    //CONSOLE.log('\n📋 Updated indexes:');
     const updatedIndexes = await storesCollection.indexes();
     updatedIndexes.forEach(index => {
-      console.log('  -', JSON.stringify(index.key), index.unique ? '(unique)' : '');
+      //CONSOLE.log('  -', JSON.stringify(index.key), index.unique ? '(unique)' : '');
     });
 
-    console.log('\n🎉 Store indexes fixed successfully!');
+    //CONSOLE.log('\n🎉 Store indexes fixed successfully!');
   } catch (error) {
-    console.error('❌ Error fixing store indexes:', error);
+    //CONSOLE.error('❌ Error fixing store indexes:', error);
   } finally {
     await mongoose.disconnect();
-    console.log('🔌 Disconnected from MongoDB');
+    //CONSOLE.log('🔌 Disconnected from MongoDB');
   }
 }
 

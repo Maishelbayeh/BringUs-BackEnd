@@ -100,10 +100,10 @@ mongoose.connect(MONGODB_URI, {
   // Removed deprecated options: useNewUrlParser and useUnifiedTopology
 })
 .then(() => {
-  console.log('✅ Connected to MongoDB');
+  //CONSOLE.log('✅ Connected to MongoDB');
 })
 .catch((err) => {
-  console.error('❌ MongoDB connection error:', err);
+  //CONSOLE.error('❌ MongoDB connection error:', err);
   process.exit(1);
 });
 
@@ -452,12 +452,32 @@ const swaggerOptions = {
           type: 'object',
           properties: {
             _id: { type: 'string', example: '507f1f77bcf86cd799439017' },
-            descriptionAr: { type: 'string', example: 'طويل' },
-            descriptionEn: { type: 'string', example: 'Long' },
+            titleAr: { type: 'string', example: 'اللون' },
+            titleEn: { type: 'string', example: 'Color' },
+            values: { 
+              type: 'array', 
+              items: { 
+                type: 'object',
+                properties: {
+                  valueAr: { type: 'string', example: 'أحمر' },
+                  valueEn: { type: 'string', example: 'Red' }
+                },
+                required: ['valueAr', 'valueEn']
+              },
+              example: [
+                { valueAr: 'أحمر', valueEn: 'Red' },
+                { valueAr: 'أزرق', valueEn: 'Blue' },
+                { valueAr: 'أخضر', valueEn: 'Green' }
+              ]
+            },
             category: { $ref: '#/components/schemas/Category' },
             isActive: { type: 'boolean', example: true },
-            sortOrder: { type: 'number', example: 1 }
-          }
+            sortOrder: { type: 'number', example: 1 },
+            store: { $ref: '#/components/schemas/Store' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          },
+          required: ['titleAr', 'titleEn', 'values', 'store']
         },
         // ProductVariant: {
         //   type: 'object',
@@ -611,7 +631,7 @@ app.use('*', (req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  //CONSOLE.error(err.stack);
   res.status(500).json({
     success: false,
     message: 'Something went wrong!',
@@ -621,8 +641,8 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📱 API available at http://localhost:${PORT}/api`);
+  //CONSOLE.log(`🚀 Server running on port ${PORT}`);
+  //CONSOLE.log(`📱 API available at http://localhost:${PORT}/api`);
 });
 
 module.exports = app; 

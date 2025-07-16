@@ -57,7 +57,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
       user
     });
   } catch (error) {
-    console.error('Get profile error:', error);
+    //CONSOLE.error('Get profile error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching profile',
@@ -103,7 +103,7 @@ router.put('/profile', [
       user
     });
   } catch (error) {
-    console.error('Update profile error:', error);
+    //CONSOLE.error('Update profile error:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating profile',
@@ -152,7 +152,7 @@ router.put('/change-password', [
       message: 'Password changed successfully'
     });
   } catch (error) {
-    console.error('Change password error:', error);
+    //CONSOLE.error('Change password error:', error);
     res.status(500).json({
       success: false,
       message: 'Error changing password',
@@ -217,7 +217,7 @@ router.post('/addresses', [
       addresses: user.addresses
     });
   } catch (error) {
-    console.error('Add address error:', error);
+    //CONSOLE.error('Add address error:', error);
     res.status(500).json({
       success: false,
       message: 'Error adding address',
@@ -278,7 +278,7 @@ router.put('/addresses/:addressId', [
       addresses: user.addresses
     });
   } catch (error) {
-    console.error('Update address error:', error);
+    //CONSOLE.error('Update address error:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating address',
@@ -306,7 +306,7 @@ router.delete('/addresses/:addressId', authenticateToken, async (req, res) => {
       addresses: user.addresses
     });
   } catch (error) {
-    console.error('Delete address error:', error);
+    //CONSOLE.error('Delete address error:', error);
     res.status(500).json({
       success: false,
       message: 'Error deleting address',
@@ -327,7 +327,7 @@ router.get('/addresses', authenticateToken, async (req, res) => {
       addresses: user.addresses
     });
   } catch (error) {
-    console.error('Get addresses error:', error);
+    //CONSOLE.error('Get addresses error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching addresses',

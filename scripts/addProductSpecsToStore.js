@@ -8,8 +8,8 @@ async function addProductSpecsToStore() {
   try {
     // Connect to MongoDB
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
-    console.log(`🏪 Adding data to Store ID: ${STORE_ID}`);
+    //CONSOLE.log('✅ Connected to MongoDB');
+    //CONSOLE.log(`🏪 Adding data to Store ID: ${STORE_ID}`);
 
     // البيانات المطلوبة إضافتها - الآن مع الهيكل الصحيح
     const specsToAdd = [
@@ -89,20 +89,20 @@ async function addProductSpecsToStore() {
       
       await newSpec.save();
       createdSpecs.push(newSpec);
-      console.log(`✅ Added: ${spec.titleAr} / ${spec.titleEn} with ${spec.values.length} values`);
+      //CONSOLE.log(`✅ Added: ${spec.titleAr} / ${spec.titleEn} with ${spec.values.length} values`);
     }
 
-    console.log(`\n🎉 Successfully added ${createdSpecs.length} specifications to store ${STORE_ID}`);
+    //CONSOLE.log(`\n🎉 Successfully added ${createdSpecs.length} specifications to store ${STORE_ID}`);
     
     // عرض إجمالي المواصفات في المتجر
     const totalSpecs = await ProductSpecification.countDocuments({ store: STORE_ID });
-    console.log(`📊 Total specifications in store ${STORE_ID}: ${totalSpecs}`);
+    //CONSOLE.log(`📊 Total specifications in store ${STORE_ID}: ${totalSpecs}`);
 
   } catch (error) {
-    console.error('❌ Error adding specifications:', error);
+    //CONSOLE.error('❌ Error adding specifications:', error);
   } finally {
     await mongoose.disconnect();
-    console.log('🔌 Disconnected from MongoDB');
+    //CONSOLE.log('🔌 Disconnected from MongoDB');
   }
 }
 

@@ -179,9 +179,9 @@ const DeliveryMethod = mongoose.model('DeliveryMethod', deliveryMethodSchema);
 
 async function createDeliveryMethodsForStore() {
   try {
-    console.log('🔌 Connecting to MongoDB...');
+    //CONSOLE.log('🔌 Connecting to MongoDB...');
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB successfully!');
+    //CONSOLE.log('✅ Connected to MongoDB successfully!');
 
     // Verify store exists
     const Store = mongoose.model('Store', new mongoose.Schema({}));
@@ -189,12 +189,12 @@ async function createDeliveryMethodsForStore() {
     if (!store) {
       throw new Error(`Store with ID ${STORE_ID} not found`);
     }
-    console.log(`✅ Store found: ${STORE_ID}`);
+    //CONSOLE.log(`✅ Store found: ${STORE_ID}`);
 
     // Clear existing delivery methods for this store
-    console.log('🧹 Clearing existing delivery methods...');
+    //CONSOLE.log('🧹 Clearing existing delivery methods...');
     await DeliveryMethod.deleteMany({ store: STORE_ID });
-    console.log('✅ Existing delivery methods cleared');
+    //CONSOLE.log('✅ Existing delivery methods cleared');
 
     // Add store ID to each delivery method
     const deliveryMethodsWithStore = deliveryMethodsData.map(method => ({
@@ -203,36 +203,36 @@ async function createDeliveryMethodsForStore() {
     }));
 
     // Insert new delivery methods
-    console.log('📦 Creating new delivery methods...');
+    //CONSOLE.log('📦 Creating new delivery methods...');
     const createdMethods = await DeliveryMethod.insertMany(deliveryMethodsWithStore);
     
-    console.log(`✅ Successfully created ${createdMethods.length} delivery methods for store ${STORE_ID}`);
+    //CONSOLE.log(`✅ Successfully created ${createdMethods.length} delivery methods for store ${STORE_ID}`);
     
     // Display created methods
-    console.log('\n📋 Created Delivery Methods:');
+    //CONSOLE.log('\n📋 Created Delivery Methods:');
     createdMethods.forEach((method, index) => {
-      console.log(`${index + 1}. ${method.locationEn} (${method.locationAr}) - $${method.price}`);
+      //CONSOLE.log(`${index + 1}. ${method.locationEn} (${method.locationAr}) - $${method.price}`);
       if (method.isDefault) {
-        console.log('   ⭐ Default method');
+        //CONSOLE.log('   ⭐ Default method');
       }
     });
 
     // Verify creation
     const totalMethods = await DeliveryMethod.countDocuments({ store: STORE_ID });
-    console.log(`\n📊 Total delivery methods for store: ${totalMethods}`);
+    //CONSOLE.log(`\n📊 Total delivery methods for store: ${totalMethods}`);
 
     // Get default method
     const defaultMethod = await DeliveryMethod.findOne({ store: STORE_ID, isDefault: true });
     if (defaultMethod) {
-      console.log(`\n⭐ Default method: ${defaultMethod.locationEn} (${defaultMethod.locationAr})`);
+      //CONSOLE.log(`\n⭐ Default method: ${defaultMethod.locationEn} (${defaultMethod.locationAr})`);
     }
 
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    //CONSOLE.error('❌ Error:', error.message);
     process.exit(1);
   } finally {
     await mongoose.disconnect();
-    console.log('🔌 Disconnected from MongoDB');
+    //CONSOLE.log('🔌 Disconnected from MongoDB');
   }
 }
 

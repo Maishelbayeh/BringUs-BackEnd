@@ -27,8 +27,8 @@ const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4md
 mongoose.connect(MONGODB_URI, {
   // Removed deprecated options for newer MongoDB driver
 })
-.then(() => console.log('✅ Connected to MongoDB Atlas'))
-.catch(err => console.error('❌ MongoDB connection error:', err));
+.then(() => //CONSOLE.log('✅ Connected to MongoDB Atlas'))
+.catch(err => //CONSOLE.error('❌ MongoDB connection error:', err));
 
 // Delivery methods data for TechStore
 const techStoreDeliveryMethods = [
@@ -241,7 +241,7 @@ const fashionStorePaymentMethods = [
 
 async function createDeliveryPaymentData() {
   try {
-    console.log('🚀 Creating delivery and payment methods test data...\n');
+    //CONSOLE.log('🚀 Creating delivery and payment methods test data...\n');
 
     // Wait for connection to be established
     await mongoose.connection.asPromise();
@@ -251,7 +251,7 @@ async function createDeliveryPaymentData() {
     const fashionStore = await Store.findOne({ name: 'FashionStore' });
 
     if (!techStore || !fashionStore) {
-      console.log('❌ Stores not found. Creating stores first...');
+      //CONSOLE.log('❌ Stores not found. Creating stores first...');
       
       // Create stores if they don't exist
       const newTechStore = await Store.create({
@@ -276,13 +276,13 @@ async function createDeliveryPaymentData() {
         }
       });
       
-      console.log('✅ Created stores');
-      console.log(`   - TechStore: ${newTechStore._id}`);
-      console.log(`   - FashionStore: ${newFashionStore._id}\n`);
+      //CONSOLE.log('✅ Created stores');
+      //CONSOLE.log(`   - TechStore: ${newTechStore._id}`);
+      //CONSOLE.log(`   - FashionStore: ${newFashionStore._id}\n`);
     } else {
-      console.log(`📦 Found stores:`);
-      console.log(`   - TechStore: ${techStore._id}`);
-      console.log(`   - FashionStore: ${fashionStore._id}\n`);
+      //CONSOLE.log(`📦 Found stores:`);
+      //CONSOLE.log(`   - TechStore: ${techStore._id}`);
+      //CONSOLE.log(`   - FashionStore: ${fashionStore._id}\n`);
     }
 
     const finalTechStore = techStore || await Store.findOne({ name: 'TechStore' });
@@ -295,10 +295,10 @@ async function createDeliveryPaymentData() {
     await PaymentMethod.deleteMany({
       store: { $in: [finalTechStore._id, finalFashionStore._id] }
     });
-    console.log('🧹 Cleared existing test data\n');
+    //CONSOLE.log('🧹 Cleared existing test data\n');
 
     // Create TechStore delivery methods
-    console.log('🛠️ Creating TechStore delivery methods...');
+    //CONSOLE.log('🛠️ Creating TechStore delivery methods...');
     const techDeliveryMethods = [];
     for (const deliveryData of techStoreDeliveryMethods) {
       const deliveryMethod = await DeliveryMethod.create({
@@ -306,11 +306,11 @@ async function createDeliveryPaymentData() {
         store: finalTechStore._id
       });
       techDeliveryMethods.push(deliveryMethod);
-      console.log(`   ✅ Created: ${deliveryMethod.locationAr} (${deliveryMethod.locationEn}) - ${deliveryMethod.price} ILS`);
+      //CONSOLE.log(`   ✅ Created: ${deliveryMethod.locationAr} (${deliveryMethod.locationEn}) - ${deliveryMethod.price} ILS`);
     }
 
     // Create FashionStore delivery methods
-    console.log('\n👗 Creating FashionStore delivery methods...');
+    //CONSOLE.log('\n👗 Creating FashionStore delivery methods...');
     const fashionDeliveryMethods = [];
     for (const deliveryData of fashionStoreDeliveryMethods) {
       const deliveryMethod = await DeliveryMethod.create({
@@ -318,11 +318,11 @@ async function createDeliveryPaymentData() {
         store: finalFashionStore._id
       });
       fashionDeliveryMethods.push(deliveryMethod);
-      console.log(`   ✅ Created: ${deliveryMethod.locationAr} (${deliveryMethod.locationEn}) - ${deliveryMethod.price} SAR`);
+      //CONSOLE.log(`   ✅ Created: ${deliveryMethod.locationAr} (${deliveryMethod.locationEn}) - ${deliveryMethod.price} SAR`);
     }
 
     // Create TechStore payment methods
-    console.log('\n💳 Creating TechStore payment methods...');
+    //CONSOLE.log('\n💳 Creating TechStore payment methods...');
     const techPaymentMethods = [];
     for (const paymentData of techStorePaymentMethods) {
       const paymentMethod = await PaymentMethod.create({
@@ -330,11 +330,11 @@ async function createDeliveryPaymentData() {
         store: finalTechStore._id
       });
       techPaymentMethods.push(paymentMethod);
-      console.log(`   ✅ Created: ${paymentMethod.titleAr} (${paymentMethod.titleEn})`);
+      //CONSOLE.log(`   ✅ Created: ${paymentMethod.titleAr} (${paymentMethod.titleEn})`);
     }
 
     // Create FashionStore payment methods
-    console.log('\n💰 Creating FashionStore payment methods...');
+    //CONSOLE.log('\n💰 Creating FashionStore payment methods...');
     const fashionPaymentMethods = [];
     for (const paymentData of fashionStorePaymentMethods) {
       const paymentMethod = await PaymentMethod.create({
@@ -342,21 +342,21 @@ async function createDeliveryPaymentData() {
         store: finalFashionStore._id
       });
       fashionPaymentMethods.push(paymentMethod);
-      console.log(`   ✅ Created: ${paymentMethod.titleAr} (${paymentMethod.titleEn})`);
+      //CONSOLE.log(`   ✅ Created: ${paymentMethod.titleAr} (${paymentMethod.titleEn})`);
     }
 
     // Verify isolation
-    console.log('\n🔍 Verifying data isolation...');
+    //CONSOLE.log('\n🔍 Verifying data isolation...');
     
     const techDeliveryCount = await DeliveryMethod.countDocuments({ store: finalTechStore._id });
     const fashionDeliveryCount = await DeliveryMethod.countDocuments({ store: finalFashionStore._id });
     const techPaymentCount = await PaymentMethod.countDocuments({ store: finalTechStore._id });
     const fashionPaymentCount = await PaymentMethod.countDocuments({ store: finalFashionStore._id });
     
-    console.log(`   - TechStore delivery methods: ${techDeliveryCount}`);
-    console.log(`   - FashionStore delivery methods: ${fashionDeliveryCount}`);
-    console.log(`   - TechStore payment methods: ${techPaymentCount}`);
-    console.log(`   - FashionStore payment methods: ${fashionPaymentCount}`);
+    //CONSOLE.log(`   - TechStore delivery methods: ${techDeliveryCount}`);
+    //CONSOLE.log(`   - FashionStore delivery methods: ${fashionDeliveryCount}`);
+    //CONSOLE.log(`   - TechStore payment methods: ${techPaymentCount}`);
+    //CONSOLE.log(`   - FashionStore payment methods: ${fashionPaymentCount}`);
 
     // Test cross-store access
     const techDeliveryInFashion = await DeliveryMethod.findOne({ 
@@ -370,63 +370,63 @@ async function createDeliveryPaymentData() {
     });
 
     if (!techDeliveryInFashion && !fashionDeliveryInTech) {
-      console.log('   ✅ Delivery methods isolation verified');
+      //CONSOLE.log('   ✅ Delivery methods isolation verified');
     } else {
-      console.log('   ❌ Delivery methods isolation failed');
+      //CONSOLE.log('   ❌ Delivery methods isolation failed');
     }
 
-    console.log('\n🎉 Delivery and payment methods test data created successfully!');
-    console.log('\n📊 Summary:');
-    console.log(`- TechStore delivery methods: ${techDeliveryCount}`);
-    console.log(`- FashionStore delivery methods: ${fashionDeliveryCount}`);
-    console.log(`- TechStore payment methods: ${techPaymentCount}`);
-    console.log(`- FashionStore payment methods: ${fashionPaymentCount}`);
-    console.log('- Total delivery methods:', techDeliveryCount + fashionDeliveryCount);
-    console.log('- Total payment methods:', techPaymentCount + fashionPaymentCount);
-    console.log('- Data isolation: Verified ✅');
+    //CONSOLE.log('\n🎉 Delivery and payment methods test data created successfully!');
+    //CONSOLE.log('\n📊 Summary:');
+    //CONSOLE.log(`- TechStore delivery methods: ${techDeliveryCount}`);
+    //CONSOLE.log(`- FashionStore delivery methods: ${fashionDeliveryCount}`);
+    //CONSOLE.log(`- TechStore payment methods: ${techPaymentCount}`);
+    //CONSOLE.log(`- FashionStore payment methods: ${fashionPaymentCount}`);
+    //CONSOLE.log('- Total delivery methods:', techDeliveryCount + fashionDeliveryCount);
+    //CONSOLE.log('- Total payment methods:', techPaymentCount + fashionPaymentCount);
+    //CONSOLE.log('- Data isolation: Verified ✅');
     
-    console.log('\n📋 Data Details:');
-    console.log('\n🛠️ TechStore Delivery Methods:');
+    //CONSOLE.log('\n📋 Data Details:');
+    //CONSOLE.log('\n🛠️ TechStore Delivery Methods:');
     techStoreDeliveryMethods.forEach((d, index) => {
-      console.log(`   ${index + 1}. ${d.locationAr} (${d.locationEn})`);
-      console.log(`      💰 Price: ${d.price} ILS`);
-      console.log(`      📱 WhatsApp: ${d.whatsappNumber}`);
-      console.log(`      ⏱️ Estimated: ${d.estimatedDays} day(s)`);
-      console.log(`      📍 Default: ${d.isDefault ? 'Yes' : 'No'}`);
+      //CONSOLE.log(`   ${index + 1}. ${d.locationAr} (${d.locationEn})`);
+      //CONSOLE.log(`      💰 Price: ${d.price} ILS`);
+      //CONSOLE.log(`      📱 WhatsApp: ${d.whatsappNumber}`);
+      //CONSOLE.log(`      ⏱️ Estimated: ${d.estimatedDays} day(s)`);
+      //CONSOLE.log(`      📍 Default: ${d.isDefault ? 'Yes' : 'No'}`);
     });
 
-    console.log('\n👗 FashionStore Delivery Methods:');
+    //CONSOLE.log('\n👗 FashionStore Delivery Methods:');
     fashionStoreDeliveryMethods.forEach((d, index) => {
-      console.log(`   ${index + 1}. ${d.locationAr} (${d.locationEn})`);
-      console.log(`      💰 Price: ${d.price} SAR`);
-      console.log(`      📱 WhatsApp: ${d.whatsappNumber}`);
-      console.log(`      ⏱️ Estimated: ${d.estimatedDays} day(s)`);
-      console.log(`      📍 Default: ${d.isDefault ? 'Yes' : 'No'}`);
+      //CONSOLE.log(`   ${index + 1}. ${d.locationAr} (${d.locationEn})`);
+      //CONSOLE.log(`      💰 Price: ${d.price} SAR`);
+      //CONSOLE.log(`      📱 WhatsApp: ${d.whatsappNumber}`);
+      //CONSOLE.log(`      ⏱️ Estimated: ${d.estimatedDays} day(s)`);
+      //CONSOLE.log(`      📍 Default: ${d.isDefault ? 'Yes' : 'No'}`);
     });
 
-    console.log('\n💳 TechStore Payment Methods:');
+    //CONSOLE.log('\n💳 TechStore Payment Methods:');
     techStorePaymentMethods.forEach((p, index) => {
-      console.log(`   ${index + 1}. ${p.titleAr} (${p.titleEn})`);
-      console.log(`      💳 Type: ${p.methodType}`);
-      console.log(`      💰 Fee: ${p.processingFee}%`);
-      console.log(`      💵 Min: ${p.minimumAmount} ILS, Max: ${p.maximumAmount} ILS`);
-      console.log(`      📍 Default: ${p.isDefault ? 'Yes' : 'No'}`);
+      //CONSOLE.log(`   ${index + 1}. ${p.titleAr} (${p.titleEn})`);
+      //CONSOLE.log(`      💳 Type: ${p.methodType}`);
+      //CONSOLE.log(`      💰 Fee: ${p.processingFee}%`);
+      //CONSOLE.log(`      💵 Min: ${p.minimumAmount} ILS, Max: ${p.maximumAmount} ILS`);
+      //CONSOLE.log(`      📍 Default: ${p.isDefault ? 'Yes' : 'No'}`);
     });
 
-    console.log('\n💰 FashionStore Payment Methods:');
+    //CONSOLE.log('\n💰 FashionStore Payment Methods:');
     fashionStorePaymentMethods.forEach((p, index) => {
-      console.log(`   ${index + 1}. ${p.titleAr} (${p.titleEn})`);
-      console.log(`      💳 Type: ${p.methodType}`);
-      console.log(`      💰 Fee: ${p.processingFee}%`);
-      console.log(`      💵 Min: ${p.minimumAmount} SAR, Max: ${p.maximumAmount} SAR`);
-      console.log(`      📍 Default: ${p.isDefault ? 'Yes' : 'No'}`);
+      //CONSOLE.log(`   ${index + 1}. ${p.titleAr} (${p.titleEn})`);
+      //CONSOLE.log(`      💳 Type: ${p.methodType}`);
+      //CONSOLE.log(`      💰 Fee: ${p.processingFee}%`);
+      //CONSOLE.log(`      💵 Min: ${p.minimumAmount} SAR, Max: ${p.maximumAmount} SAR`);
+      //CONSOLE.log(`      📍 Default: ${p.isDefault ? 'Yes' : 'No'}`);
     });
 
   } catch (error) {
-    console.error('❌ Error creating delivery and payment data:', error);
+    //CONSOLE.error('❌ Error creating delivery and payment data:', error);
   } finally {
     await mongoose.connection.close();
-    console.log('\n🔌 Database connection closed');
+    //CONSOLE.log('\n🔌 Database connection closed');
   }
 }
 

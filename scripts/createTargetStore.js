@@ -5,8 +5,8 @@ const TARGET_STORE_ID = '687505893fbf3098648bfe16';
 
 async function createTargetStore() {
   try {
-    console.log('🔄 Creating target store...');
-    console.log(`📝 Target Store ID: ${TARGET_STORE_ID}`);
+    //CONSOLE.log('🔄 Creating target store...');
+    //CONSOLE.log(`📝 Target Store ID: ${TARGET_STORE_ID}`);
     
     const Store = require('../Models/Store');
     
@@ -14,7 +14,7 @@ async function createTargetStore() {
     const existingStore = await Store.findById(TARGET_STORE_ID);
     
     if (existingStore) {
-      console.log(`✅ Store already exists: ${existingStore.nameAr} (${existingStore.nameEn})`);
+      //CONSOLE.log(`✅ Store already exists: ${existingStore.nameAr} (${existingStore.nameEn})`);
       return existingStore;
     }
     
@@ -61,15 +61,15 @@ async function createTargetStore() {
     });
     
     await newStore.save();
-    console.log(`✅ Created new store: ${newStore.nameAr} (${newStore.nameEn})`);
+    //CONSOLE.log(`✅ Created new store: ${newStore.nameAr} (${newStore.nameEn})`);
     
     return newStore;
     
   } catch (error) {
-    console.error('❌ Error creating target store:', error);
+    //CONSOLE.error('❌ Error creating target store:', error);
   } finally {
     mongoose.connection.close();
-    console.log('🔌 Database connection closed');
+    //CONSOLE.log('🔌 Database connection closed');
   }
 }
 
@@ -79,11 +79,11 @@ if (require.main === module) {
   
   mongoose.connect(MONGODB_URI)
     .then(() => {
-      console.log('🔗 Connected to MongoDB');
+      //CONSOLE.log('🔗 Connected to MongoDB');
       createTargetStore();
     })
     .catch(err => {
-      console.error('❌ Database connection error:', err);
+      //CONSOLE.error('❌ Database connection error:', err);
       process.exit(1);
     });
 }

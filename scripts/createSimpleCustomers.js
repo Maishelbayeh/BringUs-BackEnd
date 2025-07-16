@@ -4,8 +4,8 @@ const Store = require('../Models/Store');
 
 // Connect to MongoDB (local)
 mongoose.connect('mongodb://localhost:27017/bringus')
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+  .then(() => //CONSOLE.log('✅ Connected to MongoDB'))
+  .catch(err => //CONSOLE.error('❌ MongoDB connection error:', err));
 
 // Customer data for TechStore (2 users)
 const techStoreCustomers = [
@@ -106,14 +106,14 @@ const fashionStoreCustomers = [
 
 async function createSimpleCustomers() {
   try {
-    console.log('🚀 Creating 4 customers (2 for each store)...\n');
+    //CONSOLE.log('🚀 Creating 4 customers (2 for each store)...\n');
 
     // Get store IDs
     const techStore = await Store.findOne({ name: 'TechStore' });
     const fashionStore = await Store.findOne({ name: 'FashionStore' });
 
     if (!techStore || !fashionStore) {
-      console.log('❌ Stores not found. Creating stores first...');
+      //CONSOLE.log('❌ Stores not found. Creating stores first...');
       
       // Create stores if they don't exist
       const newTechStore = await Store.create({
@@ -130,13 +130,13 @@ async function createSimpleCustomers() {
         status: 'active'
       });
       
-      console.log('✅ Created stores');
-      console.log(`   - TechStore: ${newTechStore._id}`);
-      console.log(`   - FashionStore: ${newFashionStore._id}\n`);
+      //CONSOLE.log('✅ Created stores');
+      //CONSOLE.log(`   - TechStore: ${newTechStore._id}`);
+      //CONSOLE.log(`   - FashionStore: ${newFashionStore._id}\n`);
     } else {
-      console.log(`📦 Found stores:`);
-      console.log(`   - TechStore: ${techStore._id}`);
-      console.log(`   - FashionStore: ${fashionStore._id}\n`);
+      //CONSOLE.log(`📦 Found stores:`);
+      //CONSOLE.log(`   - TechStore: ${techStore._id}`);
+      //CONSOLE.log(`   - FashionStore: ${fashionStore._id}\n`);
     }
 
     const finalTechStore = techStore || await Store.findOne({ name: 'TechStore' });
@@ -151,10 +151,10 @@ async function createSimpleCustomers() {
         ]
       }
     });
-    console.log('🧹 Cleared existing test customers\n');
+    //CONSOLE.log('🧹 Cleared existing test customers\n');
 
     // Create TechStore customers
-    console.log('🛠️ Creating TechStore customers...');
+    //CONSOLE.log('🛠️ Creating TechStore customers...');
     const techCustomers = [];
     for (const customerData of techStoreCustomers) {
       const customer = await User.create({
@@ -162,11 +162,11 @@ async function createSimpleCustomers() {
         store: finalTechStore._id
       });
       techCustomers.push(customer);
-      console.log(`   ✅ Created: ${customer.firstName} ${customer.lastName} (${customer.email})`);
+      //CONSOLE.log(`   ✅ Created: ${customer.firstName} ${customer.lastName} (${customer.email})`);
     }
 
     // Create FashionStore customers
-    console.log('\n👗 Creating FashionStore customers...');
+    //CONSOLE.log('\n👗 Creating FashionStore customers...');
     const fashionCustomers = [];
     for (const customerData of fashionStoreCustomers) {
       const customer = await User.create({
@@ -174,17 +174,17 @@ async function createSimpleCustomers() {
         store: finalFashionStore._id
       });
       fashionCustomers.push(customer);
-      console.log(`   ✅ Created: ${customer.firstName} ${customer.lastName} (${customer.email})`);
+      //CONSOLE.log(`   ✅ Created: ${customer.firstName} ${customer.lastName} (${customer.email})`);
     }
 
     // Verify isolation
-    console.log('\n🔍 Verifying customer isolation...');
+    //CONSOLE.log('\n🔍 Verifying customer isolation...');
     
     const techStoreCustomerCount = await User.countDocuments({ store: finalTechStore._id, role: 'client' });
     const fashionStoreCustomerCount = await User.countDocuments({ store: finalFashionStore._id, role: 'client' });
     
-    console.log(`   - TechStore customers: ${techStoreCustomerCount}`);
-    console.log(`   - FashionStore customers: ${fashionStoreCustomerCount}`);
+    //CONSOLE.log(`   - TechStore customers: ${techStoreCustomerCount}`);
+    //CONSOLE.log(`   - FashionStore customers: ${fashionStoreCustomerCount}`);
 
     // Test cross-store access
     const techCustomerInFashion = await User.findOne({ 
@@ -198,53 +198,53 @@ async function createSimpleCustomers() {
     });
 
     if (!techCustomerInFashion && !fashionCustomerInTech) {
-      console.log('   ✅ Customer isolation verified - no cross-store data found');
+      //CONSOLE.log('   ✅ Customer isolation verified - no cross-store data found');
     } else {
-      console.log('   ❌ Customer isolation failed - cross-store data found');
+      //CONSOLE.log('   ❌ Customer isolation failed - cross-store data found');
     }
 
-    console.log('\n🎉 Customer test data created successfully!');
-    console.log('\n📊 Summary:');
-    console.log(`- TechStore customers: ${techStoreCustomerCount}`);
-    console.log(`- FashionStore customers: ${fashionStoreCustomerCount}`);
-    console.log('- Total test customers:', techStoreCustomerCount + fashionStoreCustomerCount);
-    console.log('- Customer isolation: Verified ✅');
+    //CONSOLE.log('\n🎉 Customer test data created successfully!');
+    //CONSOLE.log('\n📊 Summary:');
+    //CONSOLE.log(`- TechStore customers: ${techStoreCustomerCount}`);
+    //CONSOLE.log(`- FashionStore customers: ${fashionStoreCustomerCount}`);
+    //CONSOLE.log('- Total test customers:', techStoreCustomerCount + fashionStoreCustomerCount);
+    //CONSOLE.log('- Customer isolation: Verified ✅');
     
-    console.log('\n🔑 Test Credentials:');
-    console.log('TechStore customers:');
+    //CONSOLE.log('\n🔑 Test Credentials:');
+    //CONSOLE.log('TechStore customers:');
     techStoreCustomers.forEach(c => {
-      console.log(`   - ${c.email} / ${c.password}`);
+      //CONSOLE.log(`   - ${c.email} / ${c.password}`);
     });
     
-    console.log('\nFashionStore customers:');
+    //CONSOLE.log('\nFashionStore customers:');
     fashionStoreCustomers.forEach(c => {
-      console.log(`   - ${c.email} / ${c.password}`);
+      //CONSOLE.log(`   - ${c.email} / ${c.password}`);
     });
 
-    console.log('\n📋 Customer Details:');
-    console.log('\n🛠️ TechStore Customers:');
+    //CONSOLE.log('\n📋 Customer Details:');
+    //CONSOLE.log('\n🛠️ TechStore Customers:');
     techStoreCustomers.forEach((c, index) => {
-      console.log(`   ${index + 1}. ${c.firstName} ${c.lastName}`);
-      console.log(`      📧 Email: ${c.email}`);
-      console.log(`      📱 Phone: ${c.phone}`);
-      console.log(`      🏠 Address: ${c.addresses[0].street}, ${c.addresses[0].city}`);
-      console.log(`      📍 Store: TechStore`);
+      //CONSOLE.log(`   ${index + 1}. ${c.firstName} ${c.lastName}`);
+      //CONSOLE.log(`      📧 Email: ${c.email}`);
+      //CONSOLE.log(`      📱 Phone: ${c.phone}`);
+      //CONSOLE.log(`      🏠 Address: ${c.addresses[0].street}, ${c.addresses[0].city}`);
+      //CONSOLE.log(`      📍 Store: TechStore`);
     });
 
-    console.log('\n👗 FashionStore Customers:');
+    //CONSOLE.log('\n👗 FashionStore Customers:');
     fashionStoreCustomers.forEach((c, index) => {
-      console.log(`   ${index + 1}. ${c.firstName} ${c.lastName}`);
-      console.log(`      📧 Email: ${c.email}`);
-      console.log(`      📱 Phone: ${c.phone}`);
-      console.log(`      🏠 Address: ${c.addresses[0].street}, ${c.addresses[0].city}`);
-      console.log(`      📍 Store: FashionStore`);
+      //CONSOLE.log(`   ${index + 1}. ${c.firstName} ${c.lastName}`);
+      //CONSOLE.log(`      📧 Email: ${c.email}`);
+      //CONSOLE.log(`      📱 Phone: ${c.phone}`);
+      //CONSOLE.log(`      🏠 Address: ${c.addresses[0].street}, ${c.addresses[0].city}`);
+      //CONSOLE.log(`      📍 Store: FashionStore`);
     });
 
   } catch (error) {
-    console.error('❌ Error creating customer test data:', error);
+    //CONSOLE.error('❌ Error creating customer test data:', error);
   } finally {
     mongoose.connection.close();
-    console.log('\n🔌 Database connection closed');
+    //CONSOLE.log('\n🔌 Database connection closed');
   }
 }
 

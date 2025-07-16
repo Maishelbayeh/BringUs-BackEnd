@@ -163,7 +163,7 @@ router.post('/', [
       data: populatedOrder
     });
   } catch (error) {
-    console.error('Create order error:', error);
+    //CONSOLE.error('Create order error:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating order',
@@ -203,7 +203,7 @@ router.get('/', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get orders error:', error);
+    //CONSOLE.error('Get orders error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching orders',
@@ -241,7 +241,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       data: order
     });
   } catch (error) {
-    console.error('Get order error:', error);
+    //CONSOLE.error('Get order error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching order',
@@ -326,7 +326,7 @@ router.put('/:id/status', [
       data: updatedOrder
     });
   } catch (error) {
-    console.error('Update order status error:', error);
+    //CONSOLE.error('Update order status error:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating order status',
@@ -398,7 +398,7 @@ router.put('/:id/cancel', [
       message: 'Order cancelled successfully'
     });
   } catch (error) {
-    console.error('Cancel order error:', error);
+    //CONSOLE.error('Cancel order error:', error);
     res.status(500).json({
       success: false,
       message: 'Error cancelling order',
@@ -436,7 +436,7 @@ router.get('/number/:orderNumber', authenticateToken, async (req, res) => {
       data: order
     });
   } catch (error) {
-    console.error('Get order by number error:', error);
+    //CONSOLE.error('Get order by number error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching order',

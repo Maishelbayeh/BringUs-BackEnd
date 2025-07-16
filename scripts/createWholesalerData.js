@@ -13,19 +13,19 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mais_helbayeh:ojTOYKE
 
 const db = mongoose.connection;
 
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+db.on('error', //CONSOLE.error.bind(//CONSOLE, 'MongoDB connection error:'));
 db.once('open', async () => {
-  console.log('Connected to MongoDB');
+  //CONSOLE.log('Connected to MongoDB');
   
   try {
     // Clear existing wholesaler data
     await Wholesaler.deleteMany({});
-    console.log('Cleared existing wholesaler data');
+    //CONSOLE.log('Cleared existing wholesaler data');
     
     // Get stores
     const stores = await Store.find({});
     if (stores.length === 0) {
-      console.log('No stores found. Please create stores first.');
+      //CONSOLE.log('No stores found. Please create stores first.');
       process.exit(1);
     }
     
@@ -38,17 +38,17 @@ db.once('open', async () => {
       const anyUser = await User.findOne();
       if (anyUser) {
         adminUser = anyUser._id;
-        console.log('Using fallback user for admin operations:', anyUser.email);
+        //CONSOLE.log('Using fallback user for admin operations:', anyUser.email);
       } else {
-        console.log('Warning: No users found. Verification may fail.');
+        //CONSOLE.log('Warning: No users found. Verification may fail.');
       }
     }
     
-    console.log(`Found ${stores.length} stores`);
+    //CONSOLE.log(`Found ${stores.length} stores`);
     
     // Create wholesaler data for each store
     for (const store of stores) {
-      console.log(`\nCreating wholesaler data for store: ${store.name}`);
+      //CONSOLE.log(`\nCreating wholesaler data for store: ${store.name}`);
       
       const wholesalerData = [];
       
@@ -60,10 +60,10 @@ db.once('open', async () => {
         const createdWholesaler = await Wholesaler.create(wholesaler);
         wholesalerData.push(createdWholesaler);
         
-        console.log(`Created wholesaler: ${createdWholesaler.firstName} ${createdWholesaler.lastName} (${createdWholesaler.email})`);
+        //CONSOLE.log(`Created wholesaler: ${createdWholesaler.firstName} ${createdWholesaler.lastName} (${createdWholesaler.email})`);
       }
       
-      console.log(`Created ${wholesalerData.length} wholesalers for ${store.name}`);
+      //CONSOLE.log(`Created ${wholesalerData.length} wholesalers for ${store.name}`);
     }
     
     // Display summary
@@ -85,49 +85,49 @@ db.once('open', async () => {
       }
     ]);
     
-    console.log('\n=== Wholesaler Data Creation Summary ===');
-    console.log(`Total wholesalers created: ${totalWholesalers}`);
+    //CONSOLE.log('\n=== Wholesaler Data Creation Summary ===');
+    //CONSOLE.log(`Total wholesalers created: ${totalWholesalers}`);
     
     if (stats.length > 0) {
       const wholesalerStats = stats[0];
-      console.log('\nWholesaler Statistics:');
-      console.log(`Total wholesalers: ${wholesalerStats.totalWholesalers}`);
-      console.log(`Active wholesalers: ${wholesalerStats.activeWholesalers}`);
-      console.log(`Average discount: ${wholesalerStats.averageDiscount.toFixed(1)}%`);
-      console.log(`Verified wholesalers: ${wholesalerStats.verifiedWholesalers}`);
+      //CONSOLE.log('\nWholesaler Statistics:');
+      //CONSOLE.log(`Total wholesalers: ${wholesalerStats.totalWholesalers}`);
+      //CONSOLE.log(`Active wholesalers: ${wholesalerStats.activeWholesalers}`);
+      //CONSOLE.log(`Average discount: ${wholesalerStats.averageDiscount.toFixed(1)}%`);
+      //CONSOLE.log(`Verified wholesalers: ${wholesalerStats.verifiedWholesalers}`);
     }
     
     // Show sample data
-    console.log('\n=== Sample Wholesaler Data ===');
+    //CONSOLE.log('\n=== Sample Wholesaler Data ===');
     const sampleWholesaler = await Wholesaler.findOne()
       .populate('store', 'name domain')
       .populate('verifiedBy', 'firstName lastName');
     
     if (sampleWholesaler) {
-      console.log('Sample Wholesaler:');
-      console.log(`Name: ${sampleWholesaler.fullName}`);
-      console.log(`Email: ${sampleWholesaler.email}`);
-      console.log(`Store: ${sampleWholesaler.store.name}`);
-      console.log(`Discount: ${sampleWholesaler.discountRate}`);
-      console.log(`Status: ${sampleWholesaler.status}`);
-      console.log(`Is Verified: ${sampleWholesaler.isVerified}`);
-      console.log(`Business Name: ${sampleWholesaler.businessName || 'N/A'}`);
-      console.log(`Address: ${sampleWholesaler.address}`);
+      //CONSOLE.log('Sample Wholesaler:');
+      //CONSOLE.log(`Name: ${sampleWholesaler.fullName}`);
+      //CONSOLE.log(`Email: ${sampleWholesaler.email}`);
+      //CONSOLE.log(`Store: ${sampleWholesaler.store.name}`);
+      //CONSOLE.log(`Discount: ${sampleWholesaler.discountRate}`);
+      //CONSOLE.log(`Status: ${sampleWholesaler.status}`);
+      //CONSOLE.log(`Is Verified: ${sampleWholesaler.isVerified}`);
+      //CONSOLE.log(`Business Name: ${sampleWholesaler.businessName || 'N/A'}`);
+      //CONSOLE.log(`Address: ${sampleWholesaler.address}`);
     }
     
-    console.log('\n✅ Wholesaler data created successfully!');
-    console.log('\n📋 Next Steps:');
-    console.log('1. Test the API endpoints using the CURL commands');
-    console.log('2. Check wholesaler statistics and analytics');
-    console.log('3. Test wholesaler verification flow');
-    console.log('4. Verify store isolation');
-    console.log('5. Test discount calculations');
+    //CONSOLE.log('\n✅ Wholesaler data created successfully!');
+    //CONSOLE.log('\n📋 Next Steps:');
+    //CONSOLE.log('1. Test the API endpoints using the CURL commands');
+    //CONSOLE.log('2. Check wholesaler statistics and analytics');
+    //CONSOLE.log('3. Test wholesaler verification flow');
+    //CONSOLE.log('4. Verify store isolation');
+    //CONSOLE.log('5. Test discount calculations');
     
   } catch (error) {
-    console.error('Error creating wholesaler data:', error);
+    //CONSOLE.error('Error creating wholesaler data:', error);
   } finally {
     mongoose.connection.close();
-    console.log('MongoDB connection closed');
+    //CONSOLE.log('MongoDB connection closed');
   }
 });
 
@@ -236,17 +236,17 @@ const main = async () => {
     // Check if store exists
     const store = await Store.findById(storeId);
     if (!store) {
-      console.error('Store not found with ID:', storeId);
+      //CONSOLE.error('Store not found with ID:', storeId);
       return;
     }
     
-    console.log('Creating wholesalers for store:', store.name);
+    //CONSOLE.log('Creating wholesalers for store:', store.name);
     
     // Check if wholesalers already exist for this store
     const existingWholesalers = await Wholesaler.find({ store: storeId });
     if (existingWholesalers.length > 0) {
-      console.log(`Found ${existingWholesalers.length} existing wholesalers for this store`);
-      console.log('Skipping creation to avoid duplicates');
+      //CONSOLE.log(`Found ${existingWholesalers.length} existing wholesalers for this store`);
+      //CONSOLE.log('Skipping creation to avoid duplicates');
       return;
     }
     
@@ -258,7 +258,7 @@ const main = async () => {
       const anyUser = await User.findOne();
       if (anyUser) {
         adminUser = anyUser._id;
-        console.log('Using fallback user for admin operations:', anyUser.email);
+        //CONSOLE.log('Using fallback user for admin operations:', anyUser.email);
       }
     }
     
@@ -272,30 +272,30 @@ const main = async () => {
       const wholesaler = await Wholesaler.create(wholesalerData);
       createdWholesalers.push(wholesaler);
       
-      console.log(`Created wholesaler: ${wholesaler.firstName} ${wholesaler.lastName} (${wholesaler.email})`);
+      //CONSOLE.log(`Created wholesaler: ${wholesaler.firstName} ${wholesaler.lastName} (${wholesaler.email})`);
     }
     
-    console.log(`\n✅ Successfully created ${createdWholesalers.length} wholesalers for store: ${store.name}`);
-    console.log('Store ID:', storeId);
+    //CONSOLE.log(`\n✅ Successfully created ${createdWholesalers.length} wholesalers for store: ${store.name}`);
+    //CONSOLE.log('Store ID:', storeId);
     
     // Display summary
     const activeCount = createdWholesalers.filter(w => w.status === 'Active').length;
     const pendingCount = createdWholesalers.filter(w => w.status === 'Pending').length;
     const inactiveCount = createdWholesalers.filter(w => w.status === 'Inactive').length;
     
-    console.log('\n📊 Summary:');
-    console.log(`- Active: ${activeCount}`);
-    console.log(`- Pending: ${pendingCount}`);
-    console.log(`- Inactive: ${inactiveCount}`);
-    console.log(`- Total: ${createdWholesalers.length}`);
+    //CONSOLE.log('\n📊 Summary:');
+    //CONSOLE.log(`- Active: ${activeCount}`);
+    //CONSOLE.log(`- Pending: ${pendingCount}`);
+    //CONSOLE.log(`- Inactive: ${inactiveCount}`);
+    //CONSOLE.log(`- Total: ${createdWholesalers.length}`);
     
-    console.log('\n🎉 Wholesaler data creation completed!');
+    //CONSOLE.log('\n🎉 Wholesaler data creation completed!');
     
   } catch (error) {
-    console.error('Error in main execution:', error);
+    //CONSOLE.error('Error in main execution:', error);
   } finally {
     await mongoose.connection.close();
-    console.log('MongoDB connection closed');
+    //CONSOLE.log('MongoDB connection closed');
     process.exit(0);
   }
 };

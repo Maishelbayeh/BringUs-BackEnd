@@ -194,7 +194,7 @@ const getAllDeliveryMethods = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get all delivery methods error:', error);
+    //CONSOLE.error('Get all delivery methods error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching delivery methods',
@@ -262,7 +262,7 @@ const getDeliveryMethodById = async (req, res) => {
       data: deliveryMethod
     });
   } catch (error) {
-    console.error('Get delivery method by ID error:', error);
+    //CONSOLE.error('Get delivery method by ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching delivery method',
@@ -366,7 +366,7 @@ const createDeliveryMethod = async (req, res) => {
       data: deliveryMethod
     });
   } catch (error) {
-    console.error('Create delivery method error:', error);
+    //CONSOLE.error('Create delivery method error:', error);
     
     // Handle model validation errors
     if (error.message === 'Default delivery method cannot be inactive') {
@@ -479,7 +479,7 @@ const updateDeliveryMethod = async (req, res) => {
       data: deliveryMethod
     });
   } catch (error) {
-    console.error('Update delivery method error:', error);
+    //CONSOLE.error('Update delivery method error:', error);
     
     // Handle model validation errors
     if (error.message === 'Default delivery method cannot be inactive') {
@@ -569,7 +569,7 @@ const deleteDeliveryMethod = async (req, res) => {
       message: 'Delivery method deleted successfully'
     });
   } catch (error) {
-    console.error('Delete delivery method error:', error);
+    //CONSOLE.error('Delete delivery method error:', error);
     res.status(500).json({
       success: false,
       message: 'Error deleting delivery method',
@@ -652,7 +652,7 @@ const toggleActiveStatus = async (req, res) => {
       data: deliveryMethod
     });
   } catch (error) {
-    console.error('Toggle delivery method status error:', error);
+    //CONSOLE.error('Toggle delivery method status error:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating delivery method status',
@@ -745,7 +745,7 @@ const setAsDefault = async (req, res) => {
       data: deliveryMethod
     });
   } catch (error) {
-    console.error('Set default delivery method error:', error);
+    //CONSOLE.error('Set default delivery method error:', error);
     res.status(500).json({
       success: false,
       message: 'Error setting default delivery method',
@@ -831,7 +831,7 @@ const getDeliveryMethodsByStoreId = async (req, res) => {
       data: deliveryMethods
     });
   } catch (error) {
-    console.error('Get delivery methods by store ID error:', error);
+    //CONSOLE.error('Get delivery methods by store ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching delivery methods',

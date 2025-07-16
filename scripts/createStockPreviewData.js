@@ -13,26 +13,26 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 const db = mongoose.connection;
 
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+db.on('error', //CONSOLE.error.bind(//CONSOLE, 'MongoDB connection error:'));
 db.once('open', async () => {
-  console.log('Connected to MongoDB');
+  //CONSOLE.log('Connected to MongoDB');
   
   try {
     // Clear existing stock preview data
     await StockPreview.deleteMany({});
-    console.log('Cleared existing stock preview data');
+    //CONSOLE.log('Cleared existing stock preview data');
     
     // Get stores
     const stores = await Store.find({});
     if (stores.length === 0) {
-      console.log('No stores found. Please create stores first.');
+      //CONSOLE.log('No stores found. Please create stores first.');
       process.exit(1);
     }
     
     // Get products for each store
     const products = await Product.find({});
     if (products.length === 0) {
-      console.log('No products found. Please create products first.');
+      //CONSOLE.log('No products found. Please create products first.');
       process.exit(1);
     }
     
@@ -40,17 +40,17 @@ db.once('open', async () => {
     const adminUsers = await User.find({ role: 'admin' });
     const adminUser = adminUsers.length > 0 ? adminUsers[0]._id : null;
     
-    console.log(`Found ${stores.length} stores and ${products.length} products`);
+    //CONSOLE.log(`Found ${stores.length} stores and ${products.length} products`);
     
     // Create stock preview data for each store
     for (const store of stores) {
-      console.log(`\nCreating stock preview data for store: ${store.name}`);
+      //CONSOLE.log(`\nCreating stock preview data for store: ${store.name}`);
       
       // Get products for this store
       const storeProducts = products.filter(p => p.store.toString() === store._id.toString());
       
       if (storeProducts.length === 0) {
-        console.log(`No products found for store: ${store.name}`);
+        //CONSOLE.log(`No products found for store: ${store.name}`);
         continue;
       }
       
@@ -88,7 +88,7 @@ db.once('open', async () => {
       
       // Insert stock preview data
       const createdStock = await StockPreview.insertMany(stockPreviewData);
-      console.log(`Created ${createdStock.length} stock preview records for ${store.name}`);
+      //CONSOLE.log(`Created ${createdStock.length} stock preview records for ${store.name}`);
     }
     
     // Display summary
@@ -118,56 +118,56 @@ db.once('open', async () => {
       }
     ]);
     
-    console.log('\n=== Stock Preview Data Creation Summary ===');
-    console.log(`Total stock records created: ${totalStock}`);
+    //CONSOLE.log('\n=== Stock Preview Data Creation Summary ===');
+    //CONSOLE.log(`Total stock records created: ${totalStock}`);
     
     if (summary.length > 0) {
       const stats = summary[0];
-      console.log(`Total products: ${stats.totalProducts}`);
-      console.log(`Total available quantity: ${stats.totalAvailableQuantity}`);
-      console.log(`Total reserved quantity: ${stats.totalReservedQuantity}`);
-      console.log(`Total sold quantity: ${stats.totalSoldQuantity}`);
-      console.log(`Total damaged quantity: ${stats.totalDamagedQuantity}`);
-      console.log(`In stock products: ${stats.inStockProducts}`);
-      console.log(`Low stock products: ${stats.lowStockProducts}`);
-      console.log(`Out of stock products: ${stats.outOfStockProducts}`);
-      console.log(`Visible products: ${stats.visibleProducts}`);
+      //CONSOLE.log(`Total products: ${stats.totalProducts}`);
+      //CONSOLE.log(`Total available quantity: ${stats.totalAvailableQuantity}`);
+      //CONSOLE.log(`Total reserved quantity: ${stats.totalReservedQuantity}`);
+      //CONSOLE.log(`Total sold quantity: ${stats.totalSoldQuantity}`);
+      //CONSOLE.log(`Total damaged quantity: ${stats.totalDamagedQuantity}`);
+      //CONSOLE.log(`In stock products: ${stats.inStockProducts}`);
+      //CONSOLE.log(`Low stock products: ${stats.lowStockProducts}`);
+      //CONSOLE.log(`Out of stock products: ${stats.outOfStockProducts}`);
+      //CONSOLE.log(`Visible products: ${stats.visibleProducts}`);
     }
     
     // Show sample data
-    console.log('\n=== Sample Stock Preview Data ===');
+    //CONSOLE.log('\n=== Sample Stock Preview Data ===');
     const sampleStock = await StockPreview.findOne()
       .populate('product', 'nameAr nameEn category price')
       .populate('store', 'name domain');
     
     if (sampleStock) {
-      console.log('Sample Stock Record:');
-      console.log(`Product: ${sampleStock.product.nameAr} (${sampleStock.product.nameEn})`);
-      console.log(`Store: ${sampleStock.store.name}`);
-      console.log(`Available: ${sampleStock.availableQuantity}`);
-      console.log(`Reserved: ${sampleStock.reservedQuantity}`);
-      console.log(`Sold: ${sampleStock.soldQuantity}`);
-      console.log(`Damaged: ${sampleStock.damagedQuantity}`);
-      console.log(`Status: ${sampleStock.stockStatus}`);
-      console.log(`Visible: ${sampleStock.isVisible}`);
-      console.log(`Total Quantity: ${sampleStock.totalQuantity}`);
-      console.log(`Stock Percentage: ${sampleStock.stockPercentage}%`);
-      console.log(`Is Low Stock: ${sampleStock.isLowStock}`);
-      console.log(`Is Out of Stock: ${sampleStock.isOutOfStock}`);
+      //CONSOLE.log('Sample Stock Record:');
+      //CONSOLE.log(`Product: ${sampleStock.product.nameAr} (${sampleStock.product.nameEn})`);
+      //CONSOLE.log(`Store: ${sampleStock.store.name}`);
+      //CONSOLE.log(`Available: ${sampleStock.availableQuantity}`);
+      //CONSOLE.log(`Reserved: ${sampleStock.reservedQuantity}`);
+      //CONSOLE.log(`Sold: ${sampleStock.soldQuantity}`);
+      //CONSOLE.log(`Damaged: ${sampleStock.damagedQuantity}`);
+      //CONSOLE.log(`Status: ${sampleStock.stockStatus}`);
+      //CONSOLE.log(`Visible: ${sampleStock.isVisible}`);
+      //CONSOLE.log(`Total Quantity: ${sampleStock.totalQuantity}`);
+      //CONSOLE.log(`Stock Percentage: ${sampleStock.stockPercentage}%`);
+      //CONSOLE.log(`Is Low Stock: ${sampleStock.isLowStock}`);
+      //CONSOLE.log(`Is Out of Stock: ${sampleStock.isOutOfStock}`);
     }
     
-    console.log('\n✅ Stock preview data created successfully!');
-    console.log('\n📋 Next Steps:');
-    console.log('1. Test the API endpoints using the CURL commands');
-    console.log('2. Check stock summary and analytics');
-    console.log('3. Test stock movement tracking');
-    console.log('4. Verify store isolation');
+    //CONSOLE.log('\n✅ Stock preview data created successfully!');
+    //CONSOLE.log('\n📋 Next Steps:');
+    //CONSOLE.log('1. Test the API endpoints using the CURL commands');
+    //CONSOLE.log('2. Check stock summary and analytics');
+    //CONSOLE.log('3. Test stock movement tracking');
+    //CONSOLE.log('4. Verify store isolation');
     
   } catch (error) {
-    console.error('Error creating stock preview data:', error);
+    //CONSOLE.error('Error creating stock preview data:', error);
   } finally {
     mongoose.connection.close();
-    console.log('MongoDB connection closed');
+    //CONSOLE.log('MongoDB connection closed');
   }
 });
 

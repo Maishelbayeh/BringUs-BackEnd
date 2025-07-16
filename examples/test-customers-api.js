@@ -28,88 +28,88 @@ async function loginUser(email, password) {
     });
     return response.data.token;
   } catch (error) {
-    console.error('Login failed:', error.response?.data || error.message);
+    //CONSOLE.error('Login failed:', error.response?.data || error.message);
     return null;
   }
 }
 
 async function testCustomerIsolation() {
   try {
-    console.log('🧪 Testing Customer Isolation System...\n');
+    //CONSOLE.log('🧪 Testing Customer Isolation System...\n');
     
     // Step 1: Login users
-    console.log('1. Logging in users...');
+    //CONSOLE.log('1. Logging in users...');
     authTokens.techOwner = await loginUser(TEST_USERS.techOwner.email, TEST_USERS.techOwner.password);
     authTokens.fashionOwner = await loginUser(TEST_USERS.fashionOwner.email, TEST_USERS.fashionOwner.password);
     
     if (!authTokens.techOwner || !authTokens.fashionOwner) {
-      console.log('❌ Login failed. Please check credentials.');
+      //CONSOLE.log('❌ Login failed. Please check credentials.');
       return;
     }
     
-    console.log('✅ Users logged in successfully\n');
+    //CONSOLE.log('✅ Users logged in successfully\n');
     
     // Step 2: Test getting customers for TechStore
-    console.log('2. Testing TechStore customers...');
+    //CONSOLE.log('2. Testing TechStore customers...');
     const techCustomersResponse = await axios.get(`${API_BASE_URL}/users/customers?storeId=${TECH_STORE_ID}`, {
       headers: { Authorization: `Bearer ${authTokens.techOwner}` }
     });
     
-    console.log('✅ TechStore customers:', techCustomersResponse.data.data.length);
+    //CONSOLE.log('✅ TechStore customers:', techCustomersResponse.data.data.length);
     techCustomersResponse.data.data.forEach(customer => {
-      console.log(`   - ${customer.firstName} ${customer.lastName} (${customer.email})`);
+      //CONSOLE.log(`   - ${customer.firstName} ${customer.lastName} (${customer.email})`);
     });
     
     // Step 3: Test getting customers for FashionStore
-    console.log('\n3. Testing FashionStore customers...');
+    //CONSOLE.log('\n3. Testing FashionStore customers...');
     const fashionCustomersResponse = await axios.get(`${API_BASE_URL}/users/customers?storeId=${FASHION_STORE_ID}`, {
       headers: { Authorization: `Bearer ${authTokens.fashionOwner}` }
     });
     
-    console.log('✅ FashionStore customers:', fashionCustomersResponse.data.data.length);
+    //CONSOLE.log('✅ FashionStore customers:', fashionCustomersResponse.data.data.length);
     fashionCustomersResponse.data.data.forEach(customer => {
-      console.log(`   - ${customer.firstName} ${customer.lastName} (${customer.email})`);
+      //CONSOLE.log(`   - ${customer.firstName} ${customer.lastName} (${customer.email})`);
     });
     
     // Step 4: Test getting staff for TechStore
-    console.log('\n4. Testing TechStore staff...');
+    //CONSOLE.log('\n4. Testing TechStore staff...');
     const techStaffResponse = await axios.get(`${API_BASE_URL}/users/staff?storeId=${TECH_STORE_ID}`, {
       headers: { Authorization: `Bearer ${authTokens.techOwner}` }
     });
     
-    console.log('✅ TechStore staff:', techStaffResponse.data.data.length);
+    //CONSOLE.log('✅ TechStore staff:', techStaffResponse.data.data.length);
     techStaffResponse.data.data.forEach(staff => {
-      console.log(`   - ${staff.firstName} ${staff.lastName} (${staff.role})`);
+      //CONSOLE.log(`   - ${staff.firstName} ${staff.lastName} (${staff.role})`);
     });
     
     // Step 5: Test getting staff for FashionStore
-    console.log('\n5. Testing FashionStore staff...');
+    //CONSOLE.log('\n5. Testing FashionStore staff...');
     const fashionStaffResponse = await axios.get(`${API_BASE_URL}/users/staff?storeId=${FASHION_STORE_ID}`, {
       headers: { Authorization: `Bearer ${authTokens.fashionOwner}` }
     });
     
-    console.log('✅ FashionStore staff:', fashionStaffResponse.data.data.length);
+    //CONSOLE.log('✅ FashionStore staff:', fashionStaffResponse.data.data.length);
     fashionStaffResponse.data.data.forEach(staff => {
-      console.log(`   - ${staff.firstName} ${staff.lastName} (${staff.role})`);
+      //CONSOLE.log(`   - ${staff.firstName} ${staff.lastName} (${staff.role})`);
     });
     
     // Step 6: Test cross-store access prevention
-    console.log('\n6. Testing cross-store access prevention...');
+    //CONSOLE.log('\n6. Testing cross-store access prevention...');
     try {
       await axios.get(`${API_BASE_URL}/users/customers?storeId=${FASHION_STORE_ID}`, {
         headers: { Authorization: `Bearer ${authTokens.techOwner}` }
       });
-      console.log('❌ Cross-store access should have been blocked');
+      //CONSOLE.log('❌ Cross-store access should have been blocked');
     } catch (error) {
       if (error.response?.status === 403) {
-        console.log('✅ Cross-store access correctly blocked');
+        //CONSOLE.log('✅ Cross-store access correctly blocked');
       } else {
-        console.log('⚠️ Cross-store access test inconclusive');
+        //CONSOLE.log('⚠️ Cross-store access test inconclusive');
       }
     }
     
     // Step 7: Test creating a new customer for TechStore
-    console.log('\n7. Testing customer creation for TechStore...');
+    //CONSOLE.log('\n7. Testing customer creation for TechStore...');
     const newCustomer = {
       firstName: 'Test',
       lastName: 'Customer',
@@ -123,10 +123,10 @@ async function testCustomerIsolation() {
       headers: { Authorization: `Bearer ${authTokens.techOwner}` }
     });
     
-    console.log('✅ New customer created:', createCustomerResponse.data.data.email);
+    //CONSOLE.log('✅ New customer created:', createCustomerResponse.data.data.email);
     
     // Step 8: Verify the new customer appears only in TechStore
-    console.log('\n8. Verifying customer isolation...');
+    //CONSOLE.log('\n8. Verifying customer isolation...');
     const updatedTechCustomers = await axios.get(`${API_BASE_URL}/users/customers?storeId=${TECH_STORE_ID}`, {
       headers: { Authorization: `Bearer ${authTokens.techOwner}` }
     });
@@ -139,31 +139,31 @@ async function testCustomerIsolation() {
     const newCustomerInFashion = updatedFashionCustomers.data.data.find(c => c.email === newCustomer.email);
     
     if (newCustomerInTech && !newCustomerInFashion) {
-      console.log('✅ Customer isolation verified - new customer only appears in TechStore');
+      //CONSOLE.log('✅ Customer isolation verified - new customer only appears in TechStore');
     } else {
-      console.log('❌ Customer isolation failed');
+      //CONSOLE.log('❌ Customer isolation failed');
     }
     
-    console.log('\n🎉 Customer isolation test completed successfully!');
-    console.log('\n📊 Summary:');
-    console.log('- TechStore customers:', updatedTechCustomers.data.data.length);
-    console.log('- FashionStore customers:', updatedFashionCustomers.data.data.length);
-    console.log('- TechStore staff:', techStaffResponse.data.data.length);
-    console.log('- FashionStore staff:', fashionStaffResponse.data.data.length);
-    console.log('- Cross-store access: Blocked ✅');
-    console.log('- Customer creation: Working ✅');
-    console.log('- Data isolation: Verified ✅');
+    //CONSOLE.log('\n🎉 Customer isolation test completed successfully!');
+    //CONSOLE.log('\n📊 Summary:');
+    //CONSOLE.log('- TechStore customers:', updatedTechCustomers.data.data.length);
+    //CONSOLE.log('- FashionStore customers:', updatedFashionCustomers.data.data.length);
+    //CONSOLE.log('- TechStore staff:', techStaffResponse.data.data.length);
+    //CONSOLE.log('- FashionStore staff:', fashionStaffResponse.data.data.length);
+    //CONSOLE.log('- Cross-store access: Blocked ✅');
+    //CONSOLE.log('- Customer creation: Working ✅');
+    //CONSOLE.log('- Data isolation: Verified ✅');
     
   } catch (error) {
-    console.error('❌ Test failed:', error.response?.data || error.message);
+    //CONSOLE.error('❌ Test failed:', error.response?.data || error.message);
   }
 }
 
 // Instructions
-console.log('📝 Instructions:');
-console.log('1. Replace TECH_STORE_ID and FASHION_STORE_ID with actual store IDs');
-console.log('2. Make sure your backend server is running');
-console.log('3. Run: node examples/test-customers-api.js\n');
+//CONSOLE.log('📝 Instructions:');
+//CONSOLE.log('1. Replace TECH_STORE_ID and FASHION_STORE_ID with actual store IDs');
+//CONSOLE.log('2. Make sure your backend server is running');
+//CONSOLE.log('3. Run: node examples/test-customers-api.js\n');
 
 // Uncomment to run
 // testCustomerIsolation();

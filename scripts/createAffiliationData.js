@@ -14,20 +14,20 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mais_helbayeh:ojTOYKE
 
 const db = mongoose.connection;
 
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+db.on('error', //CONSOLE.error.bind(//CONSOLE, 'MongoDB connection error:'));
 db.once('open', async () => {
-  console.log('Connected to MongoDB');
+  //CONSOLE.log('Connected to MongoDB');
   
   try {
     // Clear existing affiliation data
     await Affiliation.deleteMany({});
     await AffiliatePayment.deleteMany({});
-    console.log('Cleared existing affiliation data');
+    //CONSOLE.log('Cleared existing affiliation data');
     
     // Get stores
     const stores = await Store.find({});
     if (stores.length === 0) {
-      console.log('No stores found. Please create stores first.');
+      //CONSOLE.log('No stores found. Please create stores first.');
       process.exit(1);
     }
     
@@ -40,17 +40,17 @@ db.once('open', async () => {
       const anyUser = await User.findOne();
       if (anyUser) {
         adminUser = anyUser._id;
-        console.log('Using fallback user for admin operations:', anyUser.email);
+        //CONSOLE.log('Using fallback user for admin operations:', anyUser.email);
       } else {
-        console.log('Warning: No users found. Payment creation may fail.');
+        //CONSOLE.log('Warning: No users found. Payment creation may fail.');
       }
     }
     
-    console.log(`Found ${stores.length} stores`);
+    //CONSOLE.log(`Found ${stores.length} stores`);
     
     // Create affiliation data for each store
     for (const store of stores) {
-      console.log(`\nCreating affiliation data for store: ${store.name}`);
+      //CONSOLE.log(`\nCreating affiliation data for store: ${store.name}`);
       
       const affiliationData = [];
       const paymentData = [];
@@ -68,7 +68,7 @@ db.once('open', async () => {
         const payments = generatePayments(createdAffiliate, store._id, adminUser);
         paymentData.push(...payments);
       } else {
-        console.log('Skipping payment creation for affiliate due to missing admin user');
+        //CONSOLE.log('Skipping payment creation for affiliate due to missing admin user');
       }
       }
       
@@ -77,7 +77,7 @@ db.once('open', async () => {
         await AffiliatePayment.insertMany(paymentData);
       }
       
-      console.log(`Created ${affiliationData.length} affiliates and ${paymentData.length} payments for ${store.name}`);
+      //CONSOLE.log(`Created ${affiliationData.length} affiliates and ${paymentData.length} payments for ${store.name}`);
     }
     
     // Display summary
@@ -125,67 +125,67 @@ db.once('open', async () => {
       }
     ]);
     
-    console.log('\n=== Affiliation Data Creation Summary ===');
-    console.log(`Total affiliates created: ${totalAffiliates}`);
-    console.log(`Total payments created: ${totalPayments}`);
+    //CONSOLE.log('\n=== Affiliation Data Creation Summary ===');
+    //CONSOLE.log(`Total affiliates created: ${totalAffiliates}`);
+    //CONSOLE.log(`Total payments created: ${totalPayments}`);
     
     if (stats.length > 0) {
       const affiliateStats = stats[0];
-      console.log('\nAffiliate Statistics:');
-      console.log(`Total affiliates: ${affiliateStats.totalAffiliates}`);
-      console.log(`Active affiliates: ${affiliateStats.activeAffiliates}`);
-      console.log(`Total sales: $${affiliateStats.totalSales.toFixed(2)}`);
-      console.log(`Total commission: $${affiliateStats.totalCommission.toFixed(2)}`);
-      console.log(`Total paid: $${affiliateStats.totalPaid.toFixed(2)}`);
-      console.log(`Total balance: $${affiliateStats.totalBalance.toFixed(2)}`);
-      console.log(`Total orders: ${affiliateStats.totalOrders}`);
-      console.log(`Total customers: ${affiliateStats.totalCustomers}`);
-      console.log(`Average commission: ${affiliateStats.averageCommission.toFixed(1)}%`);
+      //CONSOLE.log('\nAffiliate Statistics:');
+      //CONSOLE.log(`Total affiliates: ${affiliateStats.totalAffiliates}`);
+      //CONSOLE.log(`Active affiliates: ${affiliateStats.activeAffiliates}`);
+      //CONSOLE.log(`Total sales: $${affiliateStats.totalSales.toFixed(2)}`);
+      //CONSOLE.log(`Total commission: $${affiliateStats.totalCommission.toFixed(2)}`);
+      //CONSOLE.log(`Total paid: $${affiliateStats.totalPaid.toFixed(2)}`);
+      //CONSOLE.log(`Total balance: $${affiliateStats.totalBalance.toFixed(2)}`);
+      //CONSOLE.log(`Total orders: ${affiliateStats.totalOrders}`);
+      //CONSOLE.log(`Total customers: ${affiliateStats.totalCustomers}`);
+      //CONSOLE.log(`Average commission: ${affiliateStats.averageCommission.toFixed(1)}%`);
     }
     
     if (paymentStats.length > 0) {
       const payStats = paymentStats[0];
-      console.log('\nPayment Statistics:');
-      console.log(`Total payments: ${payStats.totalPayments}`);
-      console.log(`Total amount: $${payStats.totalAmount.toFixed(2)}`);
-      console.log(`Completed payments: ${payStats.completedPayments}`);
-      console.log(`Completed amount: $${payStats.completedAmount.toFixed(2)}`);
-      console.log(`Pending payments: ${payStats.pendingPayments}`);
-      console.log(`Pending amount: $${payStats.pendingAmount.toFixed(2)}`);
+      //CONSOLE.log('\nPayment Statistics:');
+      //CONSOLE.log(`Total payments: ${payStats.totalPayments}`);
+      //CONSOLE.log(`Total amount: $${payStats.totalAmount.toFixed(2)}`);
+      //CONSOLE.log(`Completed payments: ${payStats.completedPayments}`);
+      //CONSOLE.log(`Completed amount: $${payStats.completedAmount.toFixed(2)}`);
+      //CONSOLE.log(`Pending payments: ${payStats.pendingPayments}`);
+      //CONSOLE.log(`Pending amount: $${payStats.pendingAmount.toFixed(2)}`);
     }
     
     // Show sample data
-    console.log('\n=== Sample Affiliation Data ===');
+    //CONSOLE.log('\n=== Sample Affiliation Data ===');
     const sampleAffiliate = await Affiliation.findOne()
       .populate('store', 'name domain')
       .populate('verifiedBy', 'firstName lastName');
     
     if (sampleAffiliate) {
-      console.log('Sample Affiliate:');
-      console.log(`Name: ${sampleAffiliate.fullName}`);
-      console.log(`Email: ${sampleAffiliate.email}`);
-      console.log(`Store: ${sampleAffiliate.store.name}`);
-      console.log(`Commission: ${sampleAffiliate.commissionRate}`);
-      console.log(`Status: ${sampleAffiliate.status}`);
-      console.log(`Total Sales: $${sampleAffiliate.totalSales.toFixed(2)}`);
-      console.log(`Total Commission: $${sampleAffiliate.totalCommission.toFixed(2)}`);
-      console.log(`Balance: $${sampleAffiliate.balance.toFixed(2)}`);
-      console.log(`Affiliate Code: ${sampleAffiliate.affiliateCode}`);
-      console.log(`Affiliate Link: ${sampleAffiliate.affiliateLink}`);
-      console.log(`Is Verified: ${sampleAffiliate.isVerified}`);
-      console.log(`Performance Score: ${sampleAffiliate.performanceScore}`);
+      //CONSOLE.log('Sample Affiliate:');
+      //CONSOLE.log(`Name: ${sampleAffiliate.fullName}`);
+      //CONSOLE.log(`Email: ${sampleAffiliate.email}`);
+      //CONSOLE.log(`Store: ${sampleAffiliate.store.name}`);
+      //CONSOLE.log(`Commission: ${sampleAffiliate.commissionRate}`);
+      //CONSOLE.log(`Status: ${sampleAffiliate.status}`);
+      //CONSOLE.log(`Total Sales: $${sampleAffiliate.totalSales.toFixed(2)}`);
+      //CONSOLE.log(`Total Commission: $${sampleAffiliate.totalCommission.toFixed(2)}`);
+      //CONSOLE.log(`Balance: $${sampleAffiliate.balance.toFixed(2)}`);
+      //CONSOLE.log(`Affiliate Code: ${sampleAffiliate.affiliateCode}`);
+      //CONSOLE.log(`Affiliate Link: ${sampleAffiliate.affiliateLink}`);
+      //CONSOLE.log(`Is Verified: ${sampleAffiliate.isVerified}`);
+      //CONSOLE.log(`Performance Score: ${sampleAffiliate.performanceScore}`);
     }
     
-    console.log('\n✅ Affiliation data created successfully!');
-    console.log('\n📋 Next Steps:');
-    console.log('1. Test the API endpoints using the CURL commands');
-    console.log('2. Check affiliate statistics and analytics');
-    console.log('3. Test payment processing');
-    console.log('4. Verify store isolation');
-    console.log('5. Test affiliate verification flow');
+    //CONSOLE.log('\n✅ Affiliation data created successfully!');
+    //CONSOLE.log('\n📋 Next Steps:');
+    //CONSOLE.log('1. Test the API endpoints using the CURL commands');
+    //CONSOLE.log('2. Check affiliate statistics and analytics');
+    //CONSOLE.log('3. Test payment processing');
+    //CONSOLE.log('4. Verify store isolation');
+    //CONSOLE.log('5. Test affiliate verification flow');
     
   } catch (error) {
-    console.error('Error creating affiliation data:', error);
+    //CONSOLE.error('Error creating affiliation data:', error);
   }
 });
 
@@ -660,17 +660,17 @@ const createAffiliationData = async () => {
     // Check if store exists
     const store = await Store.findById(storeId);
     if (!store) {
-      console.error('Store not found with ID:', storeId);
+      //CONSOLE.error('Store not found with ID:', storeId);
       return;
     }
     
-    console.log('Creating affiliations for store:', store.name);
+    //CONSOLE.log('Creating affiliations for store:', store.name);
     
     // Check if affiliations already exist for this store
     const existingAffiliations = await Affiliation.find({ store: storeId });
     if (existingAffiliations.length > 0) {
-      console.log(`Found ${existingAffiliations.length} existing affiliations for this store`);
-      console.log('Skipping creation to avoid duplicates');
+      //CONSOLE.log(`Found ${existingAffiliations.length} existing affiliations for this store`);
+      //CONSOLE.log('Skipping creation to avoid duplicates');
       return;
     }
     
@@ -703,25 +703,25 @@ const createAffiliationData = async () => {
       const affiliation = await Affiliation.create(affiliationData);
       createdAffiliations.push(affiliation);
       
-      console.log(`Created affiliation: ${affiliation.firstName} ${affiliation.lastName} (${affiliation.affiliateCode})`);
+      //CONSOLE.log(`Created affiliation: ${affiliation.firstName} ${affiliation.lastName} (${affiliation.affiliateCode})`);
     }
     
-    console.log(`\n✅ Successfully created ${createdAffiliations.length} affiliations for store: ${store.name}`);
-    console.log('Store ID:', storeId);
+    //CONSOLE.log(`\n✅ Successfully created ${createdAffiliations.length} affiliations for store: ${store.name}`);
+    //CONSOLE.log('Store ID:', storeId);
     
     // Display summary
     const activeCount = createdAffiliations.filter(a => a.status === 'Active').length;
     const pendingCount = createdAffiliations.filter(a => a.status === 'Pending').length;
     const inactiveCount = createdAffiliations.filter(a => a.status === 'Inactive').length;
     
-    console.log('\n📊 Summary:');
-    console.log(`- Active: ${activeCount}`);
-    console.log(`- Pending: ${pendingCount}`);
-    console.log(`- Inactive: ${inactiveCount}`);
-    console.log(`- Total: ${createdAffiliations.length}`);
+    //CONSOLE.log('\n📊 Summary:');
+    //CONSOLE.log(`- Active: ${activeCount}`);
+    //CONSOLE.log(`- Pending: ${pendingCount}`);
+    //CONSOLE.log(`- Inactive: ${inactiveCount}`);
+    //CONSOLE.log(`- Total: ${createdAffiliations.length}`);
     
   } catch (error) {
-    console.error('Error creating affiliation data:', error);
+    //CONSOLE.error('Error creating affiliation data:', error);
   }
 };
 
@@ -730,12 +730,12 @@ const main = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4mdpc.mongodb.net/bringus?retryWrites=true&w=majority&appName=Cluster0');
     await createAffiliationData();
-    console.log('\n🎉 Affiliation data creation completed!');
+    //CONSOLE.log('\n🎉 Affiliation data creation completed!');
   } catch (error) {
-    console.error('Error in main execution:', error);
+    //CONSOLE.error('Error in main execution:', error);
   } finally {
     await mongoose.connection.close();
-    console.log('MongoDB connection closed');
+    //CONSOLE.log('MongoDB connection closed');
     process.exit(0);
   }
 };

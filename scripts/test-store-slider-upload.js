@@ -4,13 +4,13 @@ const path = require('path');
 
 async function testStoreSliderUpload() {
   try {
-    console.log('🚀 بدء اختبار رفع صورة Store Slider...');
+    //CONSOLE.log('🚀 بدء اختبار رفع صورة Store Slider...');
     
     // قراءة صورة تجريبية من مجلد public
     const imagePath = path.join(__dirname, '../public/placeholder-image.png');
     
     if (!fs.existsSync(imagePath)) {
-      console.log('⚠️  لم يتم العثور على placeholder-image.png، جاري إنشاء صورة تجريبية...');
+      //CONSOLE.log('⚠️  لم يتم العثور على placeholder-image.png، جاري إنشاء صورة تجريبية...');
       
       // إنشاء صورة تجريبية بسيطة (1x1 pixel PNG)
       const testImageBuffer = Buffer.from([
@@ -24,7 +24,7 @@ async function testStoreSliderUpload() {
       
       // حفظ الصورة التجريبية
       fs.writeFileSync(imagePath, testImageBuffer);
-      console.log('✅ تم إنشاء صورة تجريبية');
+      //CONSOLE.log('✅ تم إنشاء صورة تجريبية');
     }
     
     const imageBuffer = fs.readFileSync(imagePath);
@@ -32,21 +32,21 @@ async function testStoreSliderUpload() {
     const storeId = '507f1f77bcf86cd799439012'; // store ID تجريبي
     const folder = `store-sliders/${storeId}`;
     
-    console.log(`📁 رفع الصورة إلى مجلد: ${folder}`);
-    console.log(`📄 اسم الملف: ${originalName}`);
-    console.log(`📏 حجم الملف: ${imageBuffer.length} bytes`);
+    //CONSOLE.log(`📁 رفع الصورة إلى مجلد: ${folder}`);
+    //CONSOLE.log(`📄 اسم الملف: ${originalName}`);
+    //CONSOLE.log(`📏 حجم الملف: ${imageBuffer.length} bytes`);
     
     // رفع الصورة إلى Cloudflare R2
     const result = await uploadToCloudflare(imageBuffer, originalName, folder);
     
-    console.log('✅ تم رفع الصورة بنجاح!');
-    console.log('📊 النتائج:');
-    console.log(`   🔑 Key: ${result.key}`);
-    console.log(`   🌐 URL: ${result.url}`);
-    console.log(`   📁 المجلد: ${folder}`);
+    //CONSOLE.log('✅ تم رفع الصورة بنجاح!');
+    //CONSOLE.log('📊 النتائج:');
+    //CONSOLE.log(`   🔑 Key: ${result.key}`);
+    //CONSOLE.log(`   🌐 URL: ${result.url}`);
+    //CONSOLE.log(`   📁 المجلد: ${folder}`);
     
     // اختبار الوصول للصورة
-    console.log('\n🔍 اختبار الوصول للصورة...');
+    //CONSOLE.log('\n🔍 اختبار الوصول للصورة...');
     const https = require('https');
     
     const testUrl = new Promise((resolve, reject) => {
@@ -60,11 +60,11 @@ async function testStoreSliderUpload() {
     });
     
     await testUrl;
-    console.log('✅ الصورة متاحة للوصول العام!');
+    //CONSOLE.log('✅ الصورة متاحة للوصول العام!');
     
   } catch (error) {
-    console.error('❌ خطأ في اختبار رفع الصورة:', error.message);
-    console.error('🔍 تفاصيل الخطأ:', error);
+    //CONSOLE.error('❌ خطأ في اختبار رفع الصورة:', error.message);
+    //CONSOLE.error('🔍 تفاصيل الخطأ:', error);
   }
 }
 

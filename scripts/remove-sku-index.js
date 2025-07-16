@@ -9,7 +9,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mais_helbayeh:ojTOYKE
 
 async function removeSkuIndex() {
   try {
-    console.log('=== Removing SKU Index from Products Collection ===\n');
+    //CONSOLE.log('=== Removing SKU Index from Products Collection ===\n');
     
     // Wait for connection to be ready
     await mongoose.connection.asPromise();
@@ -19,9 +19,9 @@ async function removeSkuIndex() {
     
     // Get all indexes
     const indexes = await collection.indexes();
-    console.log('Current indexes:');
+    //CONSOLE.log('Current indexes:');
     indexes.forEach((index, i) => {
-      console.log(`${i + 1}. ${JSON.stringify(index.key)}`);
+      //CONSOLE.log(`${i + 1}. ${JSON.stringify(index.key)}`);
     });
     
     // Find SKU index
@@ -30,29 +30,29 @@ async function removeSkuIndex() {
     );
     
     if (skuIndex) {
-      console.log('\nFound SKU index:', JSON.stringify(skuIndex.key));
+      //CONSOLE.log('\nFound SKU index:', JSON.stringify(skuIndex.key));
       
       // Drop the SKU index
       await collection.dropIndex(skuIndex.name);
-      console.log('✅ Successfully removed SKU index');
+      //CONSOLE.log('✅ Successfully removed SKU index');
     } else {
-      console.log('\n✅ No SKU index found');
+      //CONSOLE.log('\n✅ No SKU index found');
     }
     
     // Show updated indexes
     const updatedIndexes = await collection.indexes();
-    console.log('\nUpdated indexes:');
+    //CONSOLE.log('\nUpdated indexes:');
     updatedIndexes.forEach((index, i) => {
-      console.log(`${i + 1}. ${JSON.stringify(index.key)}`);
+      //CONSOLE.log(`${i + 1}. ${JSON.stringify(index.key)}`);
     });
     
-    console.log('\n✅ SKU index removal completed successfully!');
+    //CONSOLE.log('\n✅ SKU index removal completed successfully!');
     
   } catch (error) {
-    console.error('❌ Error removing SKU index:', error);
+    //CONSOLE.error('❌ Error removing SKU index:', error);
   } finally {
     mongoose.connection.close();
-    console.log('Database connection closed.');
+    //CONSOLE.log('Database connection closed.');
   }
 }
 

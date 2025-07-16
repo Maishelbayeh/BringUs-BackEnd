@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
   try {
     await CategoryController.getAll(req, res);
   } catch (error) {
-    console.error('Get all categories error:', error);
+    //CONSOLE.error('Get all categories error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -50,7 +50,7 @@ router.get('/tree', async (req, res) => {
   try {
     await CategoryController.getCategoryTree(req, res);
   } catch (error) {
-    console.error('Get category tree error:', error);
+    //CONSOLE.error('Get category tree error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -107,7 +107,7 @@ router.get('/slug/:slug', async (req, res) => {
       data: category
     });
   } catch (error) {
-    console.error('Get category by slug error:', error);
+    //CONSOLE.error('Get category by slug error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -138,7 +138,7 @@ router.get('/:id', async (req, res) => {
   try {
     await CategoryController.getById(req, res);
   } catch (error) {
-    console.error('Get category by ID error:', error);
+    //CONSOLE.error('Get category by ID error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -169,7 +169,7 @@ router.get('/:id/details', async (req, res) => {
   try {
     await CategoryController.getCategoryDetails(req, res);
   } catch (error) {
-    console.error('Get category details error:', error);
+    //CONSOLE.error('Get category details error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -244,7 +244,7 @@ router.post('/', [
 
     await CategoryController.create(req, res);
   } catch (error) {
-    console.error('Create category error:', error);
+    //CONSOLE.error('Create category error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -326,7 +326,7 @@ router.put('/:id', [
 
     await CategoryController.update(req, res);
   } catch (error) {
-    console.error('Update category error:', error);
+    //CONSOLE.error('Update category error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -393,7 +393,7 @@ router.delete('/:id', [
 
     await CategoryController.delete(req, res);
   } catch (error) {
-    console.error('Delete category error:', error);
+    //CONSOLE.error('Delete category error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -446,7 +446,7 @@ router.get('/featured', async (req, res) => {
       data: categories
     });
   } catch (error) {
-    console.error('Get featured categories error:', error);
+    //CONSOLE.error('Get featured categories error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -565,7 +565,7 @@ router.get('/store/:storeId', async (req, res) => {
       count: categories.length
     });
   } catch (err) {
-    console.error('Get categories by storeId error:', err);
+    //CONSOLE.error('Get categories by storeId error:', err);
     
     // Handle Mongoose validation errors
     if (err.name === 'ValidationError') {
@@ -608,7 +608,7 @@ router.post('/upload-image', [protect, authorize('admin', 'superadmin')], upload
     const result = await uploadToCloudflare(req.file.buffer, req.file.originalname, folder);
     res.json({ success: true, image: result.key, imageUrl: result.url });
   } catch (err) {
-    console.error('Upload image error:', err);
+    //CONSOLE.error('Upload image error:', err);
     
     // Handle Mongoose validation errors
     if (err.name === 'ValidationError') {

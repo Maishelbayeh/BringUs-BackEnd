@@ -6,8 +6,8 @@ const Store = require('../Models/Store');
 const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4mdpc.mongodb.net/bringus?retryWrites=true&w=majority&appName=Cluster0';
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB Atlas'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+  .then(() => //CONSOLE.log('✅ Connected to MongoDB Atlas'))
+  .catch(err => //CONSOLE.error('❌ MongoDB connection error:', err));
 
 // Store ID to add sliders for
 const TARGET_STORE_ID = '687505893fbf3098648bfe16';
@@ -82,27 +82,27 @@ const storeSliders = [
 
 async function createStoreSliderData() {
   try {
-    console.log('🚀 Creating store slider data for specific store...\n');
-    console.log(`🎯 Target Store ID: ${TARGET_STORE_ID}\n`);
+    //CONSOLE.log('🚀 Creating store slider data for specific store...\n');
+    //CONSOLE.log(`🎯 Target Store ID: ${TARGET_STORE_ID}\n`);
 
     // Verify store exists
     const store = await Store.findById(TARGET_STORE_ID);
     if (!store) {
-      console.log('❌ Store not found with ID:', TARGET_STORE_ID);
-      console.log('Please check the store ID and try again.');
+      //CONSOLE.log('❌ Store not found with ID:', TARGET_STORE_ID);
+      //CONSOLE.log('Please check the store ID and try again.');
       return;
     }
 
-    console.log(`📦 Found store: ${store.name}`);
-    console.log(`   - Domain: ${store.domain}`);
-    console.log(`   - Status: ${store.status}\n`);
+    //CONSOLE.log(`📦 Found store: ${store.name}`);
+    //CONSOLE.log(`   - Domain: ${store.domain}`);
+    //CONSOLE.log(`   - Status: ${store.status}\n`);
 
     // Clear existing slider data for this store
     const deletedCount = await StoreSlider.deleteMany({ store: TARGET_STORE_ID });
-    console.log(`🧹 Cleared ${deletedCount.deletedCount} existing sliders for this store\n`);
+    //CONSOLE.log(`🧹 Cleared ${deletedCount.deletedCount} existing sliders for this store\n`);
 
     // Create sliders
-    console.log('🛠️ Creating store sliders...');
+    //CONSOLE.log('🛠️ Creating store sliders...');
     const createdSliders = [];
     
     for (const sliderData of storeSliders) {
@@ -111,60 +111,60 @@ async function createStoreSliderData() {
         store: TARGET_STORE_ID
       });
       createdSliders.push(slider);
-      console.log(`   ✅ Created: ${slider.title} (${slider.type}) - ${slider.isActive ? 'Active' : 'Inactive'}`);
+      //CONSOLE.log(`   ✅ Created: ${slider.title} (${slider.type}) - ${slider.isActive ? 'Active' : 'Inactive'}`);
     }
 
     // Verify creation
-    console.log('\n🔍 Verifying data creation...');
+    //CONSOLE.log('\n🔍 Verifying data creation...');
     const totalSliders = await StoreSlider.countDocuments({ store: TARGET_STORE_ID });
     const activeSliders = await StoreSlider.countDocuments({ store: TARGET_STORE_ID, isActive: true });
     const inactiveSliders = await StoreSlider.countDocuments({ store: TARGET_STORE_ID, isActive: false });
     
-    console.log(`   - Total sliders: ${totalSliders}`);
-    console.log(`   - Active sliders: ${activeSliders}`);
-    console.log(`   - Inactive sliders: ${inactiveSliders}`);
+    //CONSOLE.log(`   - Total sliders: ${totalSliders}`);
+    //CONSOLE.log(`   - Active sliders: ${activeSliders}`);
+    //CONSOLE.log(`   - Inactive sliders: ${inactiveSliders}`);
 
     // Test YouTube ID extraction
-    console.log('\n🎥 Testing YouTube integration...');
+    //CONSOLE.log('\n🎥 Testing YouTube integration...');
     const videoSliders = await StoreSlider.find({ store: TARGET_STORE_ID, type: 'video' });
     videoSliders.forEach(slider => {
-      console.log(`   - ${slider.title}: YouTube ID = ${slider.youtubeId}`);
-      console.log(`     Thumbnail: ${slider.thumbnailUrl}`);
+      //CONSOLE.log(`   - ${slider.title}: YouTube ID = ${slider.youtubeId}`);
+      //CONSOLE.log(`     Thumbnail: ${slider.thumbnailUrl}`);
     });
 
-    console.log('\n🎉 Store slider data created successfully!');
-    console.log('\n📊 Summary:');
-    console.log(`- Store: ${store.name} (${TARGET_STORE_ID})`);
-    console.log(`- Total sliders: ${totalSliders}`);
-    console.log(`- Active sliders: ${activeSliders}`);
-    console.log(`- Inactive sliders: ${inactiveSliders}`);
-    console.log(`- Image sliders: ${await StoreSlider.countDocuments({ store: TARGET_STORE_ID, type: 'slider' })}`);
-    console.log(`- Video sliders: ${await StoreSlider.countDocuments({ store: TARGET_STORE_ID, type: 'video' })}`);
+    //CONSOLE.log('\n🎉 Store slider data created successfully!');
+    //CONSOLE.log('\n📊 Summary:');
+    //CONSOLE.log(`- Store: ${store.name} (${TARGET_STORE_ID})`);
+    //CONSOLE.log(`- Total sliders: ${totalSliders}`);
+    //CONSOLE.log(`- Active sliders: ${activeSliders}`);
+    //CONSOLE.log(`- Inactive sliders: ${inactiveSliders}`);
+    //CONSOLE.log(`- Image sliders: ${await StoreSlider.countDocuments({ store: TARGET_STORE_ID, type: 'slider' })}`);
+    //CONSOLE.log(`- Video sliders: ${await StoreSlider.countDocuments({ store: TARGET_STORE_ID, type: 'video' })}`);
     
-    console.log('\n📋 Data Details:');
+    //CONSOLE.log('\n📋 Data Details:');
     storeSliders.forEach((slider, index) => {
-      console.log(`\n   ${index + 1}. ${slider.title}`);
-      console.log(`      📝 Description: ${slider.description}`);
-      console.log(`      🎯 Type: ${slider.type}`);
+      //CONSOLE.log(`\n   ${index + 1}. ${slider.title}`);
+      //CONSOLE.log(`      📝 Description: ${slider.description}`);
+      //CONSOLE.log(`      🎯 Type: ${slider.type}`);
       if (slider.type === 'slider') {
-        console.log(`      🖼️ Image: ${slider.imageUrl}`);
+        //CONSOLE.log(`      🖼️ Image: ${slider.imageUrl}`);
       } else {
-        console.log(`      🎥 Video: ${slider.videoUrl}`);
+        //CONSOLE.log(`      🎥 Video: ${slider.videoUrl}`);
       }
-      console.log(`      📍 Order: ${slider.order}`);
-      console.log(`      📍 Status: ${slider.isActive ? 'Active' : 'Inactive'}`);
+      //CONSOLE.log(`      📍 Order: ${slider.order}`);
+      //CONSOLE.log(`      📍 Status: ${slider.isActive ? 'Active' : 'Inactive'}`);
     });
 
-    console.log('\n✅ Script completed successfully!');
-    console.log('\n🔗 You can now view these sliders in your frontend application.');
-    console.log('📱 The sliders will be displayed based on their order and active status.');
+    //CONSOLE.log('\n✅ Script completed successfully!');
+    //CONSOLE.log('\n🔗 You can now view these sliders in your frontend application.');
+    //CONSOLE.log('📱 The sliders will be displayed based on their order and active status.');
 
   } catch (error) {
-    console.error('❌ Error creating store slider data:', error);
+    //CONSOLE.error('❌ Error creating store slider data:', error);
   } finally {
     // Close the database connection
     await mongoose.connection.close();
-    console.log('\n🔌 Database connection closed');
+    //CONSOLE.log('\n🔌 Database connection closed');
   }
 }
 

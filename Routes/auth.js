@@ -155,7 +155,7 @@ router.post('/register', [
       }
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    //CONSOLE.error('Registration error:', error);
     res.status(500).json({
       success: false,
       message: 'Error registering user',
@@ -325,7 +325,7 @@ router.post('/login', [
           userStore = userStores[0];
         }
       } catch (storeError) {
-        console.error('Error fetching admin store:', storeError);
+        //CONSOLE.error('Error fetching admin store:', storeError);
         // Don't fail login if store fetch fails
       }
     }
@@ -372,7 +372,7 @@ router.post('/login', [
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    //CONSOLE.error('Login error:', error);
     res.status(500).json({
       success: false,
       message: 'Error logging in',
@@ -446,7 +446,7 @@ router.get('/me', async (req, res) => {
       try {
         await checkAdminStoreOwnership(req, res, () => {});
       } catch (error) {
-        console.error('Store ownership check error:', error);
+        //CONSOLE.error('Store ownership check error:', error);
       }
     }
 
@@ -479,7 +479,7 @@ router.get('/me', async (req, res) => {
           userStore = userStores[0];
         }
       } catch (storeError) {
-        console.error('Error fetching admin store:', storeError);
+        //CONSOLE.error('Error fetching admin store:', storeError);
       }
     }
 
@@ -501,7 +501,7 @@ router.get('/me', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get user error:', error);
+    //CONSOLE.error('Get user error:', error);
     res.status(401).json({
       success: false,
       message: 'Invalid token'
@@ -546,7 +546,7 @@ router.post('/forgot-password', [
       resetToken: process.env.NODE_ENV === 'development' ? resetToken : undefined
     });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    //CONSOLE.error('Forgot password error:', error);
     res.status(500).json({
       success: false,
       message: 'Error sending reset email',
@@ -602,7 +602,7 @@ router.post('/reset-password', [
       message: 'Password updated successfully'
     });
   } catch (error) {
-    console.error('Reset password error:', error);
+    //CONSOLE.error('Reset password error:', error);
     res.status(500).json({
       success: false,
       message: 'Error resetting password',

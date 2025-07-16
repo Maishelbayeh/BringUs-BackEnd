@@ -26,7 +26,7 @@ exports.hasStoreAccess = async (req, res, next) => {
         status: 'active'
       };
       
-      console.log('🔓 Store access bypassed - Superadmin access granted');
+      //CONSOLE.log('🔓 Store access bypassed - Superadmin access granted');
       return next();
     }
 
@@ -48,7 +48,7 @@ exports.hasStoreAccess = async (req, res, next) => {
     req.owner = owner;
     next();
   } catch (error) {
-    console.error('Store access middleware error:', error);
+    //CONSOLE.error('Store access middleware error:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error'
@@ -75,7 +75,7 @@ exports.hasPermission = (permission) => {
         message: `Permission denied: ${permission}`
       });
     } catch (error) {
-      console.error('Permission middleware error:', error);
+      //CONSOLE.error('Permission middleware error:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error'
@@ -101,7 +101,7 @@ exports.isPrimaryOwner = async (req, res, next) => {
       message: 'Only primary owner can perform this action'
     });
   } catch (error) {
-    console.error('Primary owner middleware error:', error);
+    //CONSOLE.error('Primary owner middleware error:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error'
@@ -170,7 +170,7 @@ exports.requireStoreIdForAdmin = (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Store ID validation error:', error);
+    //CONSOLE.error('Store ID validation error:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error'
@@ -220,7 +220,7 @@ exports.checkAdminStoreOwnership = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Admin store ownership check error:', error);
+    //CONSOLE.error('Admin store ownership check error:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error'

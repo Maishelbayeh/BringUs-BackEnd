@@ -61,7 +61,7 @@ const getAllWholesalers = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Error getting wholesalers:', err);
+    //CONSOLE.error('Error getting wholesalers:', err);
     return error(res, { message: 'Failed to get wholesalers', statusCode: 500 });
   }
 };
@@ -85,7 +85,7 @@ const getWholesalerById = async (req, res) => {
     return success(res, { data: wholesaler, message: 'Wholesaler retrieved successfully' });
 
   } catch (err) {
-    console.error('Error getting wholesaler:', err);
+    //CONSOLE.error('Error getting wholesaler:', err);
     return error(res, { message: 'Failed to get wholesaler', statusCode: 500 });
   }
 };
@@ -129,7 +129,7 @@ const createWholesaler = async (req, res) => {
     return success(res, { data: wholesaler, message: 'Wholesaler created successfully', statusCode: 201 });
 
   } catch (err) {
-    console.error('Error creating wholesaler:', err);
+    //CONSOLE.error('Error creating wholesaler:', err);
     
     if (err.name === 'ValidationError') {
       const errors = Object.values(err.errors).map(e => e.message);
@@ -180,7 +180,7 @@ const updateWholesaler = async (req, res) => {
     return success(res, { data: updatedWholesaler, message: 'Wholesaler updated successfully' });
 
   } catch (err) {
-    console.error('Error updating wholesaler:', err);
+    //CONSOLE.error('Error updating wholesaler:', err);
     
     if (err.name === 'ValidationError') {
       const errors = Object.values(err.errors).map(e => e.message);
@@ -208,7 +208,7 @@ const deleteWholesaler = async (req, res) => {
     return success(res, { data: null, message: 'Wholesaler deleted successfully' });
 
   } catch (err) {
-    console.error('Error deleting wholesaler:', err);
+    //CONSOLE.error('Error deleting wholesaler:', err);
     return error(res, { message: 'Failed to delete wholesaler', statusCode: 500 });
   }
 };
@@ -242,7 +242,7 @@ const verifyWholesaler = async (req, res) => {
     return success(res, { data: wholesaler, message: 'Wholesaler verified successfully' });
 
   } catch (err) {
-    console.error('Error verifying wholesaler:', err);
+    //CONSOLE.error('Error verifying wholesaler:', err);
     return error(res, { message: 'Failed to verify wholesaler', statusCode: 500 });
   }
 };
@@ -272,7 +272,7 @@ const updateWholesalerStatus = async (req, res) => {
     return success(res, { data: wholesaler, message: 'Wholesaler status updated successfully' });
 
   } catch (err) {
-    console.error('Error updating wholesaler status:', err);
+    //CONSOLE.error('Error updating wholesaler status:', err);
     return error(res, { message: 'Failed to update wholesaler status', statusCode: 500 });
   }
 };
@@ -299,7 +299,7 @@ const getWholesalerStats = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Error getting wholesaler stats:', err);
+    //CONSOLE.error('Error getting wholesaler stats:', err);
     return error(res, { message: 'Failed to get wholesaler statistics', statusCode: 500 });
   }
 };
@@ -334,7 +334,7 @@ const bulkUpdateStatus = async (req, res) => {
     }, `${result.modifiedCount} wholesalers status updated successfully`);
 
   } catch (err) {
-    console.error('Error bulk updating wholesaler status:', err);
+    //CONSOLE.error('Error bulk updating wholesaler status:', err);
     return error(res, { message: 'Failed to bulk update wholesaler status', statusCode: 500 });
   }
 };
@@ -358,7 +358,7 @@ const bulkDelete = async (req, res) => {
     }, `${result.deletedCount} wholesalers deleted successfully`);
 
   } catch (err) {
-    console.error('Error bulk deleting wholesalers:', err);
+    //CONSOLE.error('Error bulk deleting wholesalers:', err);
     return error(res, { message: 'Failed to bulk delete wholesalers', statusCode: 500 });
   }
 };

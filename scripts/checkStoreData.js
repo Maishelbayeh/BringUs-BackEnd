@@ -2,15 +2,15 @@ const mongoose = require('mongoose');
 
 async function checkStoreData() {
   try {
-    console.log('🔍 Checking store data...');
+    //CONSOLE.log('🔍 Checking store data...');
     
     // التحقق من المتاجر الموجودة
     const Store = require('../Models/Store');
     const stores = await Store.find({});
     
-    console.log('\n📊 Stores found:');
+    //CONSOLE.log('\n📊 Stores found:');
     stores.forEach(store => {
-      console.log(`- ${store.nameAr} (${store.nameEn}): ${store._id}`);
+      //CONSOLE.log(`- ${store.nameAr} (${store.nameEn}): ${store._id}`);
     });
     
     // التحقق من البيانات المرتبطة بكل متجر
@@ -29,7 +29,7 @@ async function checkStoreData() {
     const AffiliatePayment = require('../Models/AffiliatePayment');
     
     for (const store of stores) {
-      console.log(`\n🏪 Store: ${store.nameAr} (${store._id})`);
+      //CONSOLE.log(`\n🏪 Store: ${store.nameAr} (${store._id})`);
       
       const specs = await ProductSpecification.countDocuments({ store: store._id });
       const products = await Product.countDocuments({ store: store._id });
@@ -45,36 +45,36 @@ async function checkStoreData() {
       const affiliations = await Affiliation.countDocuments({ store: store._id });
       const affiliatePayments = await AffiliatePayment.countDocuments({ store: store._id });
       
-      console.log(`  📋 Product Specifications: ${specs}`);
-      console.log(`  📦 Products: ${products}`);
-      console.log(`  📂 Categories: ${categories}`);
-      console.log(`  📏 Units: ${units}`);
-      console.log(`  🏷️ Product Labels: ${labels}`);
-      console.log(`  🚚 Delivery Methods: ${deliveries}`);
-      console.log(`  💳 Payment Methods: ${payments}`);
-      console.log(`  📢 Advertisements: ${ads}`);
-      console.log(`  🎠 Store Sliders: ${sliders}`);
-      console.log(`  📄 Terms & Conditions: ${terms}`);
-      console.log(`  🏪 Wholesalers: ${wholesalers}`);
-      console.log(`  🤝 Affiliations: ${affiliations}`);
-      console.log(`  💰 Affiliate Payments: ${affiliatePayments}`);
+      //CONSOLE.log(`  📋 Product Specifications: ${specs}`);
+      //CONSOLE.log(`  📦 Products: ${products}`);
+      //CONSOLE.log(`  📂 Categories: ${categories}`);
+      //CONSOLE.log(`  📏 Units: ${units}`);
+      //CONSOLE.log(`  🏷️ Product Labels: ${labels}`);
+      //CONSOLE.log(`  🚚 Delivery Methods: ${deliveries}`);
+      //CONSOLE.log(`  💳 Payment Methods: ${payments}`);
+      //CONSOLE.log(`  📢 Advertisements: ${ads}`);
+      //CONSOLE.log(`  🎠 Store Sliders: ${sliders}`);
+      //CONSOLE.log(`  📄 Terms & Conditions: ${terms}`);
+      //CONSOLE.log(`  🏪 Wholesalers: ${wholesalers}`);
+      //CONSOLE.log(`  🤝 Affiliations: ${affiliations}`);
+      //CONSOLE.log(`  💰 Affiliate Payments: ${affiliatePayments}`);
     }
     
     // التحقق من البيانات بدون متجر
-    console.log('\n🔍 Data without store:');
+    //CONSOLE.log('\n🔍 Data without store:');
     const specsNoStore = await ProductSpecification.countDocuments({ store: { $exists: false } });
     const productsNoStore = await Product.countDocuments({ store: { $exists: false } });
     const categoriesNoStore = await Category.countDocuments({ store: { $exists: false } });
     
-    console.log(`  📋 Product Specifications without store: ${specsNoStore}`);
-    console.log(`  📦 Products without store: ${productsNoStore}`);
-    console.log(`  📂 Categories without store: ${categoriesNoStore}`);
+    //CONSOLE.log(`  📋 Product Specifications without store: ${specsNoStore}`);
+    //CONSOLE.log(`  📦 Products without store: ${productsNoStore}`);
+    //CONSOLE.log(`  📂 Categories without store: ${categoriesNoStore}`);
     
   } catch (error) {
-    console.error('❌ Error checking store data:', error);
+    //CONSOLE.error('❌ Error checking store data:', error);
   } finally {
     mongoose.connection.close();
-    console.log('\n🔌 Database connection closed');
+    //CONSOLE.log('\n🔌 Database connection closed');
   }
 }
 
@@ -84,11 +84,11 @@ if (require.main === module) {
   
   mongoose.connect(MONGODB_URI)
     .then(() => {
-      console.log('🔗 Connected to MongoDB');
+      //CONSOLE.log('🔗 Connected to MongoDB');
       checkStoreData();
     })
     .catch(err => {
-      console.error('❌ Database connection error:', err);
+      //CONSOLE.error('❌ Database connection error:', err);
       process.exit(1);
     });
 }

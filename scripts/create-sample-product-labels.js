@@ -11,11 +11,11 @@ const storeId = '687505893fbf3098648bfe16';
 
 const createSampleProductLabels = async () => {
   try {
-    console.log('🚀 Creating sample product labels...\n');
+    //CONSOLE.log('🚀 Creating sample product labels...\n');
 
     // Clear existing labels for this store
     await ProductLabel.deleteMany({ store: storeId });
-    console.log('✅ Cleared existing product labels for store');
+    //CONSOLE.log('✅ Cleared existing product labels for store');
 
     // Create sample product labels
     const sampleLabels = [
@@ -72,16 +72,16 @@ const createSampleProductLabels = async () => {
     ];
 
     const createdLabels = await ProductLabel.insertMany(sampleLabels);
-    console.log(`✅ Created ${createdLabels.length} product labels:`);
+    //CONSOLE.log(`✅ Created ${createdLabels.length} product labels:`);
     
     createdLabels.forEach(label => {
-      console.log(`  - ${label.nameEn} (${label.nameAr}) - Color: ${label.color} - ID: ${label._id}`);
+      //CONSOLE.log(`  - ${label.nameEn} (${label.nameAr}) - Color: ${label.color} - ID: ${label._id}`);
     });
 
-    console.log('\n🎉 Sample product labels created successfully!');
+    //CONSOLE.log('\n🎉 Sample product labels created successfully!');
 
   } catch (error) {
-    console.error('❌ Error creating product labels:', error);
+    //CONSOLE.error('❌ Error creating product labels:', error);
   } finally {
     mongoose.connection.close();
   }

@@ -15,12 +15,12 @@ const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4md
 
 async function createTestData() {
   try {
-    console.log('🚀 Connecting to MongoDB...');
+    //CONSOLE.log('🚀 Connecting to MongoDB...');
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB\n');
+    //CONSOLE.log('✅ Connected to MongoDB\n');
 
     // Clear existing test data
-    console.log('🧹 Clearing existing test data...');
+    //CONSOLE.log('🧹 Clearing existing test data...');
     await User.deleteMany({ email: { $regex: /test/ } });
     await Store.deleteMany({ domain: { $regex: /test/ } });
     await Owner.deleteMany({});
@@ -28,10 +28,10 @@ async function createTestData() {
     await Product.deleteMany({});
     await ProductLabel.deleteMany({});
     await Unit.deleteMany({});
-    console.log('✅ Test data cleared\n');
+    //CONSOLE.log('✅ Test data cleared\n');
 
     // Create Store 1: TechStore
-    console.log('🏪 Creating TechStore...');
+    //CONSOLE.log('🏪 Creating TechStore...');
     const techStore = new Store({
       name: 'TechStore',
       description: 'Your one-stop shop for all things tech',
@@ -55,10 +55,10 @@ async function createTestData() {
       }
     });
     await techStore.save();
-    console.log('✅ TechStore created:', techStore._id);
+    //CONSOLE.log('✅ TechStore created:', techStore._id);
 
     // Create Store 2: FashionStore
-    console.log('\n🏪 Creating FashionStore...');
+    //CONSOLE.log('\n🏪 Creating FashionStore...');
     const fashionStore = new Store({
       name: 'FashionStore',
       description: 'Trendy fashion for everyone',
@@ -82,10 +82,10 @@ async function createTestData() {
       }
     });
     await fashionStore.save();
-    console.log('✅ FashionStore created:', fashionStore._id);
+    //CONSOLE.log('✅ FashionStore created:', fashionStore._id);
 
     // Create Users for TechStore
-    console.log('\n👥 Creating users for TechStore...');
+    //CONSOLE.log('\n👥 Creating users for TechStore...');
     const techUsers = [];
     
     // TechStore Owner
@@ -127,10 +127,10 @@ async function createTestData() {
     await techStaff.save();
     techUsers.push(techStaff);
 
-    console.log('✅ TechStore users created');
+    //CONSOLE.log('✅ TechStore users created');
 
     // Create Users for FashionStore
-    console.log('\n👥 Creating users for FashionStore...');
+    //CONSOLE.log('\n👥 Creating users for FashionStore...');
     const fashionUsers = [];
     
     // FashionStore Owner
@@ -172,10 +172,10 @@ async function createTestData() {
     await fashionStaff.save();
     fashionUsers.push(fashionStaff);
 
-    console.log('✅ FashionStore users created');
+    //CONSOLE.log('✅ FashionStore users created');
 
     // Create Owners
-    console.log('\n👑 Creating store owners...');
+    //CONSOLE.log('\n👑 Creating store owners...');
     
     // TechStore Owners
     await new Owner({
@@ -263,10 +263,10 @@ async function createTestData() {
       status: 'active'
     }).save();
 
-    console.log('✅ Store owners created');
+    //CONSOLE.log('✅ Store owners created');
 
     // Create Product Labels for TechStore
-    console.log('\n🏷️ Creating product labels for TechStore...');
+    //CONSOLE.log('\n🏷️ Creating product labels for TechStore...');
     const techLabels = [];
     
     const techRegularLabel = new ProductLabel({
@@ -305,10 +305,10 @@ async function createTestData() {
     await techNewLabel.save();
     techLabels.push(techNewLabel);
 
-    console.log('✅ TechStore labels created');
+    //CONSOLE.log('✅ TechStore labels created');
 
     // Create Product Labels for FashionStore
-    console.log('\n🏷️ Creating product labels for FashionStore...');
+    //CONSOLE.log('\n🏷️ Creating product labels for FashionStore...');
     const fashionLabels = [];
     
     const fashionRegularLabel = new ProductLabel({
@@ -347,10 +347,10 @@ async function createTestData() {
     await fashionTrendyLabel.save();
     fashionLabels.push(fashionTrendyLabel);
 
-    console.log('✅ FashionStore labels created');
+    //CONSOLE.log('✅ FashionStore labels created');
 
     // Create Units for TechStore
-    console.log('\n📦 Creating units for TechStore...');
+    //CONSOLE.log('\n📦 Creating units for TechStore...');
     const techUnits = [];
     
     const techPieceUnit = new Unit({
@@ -377,10 +377,10 @@ async function createTestData() {
     await techBoxUnit.save();
     techUnits.push(techBoxUnit);
 
-    console.log('✅ TechStore units created');
+    //CONSOLE.log('✅ TechStore units created');
 
     // Create Units for FashionStore
-    console.log('\n📦 Creating units for FashionStore...');
+    //CONSOLE.log('\n📦 Creating units for FashionStore...');
     const fashionUnits = [];
     
     const fashionPieceUnit = new Unit({
@@ -407,10 +407,10 @@ async function createTestData() {
     await fashionPairUnit.save();
     fashionUnits.push(fashionPairUnit);
 
-    console.log('✅ FashionStore units created');
+    //CONSOLE.log('✅ FashionStore units created');
 
     // Create Categories for TechStore
-    console.log('\n📁 Creating categories for TechStore...');
+    //CONSOLE.log('\n📁 Creating categories for TechStore...');
     const techCategories = [];
     
     // Main category
@@ -457,10 +457,10 @@ async function createTestData() {
     await techIPhone.save();
     techCategories.push(techIPhone);
 
-    console.log('✅ TechStore categories created');
+    //CONSOLE.log('✅ TechStore categories created');
 
     // Create Categories for FashionStore
-    console.log('\n📁 Creating categories for FashionStore...');
+    //CONSOLE.log('\n📁 Creating categories for FashionStore...');
     const fashionCategories = [];
     
     // Main category
@@ -507,10 +507,10 @@ async function createTestData() {
     await fashionTShirts.save();
     fashionCategories.push(fashionTShirts);
 
-    console.log('✅ FashionStore categories created');
+    //CONSOLE.log('✅ FashionStore categories created');
 
     // Create Products for TechStore
-    console.log('\n📱 Creating products for TechStore...');
+    //CONSOLE.log('\n📱 Creating products for TechStore...');
     
     const techProduct1 = new Product({
       nameAr: "آيفون 15 برو",
@@ -580,10 +580,10 @@ async function createTestData() {
     });
     await techProduct3.save();
 
-    console.log('✅ TechStore products created');
+    //CONSOLE.log('✅ TechStore products created');
 
     // Create Products for FashionStore
-    console.log('\n👕 Creating products for FashionStore...');
+    //CONSOLE.log('\n👕 Creating products for FashionStore...');
     
     const fashionProduct1 = new Product({
       nameAr: "قميص قطني",
@@ -654,36 +654,36 @@ async function createTestData() {
     });
     await fashionProduct3.save();
 
-    console.log('✅ FashionStore products created');
+    //CONSOLE.log('✅ FashionStore products created');
 
     // Summary
-    console.log('\n🎉 Test data creation completed successfully!');
-    console.log('\n📊 Summary:');
-    console.log('🏪 Stores: 2');
-    console.log('👥 Users: 6 (3 per store)');
-    console.log('👑 Owners: 6 (3 per store)');
-    console.log('🏷️ Product Labels: 6 (3 per store)');
-    console.log('📦 Units: 4 (2 per store)');
-    console.log('📁 Categories: 6 (3 per store)');
-    console.log('📱 Products: 6 (3 per store)');
+    //CONSOLE.log('\n🎉 Test data creation completed successfully!');
+    //CONSOLE.log('\n📊 Summary:');
+    //CONSOLE.log('🏪 Stores: 2');
+    //CONSOLE.log('👥 Users: 6 (3 per store)');
+    //CONSOLE.log('👑 Owners: 6 (3 per store)');
+    //CONSOLE.log('🏷️ Product Labels: 6 (3 per store)');
+    //CONSOLE.log('📦 Units: 4 (2 per store)');
+    //CONSOLE.log('📁 Categories: 6 (3 per store)');
+    //CONSOLE.log('📱 Products: 6 (3 per store)');
     
-    console.log('\n🔑 Test Credentials:');
-    console.log('TechStore Owner: ahmed.tech@test.com / password123');
-    console.log('TechStore Admin: sara.tech@test.com / password123');
-    console.log('TechStore Staff: omar.tech@test.com / password123');
-    console.log('FashionStore Owner: fatima.fashion@test.com / password123');
-    console.log('FashionStore Admin: layla.fashion@test.com / password123');
-    console.log('FashionStore Staff: youssef.fashion@test.com / password123');
+    //CONSOLE.log('\n🔑 Test Credentials:');
+    //CONSOLE.log('TechStore Owner: ahmed.tech@test.com / password123');
+    //CONSOLE.log('TechStore Admin: sara.tech@test.com / password123');
+    //CONSOLE.log('TechStore Staff: omar.tech@test.com / password123');
+    //CONSOLE.log('FashionStore Owner: fatima.fashion@test.com / password123');
+    //CONSOLE.log('FashionStore Admin: layla.fashion@test.com / password123');
+    //CONSOLE.log('FashionStore Staff: youssef.fashion@test.com / password123');
     
-    console.log('\n🆔 Store IDs:');
-    console.log('TechStore:', techStore._id);
-    console.log('FashionStore:', fashionStore._id);
+    //CONSOLE.log('\n🆔 Store IDs:');
+    //CONSOLE.log('TechStore:', techStore._id);
+    //CONSOLE.log('FashionStore:', fashionStore._id);
 
   } catch (error) {
-    console.error('❌ Error creating test data:', error);
+    //CONSOLE.error('❌ Error creating test data:', error);
   } finally {
     await mongoose.disconnect();
-    console.log('\n🔌 Disconnected from MongoDB');
+    //CONSOLE.log('\n🔌 Disconnected from MongoDB');
   }
 }
 

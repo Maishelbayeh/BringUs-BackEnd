@@ -215,7 +215,7 @@ const createUser = async (req, res) => {
       token
     });
   } catch (error) {
-    console.error('Create user error:', error);
+    //CONSOLE.error('Create user error:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating user',
@@ -326,7 +326,7 @@ const getAllUsers = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get all users error:', error);
+    //CONSOLE.error('Get all users error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching users',
@@ -390,7 +390,7 @@ const getUserById = async (req, res) => {
       data: user
     });
   } catch (error) {
-    console.error('Get user by ID error:', error);
+    //CONSOLE.error('Get user by ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching user',
@@ -432,7 +432,7 @@ const getCustomers = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get customers error:', error);
+    //CONSOLE.error('Get customers error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching customers',
@@ -474,7 +474,7 @@ const getStoreStaff = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get store staff error:', error);
+    //CONSOLE.error('Get store staff error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching store staff',
