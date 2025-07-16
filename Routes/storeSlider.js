@@ -1,5 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
+const multer = require('multer');
+const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 const {
   getAllStoreSliders,
   getStoreSliderById,
@@ -15,6 +17,10 @@ const { protect, authorize } = require('../middleware/auth');
 const { verifyStoreAccess } = require('../middleware/storeAuth');
 
 const router = express.Router();
+
+// إعداد multer لرفع الصور
+const imageStorage = multer.memoryStorage();
+const uploadSliderImage = multer({ storage: imageStorage });
 
 // Validation middleware for store slider creation/update
 const validateStoreSlider = [
@@ -167,7 +173,6 @@ router.get('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess,
  *               type:
  *                 type: string
  *                 enum: [slider, video]
- *                 example: "slider"
  *               imageUrl:
  *                 type: string
  *                 example: "https://example.com/image.jpg"
@@ -338,5 +343,81 @@ router.patch('/:id/increment-views', protect, authorize('admin', 'superadmin'), 
  *         description: Access denied
  */
 router.patch('/:id/increment-clicks', protect, authorize('admin', 'superadmin'), verifyStoreAccess, incrementClicks);
+
+/**
+ * @swagger
+ * /api/store-sliders/upload-image:
+ *   post:
+ *     summary: Upload store slider image
+ *     description: Upload an image for store slider to Cloudflare R2
+ *     tags: [Store Sliders]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - image
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Store slider image file
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 image:
+ *                   type: string
+ *                   example: 'store-sliders/507f1f77bcf86cd799439012/image.jpg'
+ *                   description: Image key in storage
+ *                 imageUrl:
+ *                   type: string
+ *                   example: 'https://example.com/store-sliders/507f1f77bcf86cd799439012/image.jpg'
+ *                   description: Public URL for the uploaded image
+ *       400:
+ *         description: Bad request - no file uploaded
+ *       403:
+ *         description: Access denied
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/upload-image', protect, authorize('admin', 'superadmin'), verifyStoreAccess, uploadSliderImage.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No file uploaded' 
+      });
+    }
+
+    // رفع الصورة إلى Cloudflare R2
+    const folder = `store-sliders/${req.store._id}`;
+    const result = await uploadToCloudflare(req.file.buffer, req.file.originalname, folder);
+    
+    res.json({ 
+      success: true, 
+      image: result.key, 
+      imageUrl: result.url 
+    });
+  } catch (err) {
+    console.error('Upload slider image error:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Upload failed',
+      message: err.message 
+    });
+  }
+});
 
 module.exports = router; 
