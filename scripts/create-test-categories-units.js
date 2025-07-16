@@ -13,7 +13,7 @@ const storeId = '687505893fbf3098648bfe16';
 
 async function createTestData() {
   try {
-    console.log('=== Creating Test Categories and Units ===\n');
+    //CONSOLE.log('=== Creating Test Categories and Units ===\n');
     
     // Wait for connection to be ready
     await mongoose.connection.asPromise();
@@ -36,9 +36,9 @@ async function createTestData() {
         isActive: true
       });
       await testCategory.save();
-      console.log('✅ Created test category:', testCategory._id);
+      //CONSOLE.log('✅ Created test category:', testCategory._id);
     } else {
-      console.log('✅ Test category already exists:', testCategory._id);
+      //CONSOLE.log('✅ Test category already exists:', testCategory._id);
     }
     
     // Create test unit if it doesn't exist
@@ -54,15 +54,15 @@ async function createTestData() {
         isActive: true
       });
       await testUnit.save();
-      console.log('✅ Created test unit:', testUnit._id);
+      //CONSOLE.log('✅ Created test unit:', testUnit._id);
     } else {
-      console.log('✅ Test unit already exists:', testUnit._id);
+      //CONSOLE.log('✅ Test unit already exists:', testUnit._id);
     }
     
-    console.log('\n=== Test Data Summary ===');
-    console.log(`Category ID: ${testCategory._id}`);
-    console.log(`Unit ID: ${testUnit._id}`);
-    console.log(`Store ID: ${storeId}`);
+    //CONSOLE.log('\n=== Test Data Summary ===');
+    //CONSOLE.log(`Category ID: ${testCategory._id}`);
+    //CONSOLE.log(`Unit ID: ${testUnit._id}`);
+    //CONSOLE.log(`Store ID: ${storeId}`);
     
     return {
       categoryId: testCategory._id,
@@ -71,24 +71,24 @@ async function createTestData() {
     };
     
   } catch (error) {
-    console.error('❌ Error creating test data:', error);
+    //CONSOLE.error('❌ Error creating test data:', error);
     throw error;
   } finally {
     mongoose.connection.close();
-    console.log('Database connection closed.');
+    //CONSOLE.log('Database connection closed.');
   }
 }
 
 // Run the script
 createTestData()
   .then((data) => {
-    console.log('\n✅ Test data creation completed successfully!');
-    console.log('You can now use these IDs in your product creation:');
-    console.log(`Category: ${data.categoryId}`);
-    console.log(`Unit: ${data.unitId}`);
-    console.log(`Store: ${data.storeId}`);
+    //CONSOLE.log('\n✅ Test data creation completed successfully!');
+    //CONSOLE.log('You can now use these IDs in your product creation:');
+    //CONSOLE.log(`Category: ${data.categoryId}`);
+    //CONSOLE.log(`Unit: ${data.unitId}`);
+    //CONSOLE.log(`Store: ${data.storeId}`);
   })
   .catch((error) => {
-    console.error('❌ Failed to create test data:', error);
+    //CONSOLE.error('❌ Failed to create test data:', error);
     process.exit(1);
   }); 

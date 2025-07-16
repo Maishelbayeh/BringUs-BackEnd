@@ -38,9 +38,9 @@ async function createAndUploadDefaultImage() {
     // رفع الصورة إلى Cloudflare
     const result = await uploadToCloudflare(buffer, 'default-product.png', 'defaults');
     
-    console.log('✅ Default image created and uploaded successfully!');
-    console.log('📸 Image URL:', result.url);
-    console.log('🔑 Image Key:', result.key);
+    //CONSOLE.log('✅ Default image created and uploaded successfully!');
+    //CONSOLE.log('📸 Image URL:', result.url);
+    //CONSOLE.log('🔑 Image Key:', result.key);
     
     // حفظ الصورة محلياً أيضاً
     const publicDir = path.join(__dirname, '../public');
@@ -50,11 +50,11 @@ async function createAndUploadDefaultImage() {
     
     const localPath = path.join(publicDir, 'default-product.png');
     fs.writeFileSync(localPath, buffer);
-    console.log('💾 Image saved locally at:', localPath);
+    //CONSOLE.log('💾 Image saved locally at:', localPath);
     
     return result.url;
   } catch (error) {
-    console.error('❌ Error creating default image:', error);
+    //CONSOLE.error('❌ Error creating default image:', error);
     throw error;
   }
 }
@@ -63,12 +63,12 @@ async function createAndUploadDefaultImage() {
 if (require.main === module) {
   createAndUploadDefaultImage()
     .then((url) => {
-      console.log('🎉 Default image creation completed!');
-      console.log('🔗 Use this URL for default product images:', url);
+      //CONSOLE.log('🎉 Default image creation completed!');
+      //CONSOLE.log('🔗 Use this URL for default product images:', url);
       process.exit(0);
     })
     .catch((error) => {
-      console.error('💥 Failed to create default image:', error);
+      //CONSOLE.error('💥 Failed to create default image:', error);
       process.exit(1);
     });
 }

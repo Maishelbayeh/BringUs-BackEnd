@@ -181,7 +181,7 @@ const getAllAffiliates = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get all affiliates error:', error);
+    //CONSOLE.error('Get all affiliates error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching affiliates',
@@ -276,7 +276,7 @@ const getAffiliateStats = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get affiliate stats error:', error);
+    //CONSOLE.error('Get affiliate stats error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching affiliate statistics',
@@ -365,7 +365,7 @@ const getAffiliatesByStoreId = async (req, res) => {
       data: affiliates
     });
   } catch (error) {
-    console.error('Get affiliates by store ID error:', error);
+    //CONSOLE.error('Get affiliates by store ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching affiliates',
@@ -430,7 +430,7 @@ const getTopPerformers = async (req, res) => {
       data: topAffiliates
     });
   } catch (error) {
-    console.error('Get top performers error:', error);
+    //CONSOLE.error('Get top performers error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching top performing affiliates',
@@ -506,7 +506,7 @@ const getAffiliateById = async (req, res) => {
       data: affiliate
     });
   } catch (error) {
-    console.error('Get affiliate by ID error:', error);
+    //CONSOLE.error('Get affiliate by ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching affiliate',
@@ -603,7 +603,7 @@ const createAffiliate = async (req, res) => {
       data: affiliateResponse
     });
   } catch (error) {
-    console.error('Create affiliate error:', error);
+    //CONSOLE.error('Create affiliate error:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating affiliate',
@@ -699,7 +699,7 @@ const updateAffiliate = async (req, res) => {
       data: affiliateResponse
     });
   } catch (error) {
-    console.error('Update affiliate error:', error);
+    //CONSOLE.error('Update affiliate error:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating affiliate',
@@ -764,7 +764,7 @@ const verifyAffiliate = async (req, res) => {
       message: 'Affiliate verified successfully'
     });
   } catch (error) {
-    console.error('Verify affiliate error:', error);
+    //CONSOLE.error('Verify affiliate error:', error);
     res.status(500).json({
       success: false,
       message: 'Error verifying affiliate',
@@ -889,7 +889,7 @@ const getAffiliatePayments = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get affiliate payments error:', error);
+    //CONSOLE.error('Get affiliate payments error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching affiliate payments',
@@ -1018,7 +1018,7 @@ const createAffiliatePayment = async (req, res) => {
       data: payment
     });
   } catch (error) {
-    console.error('Create affiliate payment error:', error);
+    //CONSOLE.error('Create affiliate payment error:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating payment',

@@ -46,13 +46,13 @@ const storeCategories = [
 
 async function createStoreCategories() {
   try {
-    console.log('🏪 Creating categories for store:', STORE_ID, '\n');
+    //CONSOLE.log('🏪 Creating categories for store:', STORE_ID, '\n');
     
     // First, create the main category
-    console.log('1. Creating main category...');
+    //CONSOLE.log('1. Creating main category...');
     const mainCategoryResponse = await axios.post(`${API_BASE_URL}/meta/categories`, storeCategories[0]);
     const mainCategoryId = mainCategoryResponse.data._id;
-    console.log('✅ Main category created:', mainCategoryResponse.data.nameEn);
+    //CONSOLE.log('✅ Main category created:', mainCategoryResponse.data.nameEn);
     
     // Then create sub-categories
     for (let i = 1; i < storeCategories.length; i++) {
@@ -61,28 +61,28 @@ async function createStoreCategories() {
         parent: mainCategoryId
       };
       
-      console.log(`\n${i + 1}. Creating sub-category: ${category.nameEn}...`);
+      //CONSOLE.log(`\n${i + 1}. Creating sub-category: ${category.nameEn}...`);
       const response = await axios.post(`${API_BASE_URL}/meta/categories`, category);
-      console.log('✅ Sub-category created:', response.data.nameEn);
+      //CONSOLE.log('✅ Sub-category created:', response.data.nameEn);
     }
     
     // Get all categories for this store
-    console.log('\n📋 Getting all categories for store...');
+    //CONSOLE.log('\n📋 Getting all categories for store...');
     const allCategoriesResponse = await axios.get(`${API_BASE_URL}/meta/categories?storeId=${STORE_ID}`);
-    console.log('✅ Store categories:', allCategoriesResponse.data.length, 'categories found');
+    //CONSOLE.log('✅ Store categories:', allCategoriesResponse.data.length, 'categories found');
     
-    console.log('\n🎉 Store categories created successfully!');
+    //CONSOLE.log('\n🎉 Store categories created successfully!');
     
   } catch (error) {
-    console.error('❌ Error:', error.response?.data || error.message);
+    //CONSOLE.error('❌ Error:', error.response?.data || error.message);
   }
 }
 
 // Instructions
-console.log('📝 Instructions:');
-console.log('1. Replace STORE_ID with your actual store ID');
-console.log('2. Make sure your backend server is running');
-console.log('3. Run: node examples/store-categories.js\n');
+//CONSOLE.log('📝 Instructions:');
+//CONSOLE.log('1. Replace STORE_ID with your actual store ID');
+//CONSOLE.log('2. Make sure your backend server is running');
+//CONSOLE.log('3. Run: node examples/store-categories.js\n');
 
 // Uncomment to run
 // createStoreCategories();

@@ -16,10 +16,10 @@ exports.protect = async (req, res, next) => {
       isActive: true
     };
     
-    console.log('🔓 Auth bypassed - Using mock superadmin user');
+    //CONSOLE.log('🔓 Auth bypassed - Using mock superadmin user');
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    //CONSOLE.error('Auth middleware error:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error'
@@ -71,13 +71,13 @@ exports.optionalAuth = async (req, res, next) => {
         }
       } catch (error) {
         // Token is invalid, but we don't fail the request
-        console.log('Invalid token in optional auth:', error.message);
+        //CONSOLE.log('Invalid token in optional auth:', error.message);
       }
     }
 
     next();
   } catch (error) {
-    console.error('Optional auth middleware error:', error);
+    //CONSOLE.error('Optional auth middleware error:', error);
     next();
   }
 }; 

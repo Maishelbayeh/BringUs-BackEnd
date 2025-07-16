@@ -8,10 +8,10 @@ const STORE_2_ID = 'STORE_2_ID_HERE';
 
 async function testStoreIsolation() {
   try {
-    console.log('🏪 Testing Store Isolation System...\n');
+    //CONSOLE.log('🏪 Testing Store Isolation System...\n');
     
     // Test 1: Create categories for different stores
-    console.log('1. Creating categories for Store 1...');
+    //CONSOLE.log('1. Creating categories for Store 1...');
     const category1 = await axios.post(`${API_BASE_URL}/meta/categories`, {
       nameAr: "إلكترونيات",
       nameEn: "Electronics",
@@ -19,9 +19,9 @@ async function testStoreIsolation() {
       store: STORE_1_ID,
       level: 0
     });
-    console.log('✅ Category created for Store 1:', category1.data.nameEn);
+    //CONSOLE.log('✅ Category created for Store 1:', category1.data.nameEn);
     
-    console.log('\n2. Creating categories for Store 2...');
+    //CONSOLE.log('\n2. Creating categories for Store 2...');
     const category2 = await axios.post(`${API_BASE_URL}/meta/categories`, {
       nameAr: "ملابس",
       nameEn: "Clothing",
@@ -29,28 +29,28 @@ async function testStoreIsolation() {
       store: STORE_2_ID,
       level: 0
     });
-    console.log('✅ Category created for Store 2:', category2.data.nameEn);
+    //CONSOLE.log('✅ Category created for Store 2:', category2.data.nameEn);
     
     // Test 2: Verify isolation - Get categories for each store
-    console.log('\n3. Testing category isolation...');
+    //CONSOLE.log('\n3. Testing category isolation...');
     const store1Categories = await axios.get(`${API_BASE_URL}/meta/categories?storeId=${STORE_1_ID}`);
     const store2Categories = await axios.get(`${API_BASE_URL}/meta/categories?storeId=${STORE_2_ID}`);
     
-    console.log('✅ Store 1 categories:', store1Categories.data.length);
-    console.log('✅ Store 2 categories:', store2Categories.data.length);
+    //CONSOLE.log('✅ Store 1 categories:', store1Categories.data.length);
+    //CONSOLE.log('✅ Store 2 categories:', store2Categories.data.length);
     
     // Verify no cross-contamination
     const store1HasStore2Category = store1Categories.data.some(cat => cat.store === STORE_2_ID);
     const store2HasStore1Category = store2Categories.data.some(cat => cat.store === STORE_1_ID);
     
     if (!store1HasStore2Category && !store2HasStore1Category) {
-      console.log('✅ Category isolation verified - no cross-contamination');
+      //CONSOLE.log('✅ Category isolation verified - no cross-contamination');
     } else {
-      console.log('❌ Category isolation failed - cross-contamination detected');
+      //CONSOLE.log('❌ Category isolation failed - cross-contamination detected');
     }
     
     // Test 3: Create product labels for different stores
-    console.log('\n4. Creating product labels for different stores...');
+    //CONSOLE.log('\n4. Creating product labels for different stores...');
     const label1 = await axios.post(`${API_BASE_URL}/meta/product-labels`, {
       nameAr: "عادي",
       nameEn: "Regular",
@@ -65,10 +65,10 @@ async function testStoreIsolation() {
       color: "#EF4444"
     });
     
-    console.log('✅ Product labels created for both stores');
+    //CONSOLE.log('✅ Product labels created for both stores');
     
     // Test 4: Create units for different stores
-    console.log('\n5. Creating units for different stores...');
+    //CONSOLE.log('\n5. Creating units for different stores...');
     const unit1 = await axios.post(`${API_BASE_URL}/meta/units`, {
       nameAr: "قطعة",
       nameEn: "Piece",
@@ -83,10 +83,10 @@ async function testStoreIsolation() {
       store: STORE_2_ID
     });
     
-    console.log('✅ Units created for both stores');
+    //CONSOLE.log('✅ Units created for both stores');
     
     // Test 5: Create products for different stores
-    console.log('\n6. Creating products for different stores...');
+    //CONSOLE.log('\n6. Creating products for different stores...');
     const product1 = await axios.post(`${API_BASE_URL}/meta/products`, {
       nameAr: "هاتف ذكي",
       nameEn: "Smartphone",
@@ -111,56 +111,56 @@ async function testStoreIsolation() {
       stock: 100
     });
     
-    console.log('✅ Products created for both stores');
+    //CONSOLE.log('✅ Products created for both stores');
     
     // Test 6: Verify product isolation
-    console.log('\n7. Testing product isolation...');
+    //CONSOLE.log('\n7. Testing product isolation...');
     const store1Products = await axios.get(`${API_BASE_URL}/meta/products?storeId=${STORE_1_ID}`);
     const store2Products = await axios.get(`${API_BASE_URL}/meta/products?storeId=${STORE_2_ID}`);
     
-    console.log('✅ Store 1 products:', store1Products.data.length);
-    console.log('✅ Store 2 products:', store2Products.data.length);
+    //CONSOLE.log('✅ Store 1 products:', store1Products.data.length);
+    //CONSOLE.log('✅ Store 2 products:', store2Products.data.length);
     
     // Test 7: Test category tree isolation
-    console.log('\n8. Testing category tree isolation...');
+    //CONSOLE.log('\n8. Testing category tree isolation...');
     const store1Tree = await axios.get(`${API_BASE_URL}/meta/categories/tree?storeId=${STORE_1_ID}`);
     const store2Tree = await axios.get(`${API_BASE_URL}/meta/categories/tree?storeId=${STORE_2_ID}`);
     
-    console.log('✅ Store 1 tree categories:', store1Tree.data.length);
-    console.log('✅ Store 2 tree categories:', store2Tree.data.length);
+    //CONSOLE.log('✅ Store 1 tree categories:', store1Tree.data.length);
+    //CONSOLE.log('✅ Store 2 tree categories:', store2Tree.data.length);
     
     // Test 8: Test cross-store access (should fail)
-    console.log('\n9. Testing cross-store access prevention...');
+    //CONSOLE.log('\n9. Testing cross-store access prevention...');
     try {
       await axios.get(`${API_BASE_URL}/meta/categories/${category1.data._id}?storeId=${STORE_2_ID}`);
-      console.log('❌ Cross-store access should have been blocked');
+      //CONSOLE.log('❌ Cross-store access should have been blocked');
     } catch (error) {
       if (error.response?.status === 403) {
-        console.log('✅ Cross-store access correctly blocked');
+        //CONSOLE.log('✅ Cross-store access correctly blocked');
       } else {
-        console.log('⚠️ Cross-store access test inconclusive');
+        //CONSOLE.log('⚠️ Cross-store access test inconclusive');
       }
     }
     
-    console.log('\n🎉 Store isolation test completed successfully!');
-    console.log('\n📊 Summary:');
-    console.log('- Categories: Isolated ✅');
-    console.log('- Product Labels: Isolated ✅');
-    console.log('- Units: Isolated ✅');
-    console.log('- Products: Isolated ✅');
-    console.log('- Category Trees: Isolated ✅');
-    console.log('- Cross-store Access: Blocked ✅');
+    //CONSOLE.log('\n🎉 Store isolation test completed successfully!');
+    //CONSOLE.log('\n📊 Summary:');
+    //CONSOLE.log('- Categories: Isolated ✅');
+    //CONSOLE.log('- Product Labels: Isolated ✅');
+    //CONSOLE.log('- Units: Isolated ✅');
+    //CONSOLE.log('- Products: Isolated ✅');
+    //CONSOLE.log('- Category Trees: Isolated ✅');
+    //CONSOLE.log('- Cross-store Access: Blocked ✅');
     
   } catch (error) {
-    console.error('❌ Test failed:', error.response?.data || error.message);
+    //CONSOLE.error('❌ Test failed:', error.response?.data || error.message);
   }
 }
 
 // Instructions
-console.log('📝 Instructions:');
-console.log('1. Replace STORE_1_ID and STORE_2_ID with actual store IDs');
-console.log('2. Make sure your backend server is running');
-console.log('3. Run: node examples/store-isolation-test.js\n');
+//CONSOLE.log('📝 Instructions:');
+//CONSOLE.log('1. Replace STORE_1_ID and STORE_2_ID with actual store IDs');
+//CONSOLE.log('2. Make sure your backend server is running');
+//CONSOLE.log('3. Run: node examples/store-isolation-test.js\n');
 
 // Uncomment to run
 // testStoreIsolation();

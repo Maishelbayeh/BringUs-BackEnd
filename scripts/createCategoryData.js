@@ -8,9 +8,9 @@ const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4md
 const connectDB = async () => {
   try {
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
+    //CONSOLE.log('✅ Connected to MongoDB');
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
+    //CONSOLE.error('❌ MongoDB connection error:', error);
     process.exit(1);
   }
 };
@@ -114,7 +114,7 @@ const subcategoryData = {
 };
 
 async function createCategoriesForStore(storeId, storeName) {
-  console.log(`\n🏪 Creating categories for store: ${storeName}`);
+  //CONSOLE.log(`\n🏪 Creating categories for store: ${storeName}`);
   
   const createdCategories = {};
   
@@ -128,7 +128,7 @@ async function createCategoriesForStore(storeId, storeName) {
     
     await category.save();
     createdCategories[key] = category;
-    console.log(`✅ Created category: ${category.nameEn}`);
+    //CONSOLE.log(`✅ Created category: ${category.nameEn}`);
   }
   
   // Create subcategories for electronics
@@ -141,7 +141,7 @@ async function createCategoriesForStore(storeId, storeName) {
       slug: subcategoryData.smartphones.nameEn.toLowerCase().replace(/\s+/g, '-')
     });
     await smartphoneCategory.save();
-    console.log(`✅ Created subcategory: ${smartphoneCategory.nameEn} under Electronics`);
+    //CONSOLE.log(`✅ Created subcategory: ${smartphoneCategory.nameEn} under Electronics`);
     
     const laptopCategory = new Category({
       ...subcategoryData.laptops,
@@ -151,7 +151,7 @@ async function createCategoriesForStore(storeId, storeName) {
       slug: subcategoryData.laptops.nameEn.toLowerCase().replace(/\s+/g, '-')
     });
     await laptopCategory.save();
-    console.log(`✅ Created subcategory: ${laptopCategory.nameEn} under Electronics`);
+    //CONSOLE.log(`✅ Created subcategory: ${laptopCategory.nameEn} under Electronics`);
   }
   
   // Create subcategories for clothing
@@ -164,7 +164,7 @@ async function createCategoriesForStore(storeId, storeName) {
       slug: subcategoryData.mensClothing.nameEn.toLowerCase().replace(/\s+/g, '-')
     });
     await mensCategory.save();
-    console.log(`✅ Created subcategory: ${mensCategory.nameEn} under Clothing`);
+    //CONSOLE.log(`✅ Created subcategory: ${mensCategory.nameEn} under Clothing`);
     
     const womensCategory = new Category({
       ...subcategoryData.womensClothing,
@@ -174,7 +174,7 @@ async function createCategoriesForStore(storeId, storeName) {
       slug: subcategoryData.womensClothing.nameEn.toLowerCase().replace(/\s+/g, '-')
     });
     await womensCategory.save();
-    console.log(`✅ Created subcategory: ${womensCategory.nameEn} under Clothing`);
+    //CONSOLE.log(`✅ Created subcategory: ${womensCategory.nameEn} under Clothing`);
   }
   
   return createdCategories;
@@ -184,7 +184,7 @@ async function createTestData() {
   try {
     await connectDB();
     
-    console.log('🚀 Starting to create category test data...\n');
+    //CONSOLE.log('🚀 Starting to create category test data...\n');
     
     // Get or create test stores
     let store1 = await Store.findOne({ domain: 'test-store-1' });
@@ -199,7 +199,7 @@ async function createTestData() {
         }
       });
       await store1.save();
-      console.log('✅ Created test store 1');
+      //CONSOLE.log('✅ Created test store 1');
     }
     
     let store2 = await Store.findOne({ domain: 'test-store-2' });
@@ -214,12 +214,12 @@ async function createTestData() {
         }
       });
       await store2.save();
-      console.log('✅ Created test store 2');
+      //CONSOLE.log('✅ Created test store 2');
     }
     
     // Clear existing categories for these stores
     await Category.deleteMany({ store: { $in: [store1._id, store2._id] } });
-    console.log('🧹 Cleared existing categories for test stores');
+    //CONSOLE.log('🧹 Cleared existing categories for test stores');
     
     // Create categories for store 1
     await createCategoriesForStore(store1._id, store1.name);
@@ -227,25 +227,25 @@ async function createTestData() {
     // Create categories for store 2 (different set)
     await createCategoriesForStore(store2._id, store2.name);
     
-    console.log('\n🎉 Category test data created successfully!');
-    console.log('\n📊 Summary:');
-    console.log(`Store 1 (${store1.name}): ${store1._id}`);
-    console.log(`Store 2 (${store2.name}): ${store2._id}`);
-    console.log('\nYou can now test the API with these store IDs');
+    //CONSOLE.log('\n🎉 Category test data created successfully!');
+    //CONSOLE.log('\n📊 Summary:');
+    //CONSOLE.log(`Store 1 (${store1.name}): ${store1._id}`);
+    //CONSOLE.log(`Store 2 (${store2.name}): ${store2._id}`);
+    //CONSOLE.log('\nYou can now test the API with these store IDs');
     
     // Count categories for each store
     const store1Count = await Category.countDocuments({ store: store1._id });
     const store2Count = await Category.countDocuments({ store: store2._id });
     
-    console.log(`\n📈 Categories created:`);
-    console.log(`Store 1: ${store1Count} categories`);
-    console.log(`Store 2: ${store2Count} categories`);
+    //CONSOLE.log(`\n📈 Categories created:`);
+    //CONSOLE.log(`Store 1: ${store1Count} categories`);
+    //CONSOLE.log(`Store 2: ${store2Count} categories`);
     
   } catch (error) {
-    console.error('❌ Error creating test data:', error);
+    //CONSOLE.error('❌ Error creating test data:', error);
   } finally {
     await mongoose.disconnect();
-    console.log('\n🔌 Disconnected from MongoDB');
+    //CONSOLE.log('\n🔌 Disconnected from MongoDB');
   }
 }
 

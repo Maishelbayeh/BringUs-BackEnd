@@ -31,7 +31,7 @@ exports.getAll = async (req, res) => {
       count: categories.length
     });
   } catch (err) {
-    console.error('Get categories error:', err);
+    //CONSOLE.error('Get categories error:', err);
     
     // Handle Mongoose validation errors
     if (err.name === 'ValidationError') {
@@ -77,7 +77,7 @@ exports.getById = async (req, res) => {
       data: category
     });
   } catch (err) {
-    console.error('Get category by ID error:', err);
+    //CONSOLE.error('Get category by ID error:', err);
     
     // Handle Mongoose validation errors
     if (err.name === 'ValidationError') {
@@ -102,7 +102,7 @@ exports.getById = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    console.log('Create category - Request body:', req.body);
+    //CONSOLE.log('Create category - Request body:', req.body);
     
     // Validate required fields
     const { nameAr, nameEn, slug, storeId } = req.body;
@@ -149,7 +149,7 @@ exports.create = async (req, res) => {
       categoryData.image = req.body.image.url;
     }
     
-    console.log('Create category - Final categoryData:', categoryData);
+    //CONSOLE.log('Create category - Final categoryData:', categoryData);
 
     // Check if slug already exists in the same store
     if (slug) {
@@ -176,7 +176,7 @@ exports.create = async (req, res) => {
       data: populatedCategory
     });
   } catch (err) {
-    console.error('Category creation error:', err);
+    //CONSOLE.error('Category creation error:', err);
     
     // Handle Mongoose validation errors
     if (err.name === 'ValidationError') {
@@ -215,9 +215,9 @@ exports.update = async (req, res) => {
     const { id } = req.params;
     const { storeId } = req.body;
     
-    console.log('Update category - ID:', id);
-    console.log('Update category - Request body:', req.body);
-    console.log('Update category - StoreId:', storeId);
+    //CONSOLE.log('Update category - ID:', id);
+    //CONSOLE.log('Update category - Request body:', req.body);
+    //CONSOLE.log('Update category - StoreId:', storeId);
     
     if (!storeId) {
       return res.status(400).json({ 
@@ -235,7 +235,7 @@ exports.update = async (req, res) => {
       updateData.image = req.body.image.url;
     }
     
-    console.log('Update category - Final updateData:', updateData);
+    //CONSOLE.log('Update category - Final updateData:', updateData);
     
     const category = await Category.findOneAndUpdate(
       { _id: id, store: storeId }, 
@@ -254,7 +254,7 @@ exports.update = async (req, res) => {
       data: category
     });
   } catch (err) {
-    console.error('Update category error:', err);
+    //CONSOLE.error('Update category error:', err);
     
     // Handle Mongoose validation errors
     if (err.name === 'ValidationError') {
@@ -311,7 +311,7 @@ exports.delete = async (req, res) => {
       message: 'Category deleted successfully' 
     });
   } catch (err) {
-    console.error('Delete category error:', err);
+    //CONSOLE.error('Delete category error:', err);
     
     // Handle Mongoose validation errors
     if (err.name === 'ValidationError') {
@@ -385,7 +385,7 @@ exports.getCategoryDetails = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Get category details error:', err);
+    //CONSOLE.error('Get category details error:', err);
     
     // Handle Mongoose validation errors
     if (err.name === 'ValidationError') {
@@ -453,7 +453,7 @@ exports.getCategoryTree = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Get category tree error:', err);
+    //CONSOLE.error('Get category tree error:', err);
     
     // Handle Mongoose validation errors
     if (err.name === 'ValidationError') {

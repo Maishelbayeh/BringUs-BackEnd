@@ -6,20 +6,20 @@ const NEW_STORE_ID = '687505893fbf3098648bfe16';
 
 async function updateStoreId() {
   try {
-    console.log('🔄 Starting Store ID update process...');
-    console.log(`📝 Updating from: ${OLD_STORE_ID}`);
-    console.log(`📝 Updating to: ${NEW_STORE_ID}`);
+    //CONSOLE.log('🔄 Starting Store ID update process...');
+    //CONSOLE.log(`📝 Updating from: ${OLD_STORE_ID}`);
+    //CONSOLE.log(`📝 Updating to: ${NEW_STORE_ID}`);
     
     // التحقق من وجود المتجر الجديد
     const Store = require('../Models/Store');
     const newStore = await Store.findById(NEW_STORE_ID);
     
     if (!newStore) {
-      console.log('❌ New store not found. Please create the store first.');
+      //CONSOLE.log('❌ New store not found. Please create the store first.');
       return;
     }
     
-    console.log(`✅ Found store: ${newStore.nameAr} (${newStore.nameEn})`);
+    //CONSOLE.log(`✅ Found store: ${newStore.nameAr} (${newStore.nameEn})`);
     
     // تحديث ProductSpecifications
     const ProductSpecification = require('../Models/ProductSpecification');
@@ -27,7 +27,7 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${specResult.modifiedCount} product specifications`);
+    //CONSOLE.log(`📊 Updated ${specResult.modifiedCount} product specifications`);
     
     // تحديث Products
     const Product = require('../Models/Product');
@@ -35,7 +35,7 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${productResult.modifiedCount} products`);
+    //CONSOLE.log(`📊 Updated ${productResult.modifiedCount} products`);
     
     // تحديث Categories
     const Category = require('../Models/Category');
@@ -43,7 +43,7 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${categoryResult.modifiedCount} categories`);
+    //CONSOLE.log(`📊 Updated ${categoryResult.modifiedCount} categories`);
     
     // تحديث Units
     const Unit = require('../Models/Unit');
@@ -51,7 +51,7 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${unitResult.modifiedCount} units`);
+    //CONSOLE.log(`📊 Updated ${unitResult.modifiedCount} units`);
     
     // تحديث ProductLabels
     const ProductLabel = require('../Models/ProductLabel');
@@ -59,7 +59,7 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${labelResult.modifiedCount} product labels`);
+    //CONSOLE.log(`📊 Updated ${labelResult.modifiedCount} product labels`);
     
     // تحديث DeliveryMethods
     const DeliveryMethod = require('../Models/DeliveryMethod');
@@ -67,7 +67,7 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${deliveryResult.modifiedCount} delivery methods`);
+    //CONSOLE.log(`📊 Updated ${deliveryResult.modifiedCount} delivery methods`);
     
     // تحديث PaymentMethods
     const PaymentMethod = require('../Models/PaymentMethod');
@@ -75,7 +75,7 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${paymentResult.modifiedCount} payment methods`);
+    //CONSOLE.log(`📊 Updated ${paymentResult.modifiedCount} payment methods`);
     
     // تحديث Advertisements
     const Advertisement = require('../Models/Advertisement');
@@ -83,7 +83,7 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${adResult.modifiedCount} advertisements`);
+    //CONSOLE.log(`📊 Updated ${adResult.modifiedCount} advertisements`);
     
     // تحديث StoreSliders
     const StoreSlider = require('../Models/StoreSlider');
@@ -91,7 +91,7 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${sliderResult.modifiedCount} store sliders`);
+    //CONSOLE.log(`📊 Updated ${sliderResult.modifiedCount} store sliders`);
     
     // تحديث TermsConditions
     const TermsConditions = require('../Models/TermsConditions');
@@ -99,7 +99,7 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${termsResult.modifiedCount} terms & conditions`);
+    //CONSOLE.log(`📊 Updated ${termsResult.modifiedCount} terms & conditions`);
     
     // تحديث Wholesalers
     const Wholesaler = require('../Models/Wholesaler');
@@ -107,7 +107,7 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${wholesalerResult.modifiedCount} wholesalers`);
+    //CONSOLE.log(`📊 Updated ${wholesalerResult.modifiedCount} wholesalers`);
     
     // تحديث Affiliations
     const Affiliation = require('../Models/Affiliation');
@@ -115,7 +115,7 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${affiliationResult.modifiedCount} affiliations`);
+    //CONSOLE.log(`📊 Updated ${affiliationResult.modifiedCount} affiliations`);
     
     // تحديث AffiliatePayments
     const AffiliatePayment = require('../Models/AffiliatePayment');
@@ -123,25 +123,25 @@ async function updateStoreId() {
       { store: OLD_STORE_ID },
       { store: NEW_STORE_ID }
     );
-    console.log(`📊 Updated ${paymentAffResult.modifiedCount} affiliate payments`);
+    //CONSOLE.log(`📊 Updated ${paymentAffResult.modifiedCount} affiliate payments`);
     
-    console.log('🎉 Store ID update completed successfully!');
+    //CONSOLE.log('🎉 Store ID update completed successfully!');
     
     // عرض إحصائيات نهائية
     const totalSpecs = await ProductSpecification.countDocuments({ store: NEW_STORE_ID });
     const totalProducts = await Product.countDocuments({ store: NEW_STORE_ID });
     const totalCategories = await Category.countDocuments({ store: NEW_STORE_ID });
     
-    console.log('\n📈 Final Statistics:');
-    console.log(`- Product Specifications: ${totalSpecs}`);
-    console.log(`- Products: ${totalProducts}`);
-    console.log(`- Categories: ${totalCategories}`);
+    //CONSOLE.log('\n📈 Final Statistics:');
+    //CONSOLE.log(`- Product Specifications: ${totalSpecs}`);
+    //CONSOLE.log(`- Products: ${totalProducts}`);
+    //CONSOLE.log(`- Categories: ${totalCategories}`);
     
   } catch (error) {
-    console.error('❌ Error updating store ID:', error);
+    //CONSOLE.error('❌ Error updating store ID:', error);
   } finally {
     mongoose.connection.close();
-    console.log('🔌 Database connection closed');
+    //CONSOLE.log('🔌 Database connection closed');
   }
 }
 
@@ -152,11 +152,11 @@ if (require.main === module) {
   
   mongoose.connect(MONGODB_URI)
     .then(() => {
-      console.log('🔗 Connected to MongoDB');
+      //CONSOLE.log('🔗 Connected to MongoDB');
       updateStoreId();
     })
     .catch(err => {
-      console.error('❌ Database connection error:', err);
+      //CONSOLE.error('❌ Database connection error:', err);
       process.exit(1);
     });
 }

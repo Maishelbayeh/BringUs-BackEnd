@@ -882,7 +882,7 @@ router.post('/upload-image', protect, isActive, upload.single('image'), async (r
       `${storeId}/${folder}`
     );
 
-    console.log('✅ Image uploaded successfully:', result);
+    //CONSOLE.log('✅ Image uploaded successfully:', result);
 
     res.status(200).json({
       success: true,
@@ -896,7 +896,7 @@ router.post('/upload-image', protect, isActive, upload.single('image'), async (r
     });
 
   } catch (error) {
-    console.error('❌ Error uploading image:', error);
+    //CONSOLE.error('❌ Error uploading image:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to upload image',
@@ -1022,7 +1022,7 @@ router.post('/upload-multiple-images', protect, isActive, upload.array('images',
       mimetype: req.files[index].mimetype
     }));
 
-    console.log('✅ Multiple images uploaded successfully:', formattedResults.length);
+    //CONSOLE.log('✅ Multiple images uploaded successfully:', formattedResults.length);
 
     res.status(200).json({
       success: true,
@@ -1030,7 +1030,7 @@ router.post('/upload-multiple-images', protect, isActive, upload.array('images',
     });
 
   } catch (error) {
-    console.error('❌ Error uploading multiple images:', error);
+    //CONSOLE.error('❌ Error uploading multiple images:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to upload images',

@@ -8,10 +8,10 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mais_helbayeh:ojTOYKE
   useUnifiedTopology: true,
 })
 .then(() => {
-  console.log('✅ Connected to MongoDB');
+  //CONSOLE.log('✅ Connected to MongoDB');
 })
 .catch((err) => {
-  console.error('❌ MongoDB connection error:', err);
+  //CONSOLE.error('❌ MongoDB connection error:', err);
   process.exit(1);
 });
 
@@ -20,7 +20,7 @@ const createSuperAdmin = async () => {
     // Check if superadmin already exists
     const existingSuperAdmin = await User.findOne({ role: 'superadmin' });
     if (existingSuperAdmin) {
-      console.log('❌ Superadmin already exists:', existingSuperAdmin.email);
+      //CONSOLE.log('❌ Superadmin already exists:', existingSuperAdmin.email);
       process.exit(0);
     }
 
@@ -35,14 +35,14 @@ const createSuperAdmin = async () => {
       isEmailVerified: true
     });
 
-    console.log('✅ Superadmin created successfully!');
-    console.log('📧 Email:', superAdmin.email);
-    console.log('🔑 Password: admin123456');
-    console.log('🆔 User ID:', superAdmin._id);
+    //CONSOLE.log('✅ Superadmin created successfully!');
+    //CONSOLE.log('📧 Email:', superAdmin.email);
+    //CONSOLE.log('🔑 Password: admin123456');
+    //CONSOLE.log('🆔 User ID:', superAdmin._id);
     
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error creating superadmin:', error.message);
+    //CONSOLE.error('❌ Error creating superadmin:', error.message);
     process.exit(1);
   }
 };

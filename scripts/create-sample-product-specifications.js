@@ -11,11 +11,11 @@ const storeId = '687505893fbf3098648bfe16';
 
 const createSampleProductSpecifications = async () => {
   try {
-    console.log('🚀 Creating sample product specifications...\n');
+    //CONSOLE.log('🚀 Creating sample product specifications...\n');
 
     // Clear existing specifications for this store
     await ProductSpecification.deleteMany({ store: storeId });
-    console.log('✅ Cleared existing product specifications for store');
+    //CONSOLE.log('✅ Cleared existing product specifications for store');
 
     // Create sample product specifications
     const sampleSpecifications = [
@@ -92,16 +92,16 @@ const createSampleProductSpecifications = async () => {
     ];
 
     const createdSpecifications = await ProductSpecification.insertMany(sampleSpecifications);
-    console.log(`✅ Created ${createdSpecifications.length} product specifications:`);
+    //CONSOLE.log(`✅ Created ${createdSpecifications.length} product specifications:`);
     
     createdSpecifications.forEach(spec => {
-      console.log(`  - ${spec.descriptionEn} (${spec.descriptionAr}) - ID: ${spec._id}`);
+      //CONSOLE.log(`  - ${spec.descriptionEn} (${spec.descriptionAr}) - ID: ${spec._id}`);
     });
 
-    console.log('\n🎉 Sample product specifications created successfully!');
+    //CONSOLE.log('\n🎉 Sample product specifications created successfully!');
 
   } catch (error) {
-    console.error('❌ Error creating product specifications:', error);
+    //CONSOLE.error('❌ Error creating product specifications:', error);
   } finally {
     mongoose.connection.close();
   }

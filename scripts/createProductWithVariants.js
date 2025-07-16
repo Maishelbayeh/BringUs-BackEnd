@@ -15,8 +15,8 @@ const STORE_ID = '687505893fbf3098648bfe16'; // Store ID for testing
 
 async function createProductWithVariants() {
   try {
-    console.log('🔍 Starting to create product with variants...');
-    console.log('📋 Structure: Parent Product (hasVariants: true) -> Variants (hasVariants: false)');
+    //CONSOLE.log('🔍 Starting to create product with variants...');
+    //CONSOLE.log('📋 Structure: Parent Product (hasVariants: true) -> Variants (hasVariants: false)');
 
     // Get or create category
     let category = await Category.findOne({ store: STORE_ID });
@@ -28,7 +28,7 @@ async function createProductWithVariants() {
         isActive: true
       });
       await category.save();
-      console.log('✅ Created category:', category.nameEn);
+      //CONSOLE.log('✅ Created category:', category.nameEn);
     }
 
     // Get or create unit
@@ -42,7 +42,7 @@ async function createProductWithVariants() {
         isActive: true
       });
       await unit.save();
-      console.log('✅ Created unit:', unit.nameEn);
+      //CONSOLE.log('✅ Created unit:', unit.nameEn);
     }
 
     // Get or create product labels
@@ -67,7 +67,7 @@ async function createProductWithVariants() {
       await label2.save();
 
       labels = [label1, label2];
-      console.log('✅ Created product labels');
+      //CONSOLE.log('✅ Created product labels');
     }
 
     // Create Product Specifications
@@ -91,7 +91,7 @@ async function createProductWithVariants() {
         sortOrder: 1
       });
       await storageSpec.save();
-      console.log('✅ Created storage specification');
+      //CONSOLE.log('✅ Created storage specification');
     }
 
     let colorSpec = await ProductSpecification.findOne({ 
@@ -115,10 +115,10 @@ async function createProductWithVariants() {
         sortOrder: 2
       });
       await colorSpec.save();
-      console.log('✅ Created color specification');
+      //CONSOLE.log('✅ Created color specification');
     }
 
-    console.log('\n📱 Creating iPhone 15 (Parent Product) with variants...');
+    //CONSOLE.log('\n📱 Creating iPhone 15 (Parent Product) with variants...');
 
     // ========================================
     // 1. CREATE PARENT PRODUCT (iPhone 15)
@@ -151,12 +151,12 @@ async function createProductWithVariants() {
     });
 
     await iphone15Parent.save();
-    console.log('✅ Created PARENT product:', iphone15Parent.nameEn, '(hasVariants: true)');
+    //CONSOLE.log('✅ Created PARENT product:', iphone15Parent.nameEn, '(hasVariants: true)');
 
     // ========================================
     // 2. CREATE VARIANTS (Separate Products)
     // ========================================
-    console.log('\n📱 Creating iPhone 15 variants...');
+    //CONSOLE.log('\n📱 Creating iPhone 15 variants...');
 
     // Variant 1: iPhone 15 - 128GB - Black
     const variant1 = new Product({
@@ -201,7 +201,7 @@ async function createProductWithVariants() {
     });
 
     await variant1.save();
-    console.log('✅ Created VARIANT 1:', variant1.nameEn, '(hasVariants: false)');
+    //CONSOLE.log('✅ Created VARIANT 1:', variant1.nameEn, '(hasVariants: false)');
 
     // Variant 2: iPhone 15 - 256GB - White
     const variant2 = new Product({
@@ -246,7 +246,7 @@ async function createProductWithVariants() {
     });
 
     await variant2.save();
-    console.log('✅ Created VARIANT 2:', variant2.nameEn, '(hasVariants: false)');
+    //CONSOLE.log('✅ Created VARIANT 2:', variant2.nameEn, '(hasVariants: false)');
 
     // Variant 3: iPhone 15 - 512GB - Silver
     const variant3 = new Product({
@@ -291,22 +291,22 @@ async function createProductWithVariants() {
     });
 
     await variant3.save();
-    console.log('✅ Created VARIANT 3:', variant3.nameEn, '(hasVariants: false)');
+    //CONSOLE.log('✅ Created VARIANT 3:', variant3.nameEn, '(hasVariants: false)');
 
     // ========================================
     // 3. LINK VARIANTS TO PARENT
     // ========================================
-    console.log('\n🔗 Linking variants to parent product...');
+    //CONSOLE.log('\n🔗 Linking variants to parent product...');
     
     // Update parent product with variant IDs
     iphone15Parent.variants = [variant1._id, variant2._id, variant3._id];
     await iphone15Parent.save();
-    console.log('✅ Linked 3 variants to iPhone 15 parent');
+    //CONSOLE.log('✅ Linked 3 variants to iPhone 15 parent');
 
     // ========================================
     // 4. CREATE ANOTHER PARENT PRODUCT
     // ========================================
-    console.log('\n📱 Creating Samsung Galaxy S24 (Parent Product) with variant...');
+    //CONSOLE.log('\n📱 Creating Samsung Galaxy S24 (Parent Product) with variant...');
 
     const samsungParent = new Product({
       nameAr: 'سامسونج جالكسي S24',
@@ -336,7 +336,7 @@ async function createProductWithVariants() {
     });
 
     await samsungParent.save();
-    console.log('✅ Created PARENT product:', samsungParent.nameEn, '(hasVariants: true)');
+    //CONSOLE.log('✅ Created PARENT product:', samsungParent.nameEn, '(hasVariants: true)');
 
     // Samsung Variant
     const samsungVariant = new Product({
@@ -381,17 +381,17 @@ async function createProductWithVariants() {
     });
 
     await samsungVariant.save();
-    console.log('✅ Created Samsung VARIANT:', samsungVariant.nameEn, '(hasVariants: false)');
+    //CONSOLE.log('✅ Created Samsung VARIANT:', samsungVariant.nameEn, '(hasVariants: false)');
 
     // Link Samsung variant to parent
     samsungParent.variants = [samsungVariant._id];
     await samsungParent.save();
-    console.log('✅ Linked 1 variant to Samsung parent');
+    //CONSOLE.log('✅ Linked 1 variant to Samsung parent');
 
     // ========================================
     // 5. CREATE REGULAR PRODUCT (NO VARIANTS)
     // ========================================
-    console.log('\n📱 Creating regular product (no variants)...');
+    //CONSOLE.log('\n📱 Creating regular product (no variants)...');
 
     const regularProduct = new Product({
       nameAr: 'سماعات أبل إيربودس',
@@ -421,34 +421,34 @@ async function createProductWithVariants() {
     });
 
     await regularProduct.save();
-    console.log('✅ Created REGULAR product:', regularProduct.nameEn, '(hasVariants: false)');
+    //CONSOLE.log('✅ Created REGULAR product:', regularProduct.nameEn, '(hasVariants: false)');
 
     // ========================================
     // SUMMARY
     // ========================================
-    console.log('\n🎉 Successfully created test data!');
-    console.log('\n📊 PRODUCT STRUCTURE:');
-    console.log('┌─────────────────────────────────────────────────────────┐');
-    console.log('│ PARENT PRODUCTS (hasVariants: true)                     │');
-    console.log('├─────────────────────────────────────────────────────────┤');
-    console.log('│ 📱 iPhone 15                                            │');
-    console.log('│    ├─ 128GB Black  ($999)                              │');
-    console.log('│    ├─ 256GB White  ($1099)                             │');
-    console.log('│    └─ 512GB Silver ($1299)                             │');
-    console.log('│                                                         │');
-    console.log('│ 📱 Samsung Galaxy S24                                  │');
-    console.log('│    └─ 128GB Black  ($899)                              │');
-    console.log('├─────────────────────────────────────────────────────────┤');
-    console.log('│ REGULAR PRODUCTS (hasVariants: false)                   │');
-    console.log('├─────────────────────────────────────────────────────────┤');
-    console.log('│ 🎧 Apple AirPods ($199)                                │');
-    console.log('└─────────────────────────────────────────────────────────┘');
-    console.log('\n🔍 In Table View: Only Parent + Regular products');
-    console.log('🌳 In Tree View: Parent products with expandable variants');
-    console.log('\n✅ Ready to test in frontend!');
+    //CONSOLE.log('\n🎉 Successfully created test data!');
+    //CONSOLE.log('\n📊 PRODUCT STRUCTURE:');
+    //CONSOLE.log('┌─────────────────────────────────────────────────────────┐');
+    //CONSOLE.log('│ PARENT PRODUCTS (hasVariants: true)                     │');
+    //CONSOLE.log('├─────────────────────────────────────────────────────────┤');
+    //CONSOLE.log('│ 📱 iPhone 15                                            │');
+    //CONSOLE.log('│    ├─ 128GB Black  ($999)                              │');
+    //CONSOLE.log('│    ├─ 256GB White  ($1099)                             │');
+    //CONSOLE.log('│    └─ 512GB Silver ($1299)                             │');
+    //CONSOLE.log('│                                                         │');
+    //CONSOLE.log('│ 📱 Samsung Galaxy S24                                  │');
+    //CONSOLE.log('│    └─ 128GB Black  ($899)                              │');
+    //CONSOLE.log('├─────────────────────────────────────────────────────────┤');
+    //CONSOLE.log('│ REGULAR PRODUCTS (hasVariants: false)                   │');
+    //CONSOLE.log('├─────────────────────────────────────────────────────────┤');
+    //CONSOLE.log('│ 🎧 Apple AirPods ($199)                                │');
+    //CONSOLE.log('└─────────────────────────────────────────────────────────┘');
+    //CONSOLE.log('\n🔍 In Table View: Only Parent + Regular products');
+    //CONSOLE.log('🌳 In Tree View: Parent products with expandable variants');
+    //CONSOLE.log('\n✅ Ready to test in frontend!');
 
   } catch (error) {
-    console.error('❌ Error creating test data:', error);
+    //CONSOLE.error('❌ Error creating test data:', error);
   } finally {
     mongoose.connection.close();
   }

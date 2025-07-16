@@ -146,7 +146,7 @@ const getAllAdvertisements = async (req, res) => {
     }, 'Advertisements retrieved successfully');
 
   } catch (err) {
-    console.error('Get all advertisements error:', err);
+    //CONSOLE.error('Get all advertisements error:', err);
     return error(res, { message: 'Failed to fetch advertisements', statusCode: 500 });
   }
 };
@@ -168,7 +168,7 @@ const getActiveAdvertisement = async (req, res) => {
     return success(res, { data: advertisement }, 'Active advertisement retrieved successfully');
 
   } catch (err) {
-    console.error('Get active advertisement error:', err);
+    //CONSOLE.error('Get active advertisement error:', err);
     return error(res, { message: 'Failed to fetch active advertisement', statusCode: 500 });
   }
 };
@@ -228,7 +228,7 @@ const getAdvertisementById = async (req, res) => {
     return success(res, { data: advertisement }, 'Advertisement retrieved successfully');
 
   } catch (err) {
-    console.error('Get advertisement by ID error:', err);
+    //CONSOLE.error('Get advertisement by ID error:', err);
     return error(res, { message: 'Failed to fetch advertisement', statusCode: 500 });
   }
 };
@@ -294,7 +294,7 @@ const createAdvertisement = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Create advertisement error:', err);
+    //CONSOLE.error('Create advertisement error:', err);
     
     if (err.code === 11000) {
       return error(res, { message: 'Only one active advertisement allowed per store', statusCode: 400 });
@@ -388,7 +388,7 @@ const updateAdvertisement = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Update advertisement error:', err);
+    //CONSOLE.error('Update advertisement error:', err);
     
     if (err.code === 11000) {
       return error(res, { message: 'Only one active advertisement allowed per store', statusCode: 400 });
@@ -457,7 +457,7 @@ const deleteAdvertisement = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Delete advertisement error:', err);
+    //CONSOLE.error('Delete advertisement error:', err);
     return error(res, { message: 'Failed to delete advertisement', statusCode: 500 });
   }
 };
@@ -527,7 +527,7 @@ const toggleActiveStatus = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Toggle advertisement status error:', err);
+    //CONSOLE.error('Toggle advertisement status error:', err);
     return error(res, { message: 'Failed to update advertisement status', statusCode: 500 });
   }
 };
@@ -554,7 +554,7 @@ const incrementClick = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Increment click count error:', err);
+    //CONSOLE.error('Increment click count error:', err);
     return error(res, { message: 'Failed to update click count', statusCode: 500 });
   }
 };
@@ -590,7 +590,7 @@ const getAdvertisementStats = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Get advertisement stats error:', err);
+    //CONSOLE.error('Get advertisement stats error:', err);
     return error(res, { message: 'Failed to fetch advertisement statistics', statusCode: 500 });
   }
 };

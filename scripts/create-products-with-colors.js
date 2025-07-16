@@ -13,7 +13,7 @@ const storeId = '687505893fbf3098648bfe16';
 
 const createProductsWithColors = async () => {
   try {
-    console.log('🚀 Creating products with colors...\n');
+    //CONSOLE.log('🚀 Creating products with colors...\n');
 
     // Get or create test category
     let testCategory = await Category.findOne({ 
@@ -29,7 +29,7 @@ const createProductsWithColors = async () => {
         isActive: true
       });
       await testCategory.save();
-      console.log('✅ Created test category');
+      //CONSOLE.log('✅ Created test category');
     }
 
     // Get or create test unit
@@ -47,7 +47,7 @@ const createProductsWithColors = async () => {
         isActive: true
       });
       await testUnit.save();
-      console.log('✅ Created test unit');
+      //CONSOLE.log('✅ Created test unit');
     }
 
     // Clear existing test products
@@ -55,7 +55,7 @@ const createProductsWithColors = async () => {
       store: storeId, 
       nameEn: { $regex: /^Test Product/ } 
     });
-    console.log('✅ Cleared existing test products');
+    //CONSOLE.log('✅ Cleared existing test products');
 
     // Create products with different color combinations
     const productsWithColors = [
@@ -122,18 +122,18 @@ const createProductsWithColors = async () => {
     for (const productData of productsWithColors) {
       const product = new Product(productData);
       await product.save();
-      console.log(`✅ Created product: ${product.nameEn}`);
-      console.log(`   Colors: ${product.colors.length} variants`);
+      //CONSOLE.log(`✅ Created product: ${product.nameEn}`);
+      //CONSOLE.log(`   Colors: ${product.colors.length} variants`);
       product.colors.forEach((variant, idx) => {
-        console.log(`     Variant ${idx + 1}: [${variant.join(', ')}]`);
+        //CONSOLE.log(`     Variant ${idx + 1}: [${variant.join(', ')}]`);
       });
     }
 
-    console.log('\n🎉 Successfully created products with colors!');
-    console.log(`📊 Total products created: ${productsWithColors.length}`);
+    //CONSOLE.log('\n🎉 Successfully created products with colors!');
+    //CONSOLE.log(`📊 Total products created: ${productsWithColors.length}`);
 
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    //CONSOLE.error('❌ Error:', error.message);
   } finally {
     mongoose.connection.close();
   }

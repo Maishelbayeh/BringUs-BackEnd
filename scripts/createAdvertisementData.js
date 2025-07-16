@@ -6,8 +6,8 @@ const Store = require('../Models/Store');
 const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4mdpc.mongodb.net/bringus?retryWrites=true&w=majority&appName=Cluster0';
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB Atlas'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+  .then(() => //CONSOLE.log('✅ Connected to MongoDB Atlas'))
+  .catch(err => //CONSOLE.error('❌ MongoDB connection error:', err));
 
 const storeId = '687505893fbf3098648bfe16';
 
@@ -175,13 +175,13 @@ async function createAdvertisementData() {
     // Check if store exists
     const store = await Store.findById(storeId);
     if (!store) {
-      console.error('Store not found');
+      //CONSOLE.error('Store not found');
       return;
     }
 
     // Clear existing advertisements for this store
     await Advertisement.deleteMany({ store: storeId });
-    console.log('Cleared existing advertisements');
+    //CONSOLE.log('Cleared existing advertisements');
 
     // Create new advertisements
     for (const adData of advertisementData) {
@@ -191,20 +191,20 @@ async function createAdvertisementData() {
       });
       
       await advertisement.save();
-      console.log(`Created advertisement: ${adData.title}`);
+      //CONSOLE.log(`Created advertisement: ${adData.title}`);
     }
 
-    console.log('Advertisement data created successfully!');
+    //CONSOLE.log('Advertisement data created successfully!');
     
     // Display created advertisements
     const advertisements = await Advertisement.find({ store: storeId });
-    console.log('\nCreated advertisements:');
+    //CONSOLE.log('\nCreated advertisements:');
     advertisements.forEach(ad => {
-      console.log(`- ${ad.title} (${ad.isActive ? 'Active' : 'Inactive'}) - Position: ${ad.position}`);
+      //CONSOLE.log(`- ${ad.title} (${ad.isActive ? 'Active' : 'Inactive'}) - Position: ${ad.position}`);
     });
 
   } catch (error) {
-    console.error('Error creating advertisement data:', error);
+    //CONSOLE.error('Error creating advertisement data:', error);
   } finally {
     mongoose.connection.close();
   }

@@ -16,9 +16,9 @@ exports.getAll = async (req, res) => {
     
     // Log barcodes for debugging
     products.forEach((product, index) => {
-      console.log(`🔍 Product ${index + 1} barcodes:`, product.barcodes);
-      console.log(`🔍 Product ${index + 1} barcodes type:`, typeof product.barcodes);
-      console.log(`🔍 Product ${index + 1} barcodes is array:`, Array.isArray(product.barcodes));
+      //CONSOLE.log(`🔍 Product ${index + 1} barcodes:`, product.barcodes);
+      //CONSOLE.log(`🔍 Product ${index + 1} barcodes type:`, typeof product.barcodes);
+      //CONSOLE.log(`🔍 Product ${index + 1} barcodes is array:`, Array.isArray(product.barcodes));
     });
       
     res.json({
@@ -60,9 +60,9 @@ exports.getById = async (req, res) => {
     }
     
     // Log barcodes for debugging
-    console.log('🔍 getById - product barcodes:', product.barcodes);
-    console.log('🔍 getById - product barcodes type:', typeof product.barcodes);
-    console.log('🔍 getById - product barcodes is array:', Array.isArray(product.barcodes));
+    //CONSOLE.log('🔍 getById - product barcodes:', product.barcodes);
+    //CONSOLE.log('🔍 getById - product barcodes type:', typeof product.barcodes);
+    //CONSOLE.log('🔍 getById - product barcodes is array:', Array.isArray(product.barcodes));
     
     res.json({
       success: true,
@@ -142,7 +142,7 @@ exports.create = async (req, res) => {
       data: populatedProduct
     });
   } catch (error) {
-    console.error('Create product error:', error);
+    //CONSOLE.error('Create product error:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating product',
@@ -215,7 +215,7 @@ exports.update = async (req, res) => {
       data: updatedProduct
     });
   } catch (error) {
-    console.error('Update product error:', error);
+    //CONSOLE.error('Update product error:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating product',
@@ -334,7 +334,7 @@ exports.createVariant = async (req, res) => {
       data: populatedVariant
     });
   } catch (err) {
-    console.error('Create variant error:', err);
+    //CONSOLE.error('Create variant error:', err);
     res.status(400).json({ 
       success: false,
       error: err.message 

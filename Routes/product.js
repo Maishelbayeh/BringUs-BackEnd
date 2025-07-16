@@ -224,7 +224,7 @@ router.get('/', [
       }
     });
   } catch (error) {
-    console.error('Get products error:', error);
+    //CONSOLE.error('Get products error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching products',
@@ -322,7 +322,7 @@ router.get('/:id', [
       data: product
     });
   } catch (error) {
-    console.error('Get product error:', error);
+    //CONSOLE.error('Get product error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching product',
@@ -915,7 +915,7 @@ router.delete('/:id', [
       message: 'Product deleted successfully'
     });
   } catch (error) {
-    console.error('Delete product error:', error);
+    //CONSOLE.error('Delete product error:', error);
     res.status(500).json({
       success: false,
       message: 'Error deleting product',
@@ -965,7 +965,7 @@ router.get('/featured', async (req, res) => {
       data: products
     });
   } catch (error) {
-    console.error('Get featured products error:', error);
+    //CONSOLE.error('Get featured products error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching featured products',
@@ -1015,7 +1015,7 @@ router.get('/sale', async (req, res) => {
       data: products
     });
   } catch (error) {
-    console.error('Get sale products error:', error);
+    //CONSOLE.error('Get sale products error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching sale products',
@@ -1108,7 +1108,7 @@ router.post('/upload-main-image', uploadProductImage.single('image'), async (req
       imageUrl: result.url 
     });
   } catch (err) {
-    console.error('Upload main image error:', err);
+    //CONSOLE.error('Upload main image error:', err);
     res.status(500).json({ 
       success: false, 
       error: 'Upload failed',
@@ -1211,7 +1211,7 @@ router.post('/upload-gallery-images', uploadProductImage.array('images', 10), as
       images: images 
     });
   } catch (err) {
-    console.error('Upload gallery images error:', err);
+    //CONSOLE.error('Upload gallery images error:', err);
     res.status(500).json({ 
       success: false, 
       error: 'Upload failed',
@@ -1299,7 +1299,7 @@ router.post('/upload-single-image', uploadProductImage.single('image'), async (r
       imageUrl: result.url 
     });
   } catch (err) {
-    console.error('Upload single image error:', err);
+    //CONSOLE.error('Upload single image error:', err);
     res.status(500).json({ 
       success: false, 
       error: 'Upload failed',

@@ -125,7 +125,7 @@ async function getAllUniqueColors(storeId) {
 // Function to create products in database
 async function createColorProducts() {
   try {
-    console.log('=== Creating Color Products in Database ===\n');
+    //CONSOLE.log('=== Creating Color Products in Database ===\n');
     
     // Wait for connection to be ready
     await mongoose.connection.asPromise();
@@ -152,9 +152,9 @@ async function createColorProducts() {
         isActive: true
       });
       await testCategory.save();
-      console.log('✅ Created test category:', testCategory._id);
+      //CONSOLE.log('✅ Created test category:', testCategory._id);
     } else {
-      console.log('✅ Using existing test category:', testCategory._id);
+      //CONSOLE.log('✅ Using existing test category:', testCategory._id);
     }
     
     // Get existing unit or create one
@@ -170,9 +170,9 @@ async function createColorProducts() {
         isActive: true
       });
       await testUnit.save();
-      console.log('✅ Created test unit:', testUnit._id);
+      //CONSOLE.log('✅ Created test unit:', testUnit._id);
     } else {
-      console.log('✅ Using existing test unit:', testUnit._id);
+      //CONSOLE.log('✅ Using existing test unit:', testUnit._id);
     }
     
     // Update product data with real IDs
@@ -185,62 +185,62 @@ async function createColorProducts() {
     
     // Clear ALL existing products for this store
     await Product.deleteMany({ store: storeId });
-    console.log('✅ Cleared ALL existing products for store');
+    //CONSOLE.log('✅ Cleared ALL existing products for store');
     
     // Create all products
     const createdProducts = await Product.insertMany(productsWithRealIds);
-    console.log(`✅ Successfully created ${createdProducts.length} products`);
+    //CONSOLE.log(`✅ Successfully created ${createdProducts.length} products`);
     
     // Display created products
     createdProducts.forEach((product, index) => {
-      console.log(`\n${index + 1}. ${product.nameEn} (${product.nameAr}):`);
-      console.log(`   Price: $${product.price}`);
-      console.log(`   Colors: ${product.colorOptionsCount} options`);
-      console.log(`   All Colors: ${product.allColors.join(', ')}`);
-      console.log(`   ID: ${product._id}`);
+      //CONSOLE.log(`\n${index + 1}. ${product.nameEn} (${product.nameAr}):`);
+      //CONSOLE.log(`   Price: $${product.price}`);
+      //CONSOLE.log(`   Colors: ${product.colorOptionsCount} options`);
+      //CONSOLE.log(`   All Colors: ${product.allColors.join(', ')}`);
+      //CONSOLE.log(`   ID: ${product._id}`);
     });
     
-    console.log('\n=== Product Creation Summary ===');
-    console.log(`✅ Store ID: ${storeId}`);
-    console.log(`✅ Category ID: ${testCategory._id}`);
-    console.log(`✅ Unit ID: ${testUnit._id}`);
-    console.log(`✅ Total Products: ${createdProducts.length}`);
-    console.log(`✅ All products have colors and virtual properties working`);
+    //CONSOLE.log('\n=== Product Creation Summary ===');
+    //CONSOLE.log(`✅ Store ID: ${storeId}`);
+    //CONSOLE.log(`✅ Category ID: ${testCategory._id}`);
+    //CONSOLE.log(`✅ Unit ID: ${testUnit._id}`);
+    //CONSOLE.log(`✅ Total Products: ${createdProducts.length}`);
+    //CONSOLE.log(`✅ All products have colors and virtual properties working`);
     
     return createdProducts;
     
   } catch (error) {
-    console.error('❌ Error creating products:', error);
+    //CONSOLE.error('❌ Error creating products:', error);
     throw error;
   }
 }
 
 // Example usage functions
 async function demonstrateColorSystem() {
-  console.log('=== Product Colors System Examples ===\n');
+  //CONSOLE.log('=== Product Colors System Examples ===\n');
   
   // Example of creating a product with colors
-  console.log('1. Single Color Product:');
-  console.log(JSON.stringify(singleColorProduct, null, 2));
+  //CONSOLE.log('1. Single Color Product:');
+  //CONSOLE.log(JSON.stringify(singleColorProduct, null, 2));
   
-  console.log('\n2. Multi-Color Product:');
-  console.log(JSON.stringify(multiColorProduct, null, 2));
+  //CONSOLE.log('\n2. Multi-Color Product:');
+  //CONSOLE.log(JSON.stringify(multiColorProduct, null, 2));
   
-  console.log('\n3. Mixed Color Product:');
-  console.log(JSON.stringify(mixedColorProduct, null, 2));
+  //CONSOLE.log('\n3. Mixed Color Product:');
+  //CONSOLE.log(JSON.stringify(mixedColorProduct, null, 2));
   
-  console.log('\n4. RGB Color Product:');
-  console.log(JSON.stringify(rgbColorProduct, null, 2));
+  //CONSOLE.log('\n4. RGB Color Product:');
+  //CONSOLE.log(JSON.stringify(rgbColorProduct, null, 2));
   
-  console.log('\n=== Color Query Examples ===');
-  console.log('• Find products with black color: findProductsByColor("#000000")');
-  console.log('• Find products with multiple colors: findProductsWithMultipleColors()');
-  console.log('• Find products with white+red: findProductsWithColorCombination(["#FFFFFF", "#FF0000"])');
-  console.log('• Get all unique colors: getAllUniqueColors(storeId)');
+  //CONSOLE.log('\n=== Color Query Examples ===');
+  //CONSOLE.log('• Find products with black color: findProductsByColor("#000000")');
+  //CONSOLE.log('• Find products with multiple colors: findProductsWithMultipleColors()');
+  //CONSOLE.log('• Find products with white+red: findProductsWithColorCombination(["#FFFFFF", "#FF0000"])');
+  //CONSOLE.log('• Get all unique colors: getAllUniqueColors(storeId)');
   
-  console.log('\n=== Virtual Properties ===');
-  console.log('• product.allColors - Returns all unique colors');
-  console.log('• product.colorOptionsCount - Returns number of color options');
+  //CONSOLE.log('\n=== Virtual Properties ===');
+  //CONSOLE.log('• product.allColors - Returns all unique colors');
+  //CONSOLE.log('• product.colorOptionsCount - Returns number of color options');
 }
 
 // Export examples
@@ -261,12 +261,12 @@ module.exports = {
 if (require.main === module) {
   createColorProducts()
     .then(() => {
-      console.log('\n✅ Product creation completed successfully!');
+      //CONSOLE.log('\n✅ Product creation completed successfully!');
       mongoose.connection.close();
-      console.log('Database connection closed.');
+      //CONSOLE.log('Database connection closed.');
     })
     .catch((error) => {
-      console.error('❌ Failed to create products:', error);
+      //CONSOLE.error('❌ Failed to create products:', error);
       mongoose.connection.close();
       process.exit(1);
     });

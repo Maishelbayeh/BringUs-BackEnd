@@ -9,8 +9,8 @@ async function createCustomersData() {
   try {
     // Connect to MongoDB
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
-    console.log(`🏪 Using Store ID: ${STORE_ID}`);
+    //CONSOLE.log('✅ Connected to MongoDB');
+    //CONSOLE.log(`🏪 Using Store ID: ${STORE_ID}`);
 
     // Sample customers data
     const customersData = [
@@ -257,7 +257,7 @@ async function createCustomersData() {
 
     // Clear existing customers for this store
     const deleteResult = await User.deleteMany({ store: STORE_ID, role: 'client' });
-    console.log(`🗑️ Cleared ${deleteResult.deletedCount} existing customers for store ${STORE_ID}`);
+    //CONSOLE.log(`🗑️ Cleared ${deleteResult.deletedCount} existing customers for store ${STORE_ID}`);
 
     // Hash passwords before creating users
     const customersWithHashedPasswords = await Promise.all(
@@ -273,28 +273,28 @@ async function createCustomersData() {
 
     // Insert new customers
     const customers = await User.insertMany(customersWithHashedPasswords);
-    console.log(`✅ Created ${customers.length} customers for store ${STORE_ID}`);
+    //CONSOLE.log(`✅ Created ${customers.length} customers for store ${STORE_ID}`);
 
     // Display created customers
-    console.log('\n👥 Created Customers:');
+    //CONSOLE.log('\n👥 Created Customers:');
     customers.forEach((customer, index) => {
-      console.log(`${index + 1}. ${customer.firstName} ${customer.lastName} (${customer.email})`);
-      console.log(`   Phone: ${customer.phone}`);
-      console.log(`   Status: ${customer.status}`);
-      console.log(`   Email Verified: ${customer.isEmailVerified}`);
-      console.log(`   Active: ${customer.isActive}`);
-      console.log(`   Addresses: ${customer.addresses.length}`);
-      console.log(`   ID: ${customer._id}`);
-      console.log('');
+      //CONSOLE.log(`${index + 1}. ${customer.firstName} ${customer.lastName} (${customer.email})`);
+      //CONSOLE.log(`   Phone: ${customer.phone}`);
+      //CONSOLE.log(`   Status: ${customer.status}`);
+      //CONSOLE.log(`   Email Verified: ${customer.isEmailVerified}`);
+      //CONSOLE.log(`   Active: ${customer.isActive}`);
+      //CONSOLE.log(`   Addresses: ${customer.addresses.length}`);
+      //CONSOLE.log(`   ID: ${customer._id}`);
+      //CONSOLE.log('');
     });
 
-    console.log('\n🎉 Customers data created successfully!');
-    console.log(`📊 Total customers in database for store ${STORE_ID}: ${customers.length}`);
+    //CONSOLE.log('\n🎉 Customers data created successfully!');
+    //CONSOLE.log(`📊 Total customers in database for store ${STORE_ID}: ${customers.length}`);
 
     // Test the API endpoint
-    console.log('\n🧪 Testing API endpoint...');
+    //CONSOLE.log('\n🧪 Testing API endpoint...');
     const testCustomers = await User.find({ store: STORE_ID, role: 'client' }).populate('store');
-    console.log(`✅ API test successful - Found ${testCustomers.length} customers`);
+    //CONSOLE.log(`✅ API test successful - Found ${testCustomers.length} customers`);
 
     // Display statistics
     const activeCustomers = await User.countDocuments({ store: STORE_ID, role: 'client', status: 'active' });
@@ -302,17 +302,17 @@ async function createCustomersData() {
     const bannedCustomers = await User.countDocuments({ store: STORE_ID, role: 'client', status: 'banned' });
     const verifiedCustomers = await User.countDocuments({ store: STORE_ID, role: 'client', isEmailVerified: true });
 
-    console.log('\n📈 Customer Statistics:');
-    console.log(`   Active: ${activeCustomers}`);
-    console.log(`   Inactive: ${inactiveCustomers}`);
-    console.log(`   Banned: ${bannedCustomers}`);
-    console.log(`   Email Verified: ${verifiedCustomers}`);
+    //CONSOLE.log('\n📈 Customer Statistics:');
+    //CONSOLE.log(`   Active: ${activeCustomers}`);
+    //CONSOLE.log(`   Inactive: ${inactiveCustomers}`);
+    //CONSOLE.log(`   Banned: ${bannedCustomers}`);
+    //CONSOLE.log(`   Email Verified: ${verifiedCustomers}`);
 
   } catch (error) {
-    console.error('❌ Error creating customers data:', error);
+    //CONSOLE.error('❌ Error creating customers data:', error);
   } finally {
     await mongoose.disconnect();
-    console.log('🔌 Disconnected from MongoDB');
+    //CONSOLE.log('🔌 Disconnected from MongoDB');
   }
 }
 

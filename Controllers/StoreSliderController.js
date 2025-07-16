@@ -154,7 +154,7 @@ const getAllStoreSliders = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get all store sliders error:', error);
+    //CONSOLE.error('Get all store sliders error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching store sliders',
@@ -229,7 +229,7 @@ const getStoreSliderById = async (req, res) => {
       data: slider
     });
   } catch (error) {
-    console.error('Get store slider by ID error:', error);
+    //CONSOLE.error('Get store slider by ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching store slider',
@@ -300,7 +300,7 @@ const createStoreSlider = async (req, res) => {
       data: slider
     });
   } catch (error) {
-    console.error('Create store slider error:', error);
+    //CONSOLE.error('Create store slider error:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating store slider',
@@ -386,7 +386,7 @@ const updateStoreSlider = async (req, res) => {
       data: slider
     });
   } catch (error) {
-    console.error('Update store slider error:', error);
+    //CONSOLE.error('Update store slider error:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating store slider',
@@ -449,7 +449,7 @@ const deleteStoreSlider = async (req, res) => {
       message: 'Store slider deleted successfully'
     });
   } catch (error) {
-    console.error('Delete store slider error:', error);
+    //CONSOLE.error('Delete store slider error:', error);
     res.status(500).json({
       success: false,
       message: 'Error deleting store slider',
@@ -518,7 +518,7 @@ const toggleActiveStatus = async (req, res) => {
       data: slider
     });
   } catch (error) {
-    console.error('Toggle store slider status error:', error);
+    //CONSOLE.error('Toggle store slider status error:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating store slider status',
@@ -586,7 +586,7 @@ const incrementViews = async (req, res) => {
       data: slider
     });
   } catch (error) {
-    console.error('Increment views error:', error);
+    //CONSOLE.error('Increment views error:', error);
     res.status(500).json({
       success: false,
       message: 'Error incrementing views',
@@ -654,7 +654,7 @@ const incrementClicks = async (req, res) => {
       data: slider
     });
   } catch (error) {
-    console.error('Increment clicks error:', error);
+    //CONSOLE.error('Increment clicks error:', error);
     res.status(500).json({
       success: false,
       message: 'Error incrementing clicks',
@@ -734,7 +734,7 @@ const getActiveByType = async (req, res) => {
       data: sliders
     });
   } catch (error) {
-    console.error('Get active by type error:', error);
+    //CONSOLE.error('Get active by type error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching active store sliders',

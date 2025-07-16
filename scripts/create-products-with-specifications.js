@@ -14,7 +14,7 @@ const storeId = '687505893fbf3098648bfe16';
 
 const createProductsWithSpecifications = async () => {
   try {
-    console.log('🚀 Creating products with specifications...\n');
+    //CONSOLE.log('🚀 Creating products with specifications...\n');
 
     // Get or create test category
     let testCategory = await Category.findOne({ 
@@ -34,9 +34,9 @@ const createProductsWithSpecifications = async () => {
         isActive: true
       });
       await testCategory.save();
-      console.log('✅ Created test category:', testCategory._id);
+      //CONSOLE.log('✅ Created test category:', testCategory._id);
     } else {
-      console.log('✅ Using existing test category:', testCategory._id);
+      //CONSOLE.log('✅ Using existing test category:', testCategory._id);
     }
 
     // Get or create test unit
@@ -52,23 +52,23 @@ const createProductsWithSpecifications = async () => {
         isActive: true
       });
       await testUnit.save();
-      console.log('✅ Created test unit:', testUnit._id);
+      //CONSOLE.log('✅ Created test unit:', testUnit._id);
     } else {
-      console.log('✅ Using existing test unit:', testUnit._id);
+      //CONSOLE.log('✅ Using existing test unit:', testUnit._id);
     }
 
     // Get product specifications
     const specifications = await ProductSpecification.find({ store: storeId });
-    console.log(`✅ Found ${specifications.length} product specifications`);
+    //CONSOLE.log(`✅ Found ${specifications.length} product specifications`);
 
     if (specifications.length === 0) {
-      console.log('⚠️ No product specifications found. Please run create-sample-product-specifications.js first.');
+      //CONSOLE.log('⚠️ No product specifications found. Please run create-sample-product-specifications.js first.');
       return;
     }
 
     // Clear existing products for this store
     await Product.deleteMany({ store: storeId });
-    console.log('✅ Cleared existing products for store');
+    //CONSOLE.log('✅ Cleared existing products for store');
 
     // Create products with specifications
     const productsData = [
@@ -138,35 +138,35 @@ const createProductsWithSpecifications = async () => {
     ];
 
     const createdProducts = await Product.insertMany(productsData);
-    console.log(`✅ Created ${createdProducts.length} products with specifications`);
+    //CONSOLE.log(`✅ Created ${createdProducts.length} products with specifications`);
 
     // Display created products summary
     createdProducts.forEach((product, index) => {
-      console.log(`\n${index + 1}. ${product.nameEn} (${product.nameAr}):`);
-      console.log(`   Price: $${product.price}`);
-      console.log(`   Barcode: ${product.barcode}`);
-      console.log(`   Colors: ${product.colors.length} options`);
-      console.log(`   Stock: ${product.stock}`);
-      console.log(`   Specifications: ${product.specifications.length} specifications`);
-      console.log(`   ID: ${product._id}`);
+      //CONSOLE.log(`\n${index + 1}. ${product.nameEn} (${product.nameAr}):`);
+      //CONSOLE.log(`   Price: $${product.price}`);
+      //CONSOLE.log(`   Barcode: ${product.barcode}`);
+      //CONSOLE.log(`   Colors: ${product.colors.length} options`);
+      //CONSOLE.log(`   Stock: ${product.stock}`);
+      //CONSOLE.log(`   Specifications: ${product.specifications.length} specifications`);
+      //CONSOLE.log(`   ID: ${product._id}`);
     });
 
     // Test population
-    console.log('\n🔍 Testing population...');
+    //CONSOLE.log('\n🔍 Testing population...');
     const populatedProducts = await Product.find({ store: storeId })
       .populate('specifications')
       .populate('category')
       .populate('unit');
     
     populatedProducts.forEach(product => {
-      console.log(`\n  Product: ${product.nameEn}`);
-      console.log(`    Specifications:`, product.specifications.map(spec => spec.descriptionEn).join(', '));
+      //CONSOLE.log(`\n  Product: ${product.nameEn}`);
+      //CONSOLE.log(`    Specifications:`, product.specifications.map(spec => spec.descriptionEn).join(', '));
     });
 
-    console.log('\n🎉 Products with specifications created successfully!');
+    //CONSOLE.log('\n🎉 Products with specifications created successfully!');
 
   } catch (error) {
-    console.error('❌ Error creating products with specifications:', error);
+    //CONSOLE.error('❌ Error creating products with specifications:', error);
   } finally {
     mongoose.connection.close();
   }

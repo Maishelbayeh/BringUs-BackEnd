@@ -44,7 +44,7 @@ exports.verifyStoreAccess = async (req, res, next) => {
     req.params.storeId = storeId;
     next();
   } catch (error) {
-    console.error('Store verification error:', error);
+    //CONSOLE.error('Store verification error:', error);
     res.status(500).json({ 
       error: 'Store verification failed',
       message: error.message
@@ -107,7 +107,7 @@ exports.checkStoreOwnership = async (req, res, next) => {
     req.storeOwner = owner;
     next();
   } catch (error) {
-    console.error('Store ownership verification error:', error);
+    //CONSOLE.error('Store ownership verification error:', error);
     res.status(500).json({ 
       error: 'Store ownership verification failed',
       message: error.message

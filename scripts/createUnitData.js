@@ -24,10 +24,10 @@ mongoose.connect(MONGODB_URI, {
   // Removed deprecated options for newer MongoDB driver
 })
 .then(() => {
-  console.log('✅ Connected to MongoDB Atlas');
+  //CONSOLE.log('✅ Connected to MongoDB Atlas');
 })
 .catch((err) => {
-  console.error('❌ MongoDB connection error:', err);
+  //CONSOLE.error('❌ MongoDB connection error:', err);
   process.exit(1);
 });
 
@@ -297,7 +297,7 @@ const basicUnits = [
 
 const createUnitData = async () => {
   try {
-    console.log('🚀 Starting to create unit data...');
+    //CONSOLE.log('🚀 Starting to create unit data...');
     
     // Wait for connection to be established
     await mongoose.connection.asPromise();
@@ -308,33 +308,33 @@ const createUnitData = async () => {
     
     // Uncomment the next line if you want to clear all existing units first
     // await Unit.deleteMany({});
-    // console.log('✅ Cleared existing units');
+    // //CONSOLE.log('✅ Cleared existing units');
     
     // Filter out units that already exist
     const newUnits = basicUnits.filter(unit => !existingSymbols.includes(unit.symbol));
     
     if (newUnits.length === 0) {
-      console.log('ℹ️  All units already exist in the database');
-      console.log('💡 To add all units again, uncomment the clear line in the script');
+      //CONSOLE.log('ℹ️  All units already exist in the database');
+      //CONSOLE.log('💡 To add all units again, uncomment the clear line in the script');
       return;
     }
     
     // Insert new units
     const createdUnits = await Unit.insertMany(newUnits);
     
-    console.log(`✅ Successfully created ${createdUnits.length} new units`);
-    console.log('\n📋 Created units:');
+    //CONSOLE.log(`✅ Successfully created ${createdUnits.length} new units`);
+    //CONSOLE.log('\n📋 Created units:');
     createdUnits.forEach(unit => {
-      console.log(`   - ${unit.nameEn} (${unit.symbol}) - ${unit.nameAr}`);
+      //CONSOLE.log(`   - ${unit.nameEn} (${unit.symbol}) - ${unit.nameAr}`);
     });
     
-    console.log(`\n📊 Total units in database: ${existingUnits.length + createdUnits.length}`);
+    //CONSOLE.log(`\n📊 Total units in database: ${existingUnits.length + createdUnits.length}`);
     
   } catch (error) {
-    console.error('❌ Error creating unit data:', error);
+    //CONSOLE.error('❌ Error creating unit data:', error);
   } finally {
     await mongoose.connection.close();
-    console.log('🔌 Database connection closed');
+    //CONSOLE.log('🔌 Database connection closed');
   }
 };
 

@@ -21,7 +21,7 @@ const controllersWithStoreId = [
   'AffiliationController.js'
 ];
 
-console.log('🔍 Checking controllers for storeId parameter support...\n');
+//CONSOLE.log('🔍 Checking controllers for storeId parameter support...\n');
 
 // Check which controllers need updates
 const controllersPath = path.join(__dirname, '..', 'Controllers');
@@ -33,40 +33,40 @@ controllers.forEach(controller => {
     const content = fs.readFileSync(filePath, 'utf8');
     
     if (content.includes('@swagger')) {
-      console.log(`✅ ${controller} - Has Swagger documentation`);
+      //CONSOLE.log(`✅ ${controller} - Has Swagger documentation`);
       
       if (content.includes('storeId')) {
-        console.log(`   ✅ Already has storeId parameter`);
+        //CONSOLE.log(`   ✅ Already has storeId parameter`);
       } else {
-        console.log(`   ❌ Missing storeId parameter - Needs update`);
+        //CONSOLE.log(`   ❌ Missing storeId parameter - Needs update`);
       }
     } else {
-      console.log(`⚠️  ${controller} - No Swagger documentation found`);
+      //CONSOLE.log(`⚠️  ${controller} - No Swagger documentation found`);
     }
   } else {
-    console.log(`❌ ${controller} - File not found`);
+    //CONSOLE.log(`❌ ${controller} - File not found`);
   }
 });
 
-console.log('\n📋 Summary:');
-console.log('Controllers with storeId parameter:');
+//CONSOLE.log('\n📋 Summary:');
+//CONSOLE.log('Controllers with storeId parameter:');
 controllersWithStoreId.forEach(controller => {
-  console.log(`   ✅ ${controller}`);
+  //CONSOLE.log(`   ✅ ${controller}`);
 });
 
-console.log('\nControllers that need storeId parameter:');
+//CONSOLE.log('\nControllers that need storeId parameter:');
 controllers.forEach(controller => {
   const filePath = path.join(controllersPath, controller);
   if (fs.existsSync(filePath)) {
     const content = fs.readFileSync(filePath, 'utf8');
     if (content.includes('@swagger') && !content.includes('storeId')) {
-      console.log(`   ❌ ${controller}`);
+      //CONSOLE.log(`   ❌ ${controller}`);
     }
   }
 });
 
-console.log('\n🎯 Next steps:');
-console.log('1. Add storeId parameter to Swagger documentation for controllers that need it');
-console.log('2. Update controller logic to handle storeId parameter');
-console.log('3. Test all endpoints with storeId parameter');
-console.log('4. Update frontend to use storeId parameter when needed'); 
+//CONSOLE.log('\n🎯 Next steps:');
+//CONSOLE.log('1. Add storeId parameter to Swagger documentation for controllers that need it');
+//CONSOLE.log('2. Update controller logic to handle storeId parameter');
+//CONSOLE.log('3. Test all endpoints with storeId parameter');
+//CONSOLE.log('4. Update frontend to use storeId parameter when needed'); 

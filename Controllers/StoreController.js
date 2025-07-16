@@ -11,8 +11,8 @@ class StoreController {
   // Create new store
   static async createStore(req, res) {
     try {
-      console.log('Create store - Request body:', req.body);
-      console.log('Create store - Request file:', req.file);
+      //CONSOLE.log('Create store - Request body:', req.body);
+      //CONSOLE.log('Create store - Request file:', req.file);
       
       let { 
         nameAr, 
@@ -32,7 +32,7 @@ class StoreController {
         try {
           contact = JSON.parse(contact);
         } catch (e) {
-          console.error('Error parsing contact:', e);
+          //CONSOLE.error('Error parsing contact:', e);
           return error(res, { 
             message: 'Invalid contact data format', 
             statusCode: 400 
@@ -44,7 +44,7 @@ class StoreController {
         try {
           settings = JSON.parse(settings);
         } catch (e) {
-          console.error('Error parsing settings:', e);
+          //CONSOLE.error('Error parsing settings:', e);
           return error(res, { 
             message: 'Invalid settings data format', 
             statusCode: 400 
@@ -52,8 +52,8 @@ class StoreController {
         }
       }
 
-      console.log('Parsed contact:', contact);
-      console.log('Parsed settings:', settings);
+      //CONSOLE.log('Parsed contact:', contact);
+      //CONSOLE.log('Parsed settings:', settings);
 
       // Validate required fields
       if (!nameAr || !nameEn || !slug || !contact?.email) {
@@ -86,7 +86,7 @@ class StoreController {
             url: uploadResult.url
           };
         } catch (uploadError) {
-          console.error('Logo upload error:', uploadError);
+          //CONSOLE.error('Logo upload error:', uploadError);
           return error(res, { 
             message: 'Failed to upload logo', 
             statusCode: 500 
@@ -129,7 +129,7 @@ class StoreController {
       await store.populate('contact');
       return success(res, { data: store, message: 'Store created successfully', statusCode: 201 });
     } catch (err) {
-      console.error('Create store error:', err);
+      //CONSOLE.error('Create store error:', err);
       return error(res, { message: 'Create store error', error: err });
     }
   }
@@ -183,7 +183,7 @@ class StoreController {
         try {
           updateData.contact = JSON.parse(updateData.contact);
         } catch (parseError) {
-          console.error('Error parsing contact JSON:', parseError);
+          //CONSOLE.error('Error parsing contact JSON:', parseError);
           return error(res, { 
             message: 'Invalid contact data format', 
             statusCode: 400 
@@ -195,7 +195,7 @@ class StoreController {
         try {
           updateData.settings = JSON.parse(updateData.settings);
         } catch (parseError) {
-          console.error('Error parsing settings JSON:', parseError);
+          //CONSOLE.error('Error parsing settings JSON:', parseError);
           return error(res, { 
             message: 'Invalid settings data format', 
             statusCode: 400 
@@ -216,7 +216,7 @@ class StoreController {
             url: uploadResult.url
           };
         } catch (uploadError) {
-          console.error('Logo upload error:', uploadError);
+          //CONSOLE.error('Logo upload error:', uploadError);
           return error(res, { 
             message: 'Failed to upload logo', 
             statusCode: 500 
@@ -246,7 +246,7 @@ class StoreController {
       }
       return success(res, { data: store, message: 'Store updated successfully' });
     } catch (err) {
-      console.error('Update store error:', err);
+      //CONSOLE.error('Update store error:', err);
       return error(res, { message: 'Update store error', error: err });
     }
   }

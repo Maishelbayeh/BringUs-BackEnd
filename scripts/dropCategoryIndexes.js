@@ -11,14 +11,14 @@ async function dropIndexes() {
     if (idx.name !== '_id_') {
       try {
         await categories.dropIndex(idx.name);
-        console.log('Dropped index:', idx.name);
+        //CONSOLE.log('Dropped index:', idx.name);
       } catch (e) {
-        console.log('Could not drop index:', idx.name, e.message);
+        //CONSOLE.log('Could not drop index:', idx.name, e.message);
       }
     }
   }
   await mongoose.disconnect();
-  console.log('All non-_id_ indexes dropped.');
+  //CONSOLE.log('All non-_id_ indexes dropped.');
 }
 
 dropIndexes(); 

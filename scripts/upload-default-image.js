@@ -9,7 +9,7 @@ async function uploadDefaultImage() {
     
     // إذا لم تكن الصورة موجودة، أنشئ صورة افتراضية بسيطة
     if (!fs.existsSync(defaultImagePath)) {
-      console.log('Default image not found, creating a simple placeholder...');
+      //CONSOLE.log('Default image not found, creating a simple placeholder...');
       
       // إنشاء صورة افتراضية بسيطة باستخدام Canvas أو استخدام صورة من الإنترنت
       const defaultImageUrl = 'https://via.placeholder.com/300x300/e5e7eb/6b7280?text=No+Image';
@@ -28,9 +28,9 @@ async function uploadDefaultImage() {
       // رفع الصورة إلى Cloudflare
       const result = await uploadToCloudflare(imageBuffer, 'default-product.png', 'defaults');
       
-      console.log('✅ Default image uploaded successfully!');
-      console.log('📸 Image URL:', result.url);
-      console.log('🔑 Image Key:', result.key);
+      //CONSOLE.log('✅ Default image uploaded successfully!');
+      //CONSOLE.log('📸 Image URL:', result.url);
+      //CONSOLE.log('🔑 Image Key:', result.key);
       
       return result.url;
     } else {
@@ -40,14 +40,14 @@ async function uploadDefaultImage() {
       // رفع الصورة إلى Cloudflare
       const result = await uploadToCloudflare(imageBuffer, 'default-product.png', 'defaults');
       
-      console.log('✅ Default image uploaded successfully!');
-      console.log('📸 Image URL:', result.url);
-      console.log('🔑 Image Key:', result.key);
+      //CONSOLE.log('✅ Default image uploaded successfully!');
+      //CONSOLE.log('📸 Image URL:', result.url);
+      //CONSOLE.log('🔑 Image Key:', result.key);
       
       return result.url;
     }
   } catch (error) {
-    console.error('❌ Error uploading default image:', error);
+    //CONSOLE.error('❌ Error uploading default image:', error);
     throw error;
   }
 }
@@ -56,12 +56,12 @@ async function uploadDefaultImage() {
 if (require.main === module) {
   uploadDefaultImage()
     .then((url) => {
-      console.log('🎉 Default image upload completed!');
-      console.log('🔗 Use this URL for default product images:', url);
+      //CONSOLE.log('🎉 Default image upload completed!');
+      //CONSOLE.log('🔗 Use this URL for default product images:', url);
       process.exit(0);
     })
     .catch((error) => {
-      console.error('💥 Failed to upload default image:', error);
+      //CONSOLE.error('💥 Failed to upload default image:', error);
       process.exit(1);
     });
 }

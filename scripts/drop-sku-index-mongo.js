@@ -9,7 +9,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mais_helbayeh:ojTOYKE
 
 async function dropSkuIndex() {
   try {
-    console.log('=== Dropping SKU Index from Products Collection ===\n');
+    //CONSOLE.log('=== Dropping SKU Index from Products Collection ===\n');
     
     // Wait for connection to be ready
     await mongoose.connection.asPromise();
@@ -22,27 +22,27 @@ async function dropSkuIndex() {
       index: 'sku_1'
     });
     
-    console.log('✅ SKU index dropped successfully!');
-    console.log('Result:', result);
+    //CONSOLE.log('✅ SKU index dropped successfully!');
+    //CONSOLE.log('Result:', result);
     
     // Verify the index is gone
     const indexes = await db.collection('products').indexes();
-    console.log('\nRemaining indexes:');
+    //CONSOLE.log('\nRemaining indexes:');
     indexes.forEach((index, i) => {
-      console.log(`${i + 1}. ${JSON.stringify(index.key)}`);
+      //CONSOLE.log(`${i + 1}. ${JSON.stringify(index.key)}`);
     });
     
-    console.log('\n✅ SKU index removal completed successfully!');
+    //CONSOLE.log('\n✅ SKU index removal completed successfully!');
     
   } catch (error) {
     if (error.message.includes('index not found')) {
-      console.log('✅ SKU index was already removed or never existed');
+      //CONSOLE.log('✅ SKU index was already removed or never existed');
     } else {
-      console.error('❌ Error dropping SKU index:', error.message);
+      //CONSOLE.error('❌ Error dropping SKU index:', error.message);
     }
   } finally {
     mongoose.connection.close();
-    console.log('Database connection closed.');
+    //CONSOLE.log('Database connection closed.');
   }
 }
 

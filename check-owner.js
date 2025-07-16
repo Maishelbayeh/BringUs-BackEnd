@@ -7,34 +7,34 @@ const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4md
 async function checkOwner() {
   try {
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
+    //CONSOLE.log('✅ Connected to MongoDB');
 
     const superadminId = '6863f791f1a6dba57fe0e323';
     
     // Check if owner exists
     const owner = await Owner.findOne({ userId: superadminId }).populate('storeId');
-    console.log('Owner record:', owner);
+    //CONSOLE.log('Owner record:', owner);
 
     if (!owner) {
-      console.log('❌ No owner record found for superadmin');
+      //CONSOLE.log('❌ No owner record found for superadmin');
       
       // Check available stores
       const stores = await Store.find({ status: 'active' });
-      console.log('Available stores:', stores);
+      //CONSOLE.log('Available stores:', stores);
       
       if (stores.length > 0) {
-        console.log('✅ Found active stores, you can create an owner record');
+        //CONSOLE.log('✅ Found active stores, you can create an owner record');
       }
     } else {
-      console.log('✅ Owner record found');
-      console.log('Store:', owner.storeId);
+      //CONSOLE.log('✅ Owner record found');
+      //CONSOLE.log('Store:', owner.storeId);
     }
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    //CONSOLE.error('❌ Error:', error);
   } finally {
     await mongoose.disconnect();
-    console.log('Disconnected from MongoDB');
+    //CONSOLE.log('Disconnected from MongoDB');
   }
 }
 

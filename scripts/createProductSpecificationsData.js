@@ -9,19 +9,19 @@ async function createProductSpecificationsData() {
   try {
     // Connect to MongoDB
     await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
-    console.log(`🏪 Using Store ID: ${STORE_ID}`);
+    //CONSOLE.log('✅ Connected to MongoDB');
+    //CONSOLE.log(`🏪 Using Store ID: ${STORE_ID}`);
 
     // Get a category to use for specifications
     const category = await Category.findOne({ store: STORE_ID });
     if (!category) {
-      console.log('❌ No category found for store. Please create a category first.');
-      console.log('💡 You can create a category first or the script will create specifications without category association.');
+      //CONSOLE.log('❌ No category found for store. Please create a category first.');
+      //CONSOLE.log('💡 You can create a category first or the script will create specifications without category association.');
       
       // Continue without category if none exists
-      console.log('🔄 Continuing without category association...');
+      //CONSOLE.log('🔄 Continuing without category association...');
     } else {
-      console.log(`📁 Using category: ${category.nameEn} (${category._id})`);
+      //CONSOLE.log(`📁 Using category: ${category.nameEn} (${category._id})`);
     }
 
     // Sample product specifications data based on initialProductSpecifications
@@ -100,31 +100,31 @@ async function createProductSpecificationsData() {
 
     // Clear existing specifications for this store
     const deleteResult = await ProductSpecification.deleteMany({ store: STORE_ID });
-    console.log(`🗑️ Cleared ${deleteResult.deletedCount} existing specifications for store ${STORE_ID}`);
+    //CONSOLE.log(`🗑️ Cleared ${deleteResult.deletedCount} existing specifications for store ${STORE_ID}`);
 
     // Insert new specifications
     const specifications = await ProductSpecification.insertMany(specificationsData);
-    console.log(`✅ Created ${specifications.length} product specifications for store ${STORE_ID}`);
+    //CONSOLE.log(`✅ Created ${specifications.length} product specifications for store ${STORE_ID}`);
 
     // Display created specifications
-    console.log('\n📋 Created Specifications:');
+    //CONSOLE.log('\n📋 Created Specifications:');
     specifications.forEach((spec, index) => {
-      console.log(`${index + 1}. ${spec.descriptionAr} / ${spec.descriptionEn} (Order: ${spec.sortOrder})`);
+      //CONSOLE.log(`${index + 1}. ${spec.descriptionAr} / ${spec.descriptionEn} (Order: ${spec.sortOrder})`);
     });
 
-    console.log('\n🎉 Product Specifications data created successfully!');
-    console.log(`📊 Total specifications in database for store ${STORE_ID}: ${specifications.length}`);
+    //CONSOLE.log('\n🎉 Product Specifications data created successfully!');
+    //CONSOLE.log(`📊 Total specifications in database for store ${STORE_ID}: ${specifications.length}`);
 
     // Test the API endpoint
-    console.log('\n🧪 Testing API endpoint...');
+    //CONSOLE.log('\n🧪 Testing API endpoint...');
     const testSpecs = await ProductSpecification.find({ store: STORE_ID }).populate('category');
-    console.log(`✅ API test successful - Found ${testSpecs.length} specifications`);
+    //CONSOLE.log(`✅ API test successful - Found ${testSpecs.length} specifications`);
 
   } catch (error) {
-    console.error('❌ Error creating product specifications data:', error);
+    //CONSOLE.error('❌ Error creating product specifications data:', error);
   } finally {
     await mongoose.disconnect();
-    console.log('🔌 Disconnected from MongoDB');
+    //CONSOLE.log('🔌 Disconnected from MongoDB');
   }
 }
 
