@@ -233,6 +233,522 @@ router.get('/', [
   }
 });
 
+// ========== VARIANT ROUTES (MUST BE BEFORE /:id ROUTE) ========== //
+
+// Create variant product
+/**
+ * @swagger
+ * /api/products/{productId}/variants:
+ *   post:
+ *     summary: Create a variant product
+ *     description: Create a new product that is a variant of an existing product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Parent product ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nameAr
+ *               - nameEn
+ *               - price
+ *               - storeId
+ *             properties:
+ *               nameAr:
+ *                 type: string
+ *                 description: Arabic product name
+ *               nameEn:
+ *                 type: string
+ *                 description: English product name
+ *               descriptionAr:
+ *                 type: string
+ *                 description: Arabic description
+ *               descriptionEn:
+ *                 type: string
+ *                 description: English description
+ *               price:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Product price
+ *               compareAtPrice:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Compare at price
+ *               costPrice:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Cost price
+ *               barcodes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of barcodes
+ *               stock:
+ *                 type: number
+ *                 minimum: 0
+ *                 default: 0
+ *                 description: Stock quantity
+ *               storeId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Store ID
+ *     responses:
+ *       201:
+ *         description: Variant created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Variant created successfully
+ *                 data:
+ *                   $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Parent product not found
+ */
+router.post('/:productId/variants', [
+  body('nameAr').notEmpty().withMessage('Arabic name is required'),
+  body('nameEn').notEmpty().withMessage('English name is required'),
+  body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number'),
+  body('storeId').isMongoId().withMessage('Valid store ID is required'),
+  body('barcodes').optional().isArray().withMessage('Barcodes must be an array'),
+  body('stock').optional().isInt({ min: 0 }).withMessage('Stock must be a non-negative integer')
+], ProductController.createVariant);
+
+// Get variants of a product
+/**
+ * @swagger
+ * /api/products/{productId}/variants:
+ *   get:
+ *     summary: Get variants of a product
+ *     description: Retrieve all variant products of a specific parent product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Parent product ID
+ *       - in: query
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Store ID
+ *     responses:
+ *       200:
+ *         description: Variants retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *                 count:
+ *                   type: integer
+ *                   example: 3
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Product not found
+ */
+router.get('/:productId/variants', [
+  query('storeId').isMongoId().withMessage('Valid store ID is required')
+], ProductController.getVariants);
+
+// Add new variant to existing product
+/**
+ * @swagger
+ * /api/products/{productId}/add-variant:
+ *   post:
+ *     summary: Add new variant to existing product
+ *     description: Create a new variant product and add it to an existing parent product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Parent product ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nameAr
+ *               - nameEn
+ *               - price
+ *               - storeId
+ *             properties:
+ *               nameAr:
+ *                 type: string
+ *                 description: Arabic variant name
+ *               nameEn:
+ *                 type: string
+ *                 description: English variant name
+ *               descriptionAr:
+ *                 type: string
+ *                 description: Arabic description
+ *               descriptionEn:
+ *                 type: string
+ *                 description: English description
+ *               price:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Variant price
+ *               compareAtPrice:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Compare at price
+ *               costPrice:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Cost price
+ *               barcodes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of barcodes
+ *               availableQuantity:
+ *                 type: number
+ *                 minimum: 0
+ *                 default: 0
+ *                 description: Available quantity
+ *               storeId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Store ID
+ *               mainImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Main variant image
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Additional variant images
+ *     responses:
+ *       201:
+ *         description: Variant added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Variant added successfully
+ *                 data:
+ *                   $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Parent product not found
+ */
+router.post('/:productId/add-variant', upload.fields([
+  { name: 'mainImage', maxCount: 1 },
+  { name: 'images', maxCount: 10 }
+]), [
+  body('nameAr').notEmpty().withMessage('Arabic name is required'),
+  body('nameEn').notEmpty().withMessage('English name is required'),
+  body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number'),
+  body('storeId').isMongoId().withMessage('Valid store ID is required'),
+  body('barcodes').optional().isArray().withMessage('Barcodes must be an array'),
+  body('availableQuantity').optional().isInt({ min: 0 }).withMessage('Available quantity must be a non-negative integer')
+], ProductController.addVariant);
+
+// Delete variant
+/**
+ * @swagger
+ * /api/products/{productId}/variants/{variantId}:
+ *   delete:
+ *     summary: Delete variant
+ *     description: Delete a specific variant from a parent product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Parent product ID
+ *       - in: path
+ *         name: variantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Variant product ID to delete
+ *       - in: query
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Store ID
+ *     responses:
+ *       200:
+ *         description: Variant deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Variant deleted successfully
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Product or variant not found
+ */
+router.delete('/:productId/variants/:variantId', [
+  query('storeId').isMongoId().withMessage('Valid store ID is required')
+], ProductController.deleteVariant);
+
+// Update variant
+/**
+ * @swagger
+ * /api/products/{productId}/variants/{variantId}:
+ *   put:
+ *     summary: Update variant
+ *     description: Update a specific variant of a parent product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Parent product ID
+ *       - in: path
+ *         name: variantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Variant product ID to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - storeId
+ *             properties:
+ *               nameAr:
+ *                 type: string
+ *                 description: Arabic variant name
+ *               nameEn:
+ *                 type: string
+ *                 description: English variant name
+ *               descriptionAr:
+ *                 type: string
+ *                 description: Arabic description
+ *               descriptionEn:
+ *                 type: string
+ *                 description: English description
+ *               price:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Variant price
+ *               compareAtPrice:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Compare at price
+ *               costPrice:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: Cost price
+ *               barcodes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of barcodes
+ *               availableQuantity:
+ *                 type: number
+ *                 minimum: 0
+ *                 default: 0
+ *                 description: Available quantity
+ *               storeId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Store ID
+ *               mainImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Main variant image
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Additional variant images
+ *               specifications:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of specification IDs
+ *               specificationValues:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     specificationId:
+ *                       type: string
+ *                     valueId:
+ *                       type: string
+ *                     value:
+ *                       type: string
+ *                     title:
+ *                       type: string
+ *                 description: Array of specification values
+ *     responses:
+ *       200:
+ *         description: Variant updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Variant updated successfully
+ *                 data:
+ *                   $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Product or variant not found
+ */
+router.put('/:productId/variants/:variantId', upload.fields([
+  { name: 'mainImage', maxCount: 1 },
+  { name: 'images', maxCount: 10 }
+]), [
+  body('storeId').isMongoId().withMessage('Valid store ID is required'),
+  body('nameAr').optional().notEmpty().withMessage('Arabic name cannot be empty'),
+  body('nameEn').optional().notEmpty().withMessage('English name cannot be empty'),
+  body('price').optional().isFloat({ min: 0 }).withMessage('Price must be a positive number'),
+  body('barcodes').optional().isArray().withMessage('Barcodes must be an array'),
+  body('availableQuantity').optional().isInt({ min: 0 }).withMessage('Available quantity must be a non-negative integer')
+], ProductController.updateVariant);
+
+// ========== GENERAL PRODUCT ROUTES ========== //
+
+// Get products with variants
+/**
+ * @swagger
+ * /api/products/with-variants:
+ *   get:
+ *     summary: Get products with variants
+ *     description: Retrieve all products that have variants
+ *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: storeId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by store ID
+ *     responses:
+ *       200:
+ *         description: Products with variants retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *                 count:
+ *                   type: integer
+ *                   example: 5
+ */
+router.get('/with-variants', ProductController.getWithVariants);
+
+// Get variant products only
+/**
+ * @swagger
+ * /api/products/variants-only:
+ *   get:
+ *     summary: Get variant products only
+ *     description: Retrieve all products that are variants (have a parent product)
+ *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: storeId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by store ID
+ *     responses:
+ *       200:
+ *         description: Variant products retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *                 count:
+ *                   type: integer
+ *                   example: 10
+ */
+router.get('/variants-only', ProductController.getVariantsOnly);
+
 /**
  * @swagger
  * /api/products/{id}:
@@ -1307,223 +1823,5 @@ router.post('/upload-single-image', uploadProductImage.single('image'), async (r
     });
   }
 });
-
-// Create variant product
-/**
- * @swagger
- * /api/products/{productId}/variants:
- *   post:
- *     summary: Create a variant product
- *     description: Create a new product that is a variant of an existing product
- *     tags: [Products]
- *     parameters:
- *       - in: path
- *         name: productId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Parent product ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - nameAr
- *               - nameEn
- *               - price
- *               - storeId
- *             properties:
- *               nameAr:
- *                 type: string
- *                 description: Arabic product name
- *               nameEn:
- *                 type: string
- *                 description: English product name
- *               descriptionAr:
- *                 type: string
- *                 description: Arabic description
- *               descriptionEn:
- *                 type: string
- *                 description: English description
- *               price:
- *                 type: number
- *                 minimum: 0
- *                 description: Product price
- *               compareAtPrice:
- *                 type: number
- *                 minimum: 0
- *                 description: Compare at price
- *               costPrice:
- *                 type: number
- *                 minimum: 0
- *                 description: Cost price
- *               barcodes:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: Array of barcodes
- *               stock:
- *                 type: number
- *                 minimum: 0
- *                 default: 0
- *                 description: Stock quantity
- *               storeId:
- *                 type: string
- *                 format: uuid
- *                 description: Store ID
- *     responses:
- *       201:
- *         description: Variant created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: Variant created successfully
- *                 data:
- *                   $ref: '#/components/schemas/Product'
- *       400:
- *         description: Bad request
- *       404:
- *         description: Parent product not found
- */
-router.post('/:productId/variants', [
-  body('nameAr').notEmpty().withMessage('Arabic name is required'),
-  body('nameEn').notEmpty().withMessage('English name is required'),
-  body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number'),
-  body('storeId').isMongoId().withMessage('Valid store ID is required'),
-  body('barcodes').optional().isArray().withMessage('Barcodes must be an array'),
-  body('stock').optional().isInt({ min: 0 }).withMessage('Stock must be a non-negative integer')
-], ProductController.createVariant);
-
-// Get variants of a product
-/**
- * @swagger
- * /api/products/{productId}/variants:
- *   get:
- *     summary: Get variants of a product
- *     description: Retrieve all variant products of a specific parent product
- *     tags: [Products]
- *     parameters:
- *       - in: path
- *         name: productId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Parent product ID
- *       - in: query
- *         name: storeId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Store ID
- *     responses:
- *       200:
- *         description: Variants retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Product'
- *                 count:
- *                   type: integer
- *                   example: 3
- *       400:
- *         description: Bad request
- *       404:
- *         description: Product not found
- */
-router.get('/:productId/variants', [
-  query('storeId').isMongoId().withMessage('Valid store ID is required')
-], ProductController.getVariants);
-
-// Get products with variants
-/**
- * @swagger
- * /api/products/with-variants:
- *   get:
- *     summary: Get products with variants
- *     description: Retrieve all products that have variants
- *     tags: [Products]
- *     parameters:
- *       - in: query
- *         name: storeId
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Filter by store ID
- *     responses:
- *       200:
- *         description: Products with variants retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Product'
- *                 count:
- *                   type: integer
- *                   example: 5
- */
-router.get('/with-variants', ProductController.getWithVariants);
-
-// Get variant products only
-/**
- * @swagger
- * /api/products/variants-only:
- *   get:
- *     summary: Get variant products only
- *     description: Retrieve all products that are variants (have a parent product)
- *     tags: [Products]
- *     parameters:
- *       - in: query
- *         name: storeId
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Filter by store ID
- *     responses:
- *       200:
- *         description: Variant products retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Product'
- *                 count:
- *                   type: integer
- *                   example: 10
- */
-router.get('/variants-only', ProductController.getVariantsOnly);
 
 module.exports = router; 

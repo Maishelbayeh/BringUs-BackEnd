@@ -2,10 +2,80 @@
 
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 
 const SocialCommentController = require('../Controllers/SocialCommentController');
-const protect = require('../middleware/auth');
-const permissions = require('../middleware/permissions');
+const { protect } = require('../middleware/auth');
+const { uploadToCloudflare } = require('../utils/cloudflareUploader');
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  },
+});
+
+// Middleware to set current store for social comments and check permissions
+const setCurrentStoreAndCheckPermissions = async (req, res, next) => {
+  try {
+    // Check if user is admin or superadmin
+    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin access required'
+      });
+    }
+
+    // Superadmin can access any store, but for now we'll use the first available store
+    if (req.user.role === 'superadmin') {
+      const Store = require('../Models/Store');
+      const store = await Store.findOne({ status: 'active' });
+      if (store) {
+        req.store = store;
+        req.owner = {
+          permissions: ['manage_store', 'manage_users', 'manage_products', 'manage_categories', 'manage_orders', 'manage_inventory', 'view_analytics', 'manage_settings'],
+          isPrimaryOwner: true
+        };
+      }
+      return next();
+    }
+
+    // For admin users, get their first store
+    if (req.user.role === 'admin') {
+      const Owner = require('../Models/Owner');
+      const owner = await Owner.findOne({
+        userId: req.user._id,
+        status: 'active'
+      }).populate('storeId');
+
+      if (owner) {
+        req.store = owner.storeId;
+        req.owner = owner;
+      } else {
+        return res.status(403).json({
+          success: false,
+          message: 'No store access found'
+        });
+      }
+    }
+
+    next();
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
 
 /**
  * @swagger
@@ -84,12 +154,13 @@ const permissions = require('../middleware/permissions');
  *                   type: string
  *                   example: "Failed to fetch testimonials"
  */
-// router.get(
-//   '/api/social-comments',
-//   protect,
-//   permissions(['owner']),
-//   SocialCommentController.getSocialComments
-// );
+router.get(
+  '/api/social-comments',
+  protect,
+  (req, res) => {
+    res.json({ message: 'Test route working' });
+  }
+);
 
 /**
  * @swagger
@@ -145,12 +216,12 @@ const permissions = require('../middleware/permissions');
  *                   type: string
  *                   example: "Failed to create testimonial"
  */
-// router.post(
-//   '/api/social-comments',
-//   protect,
-//   permissions(['owner']),
-//   SocialCommentController.createSocialComment
-// );
+router.post(
+  '/api/social-comments',
+  protect,
+  setCurrentStoreAndCheckPermissions,
+  SocialCommentController.createSocialComment
+);
 
 /**
  * @swagger
@@ -226,12 +297,12 @@ const permissions = require('../middleware/permissions');
  *                   type: string
  *                   example: "Failed to update testimonial"
  */
-// router.put(
-//   '/api/social-comments/:id',
-//   protect,
-//   permissions(['owner']),
-//   SocialCommentController.updateSocialComment
-// );
+router.put(
+  '/api/social-comments/:id',
+  protect,
+  setCurrentStoreAndCheckPermissions,
+  SocialCommentController.updateSocialComment
+);
 
 /**
  * @swagger
@@ -288,12 +359,88 @@ const permissions = require('../middleware/permissions');
  *                   type: string
  *                   example: "Failed to delete testimonial"
  */
-// router.delete(
-//   '/api/social-comments/:id',
-//   protect,
-//   permissions(['owner']),
-//   SocialCommentController.deleteSocialComment
-// );
+router.delete(
+  '/api/social-comments/:id',
+  protect,
+  setCurrentStoreAndCheckPermissions,
+  SocialCommentController.deleteSocialComment
+);
+
+/**
+ * @swagger
+ * /api/social-comments/upload-image:
+ *   post:
+ *     summary: Upload image for social comment
+ *     tags: [SocialComment]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - image
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file to upload
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     url:
+ *                       type: string
+ *                       example: "https://pub-237eec0793554bacb7debfc287be3b32.r2.dev/social-comments/1234567890-image.jpg"
+ *                     key:
+ *                       type: string
+ *                       example: "social-comments/1234567890-image.jpg"
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Only image files are allowed"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to upload image"
+ */
+router.post(
+  '/api/social-comments/upload-image',
+  protect,
+  setCurrentStoreAndCheckPermissions,
+  upload.single('image'),
+  SocialCommentController.uploadImage
+);
 
 module.exports = router;
 

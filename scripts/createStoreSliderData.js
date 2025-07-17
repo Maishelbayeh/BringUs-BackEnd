@@ -6,8 +6,8 @@ const Store = require('../Models/Store');
 const MONGODB_URI = 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4mdpc.mongodb.net/bringus?retryWrites=true&w=majority&appName=Cluster0';
 
 mongoose.connect(MONGODB_URI)
-  .then(() => //CONSOLE.log('✅ Connected to MongoDB Atlas'))
-  .catch(err => //CONSOLE.error('❌ MongoDB connection error:', err));
+  .then(() => console.log('✅ Connected to MongoDB Atlas'))
+  .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // Store slider data for TechStore
 const techStoreSliders = [
