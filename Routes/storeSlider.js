@@ -242,7 +242,7 @@ router.post('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, v
  *       403:
  *         description: Access denied
  */
-router.put('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess, validateStoreSlider, validateSliderType, updateStoreSlider);
+router.put('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess, validateSliderType, updateStoreSlider);
 
 /**
  * @swagger
