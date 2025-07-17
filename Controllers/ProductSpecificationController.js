@@ -120,13 +120,14 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    
+
     const { id } = req.params;
     const { titleAr, titleEn, values, category, storeId, isActive } = req.body;
     
     if (!storeId) {
       return res.status(400).json({ 
         success: false,
+        
         error: 'Store ID is required',
         message: 'Please provide storeId in request body'
       });
