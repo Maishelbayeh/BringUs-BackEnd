@@ -155,11 +155,10 @@ const setCurrentStoreAndCheckPermissions = async (req, res, next) => {
  *                   example: "Failed to fetch testimonials"
  */
 router.get(
-  '/api/social-comments',
+  '/',
   protect,
-  (req, res) => {
-    res.json({ message: 'Test route working' });
-  }
+  setCurrentStoreAndCheckPermissions,
+  SocialCommentController.getSocialComments
 );
 
 /**
@@ -217,7 +216,7 @@ router.get(
  *                   example: "Failed to create testimonial"
  */
 router.post(
-  '/api/social-comments',
+  '/',
   protect,
   setCurrentStoreAndCheckPermissions,
   SocialCommentController.createSocialComment
@@ -298,7 +297,7 @@ router.post(
  *                   example: "Failed to update testimonial"
  */
 router.put(
-  '/api/social-comments/:id',
+  '/:id',
   protect,
   setCurrentStoreAndCheckPermissions,
   SocialCommentController.updateSocialComment
@@ -360,7 +359,7 @@ router.put(
  *                   example: "Failed to delete testimonial"
  */
 router.delete(
-  '/api/social-comments/:id',
+  '/:id',
   protect,
   setCurrentStoreAndCheckPermissions,
   SocialCommentController.deleteSocialComment
@@ -435,11 +434,50 @@ router.delete(
  *                   example: "Failed to upload image"
  */
 router.post(
-  '/api/social-comments/upload-image',
+  '/upload-image',
   protect,
   setCurrentStoreAndCheckPermissions,
   upload.single('image'),
   SocialCommentController.uploadImage
+);
+
+/**
+ * @swagger
+ * /api/social-comments/by-store/{storeId}:
+ *   get:
+ *     summary: Get all social comments for a specific store by storeId
+ *     tags: [SocialComment]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     responses:
+ *       200:
+ *         description: List of testimonials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/SocialComment'
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/by-store/:storeId',
+  protect,
+  SocialCommentController.getSocialCommentsByStoreId
 );
 
 module.exports = router;
