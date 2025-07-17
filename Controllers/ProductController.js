@@ -525,4 +525,430 @@ exports.getVariantsOnly = async (req, res) => {
       error: err.message 
     });
   }
+};
+
+// Add new variant to existing product
+exports.addVariant = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { storeId, ...variantData } = req.body;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in request body'
+      });
+    }
+
+    // Check if parent product exists and belongs to store
+    const parentProduct = await Product.findOne({ _id: productId, store: storeId });
+    if (!parentProduct) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Parent product not found' 
+      });
+    }
+
+    // Validate required fields for variant
+    if (!variantData.nameAr || !variantData.nameEn || !variantData.price) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Missing required variant fields',
+        details: {
+          nameAr: !variantData.nameAr ? 'Arabic name is required' : null,
+          nameEn: !variantData.nameEn ? 'English name is required' : null,
+          price: !variantData.price ? 'Price is required' : null
+        }
+      });
+    }
+
+    // Check variant barcodes uniqueness
+    if (variantData.barcodes && Array.isArray(variantData.barcodes)) {
+      for (const barcode of variantData.barcodes) {
+        const existingProduct = await Product.findOne({ barcodes: barcode });
+        if (existingProduct) {
+          return res.status(400).json({ 
+            success: false,
+            error: 'Variant barcode already exists',
+            message: `A product with barcode "${barcode}" already exists`
+          });
+        }
+      }
+    }
+
+    // Handle main image upload for variant
+    let mainImageUrl = variantData.mainImage || null;
+    if (req.files && req.files.mainImage && req.files.mainImage[0]) {
+      const result = await uploadToCloudflare(
+        req.files.mainImage[0].buffer,
+        req.files.mainImage[0].originalname,
+        `products/${storeId}/variants/main`
+      );
+      mainImageUrl = result.url;
+    }
+
+    // Handle gallery images upload for variant
+    let imagesUrls = [];
+    if (req.files && req.files.images && req.files.images.length > 0) {
+      const uploadPromises = req.files.images.map(file =>
+        uploadToCloudflare(file.buffer, file.originalname, `products/${storeId}/variants/gallery`)
+      );
+      const results = await Promise.all(uploadPromises);
+      imagesUrls = results.map(r => r.url);
+    } else if (variantData.images) {
+      if (Array.isArray(variantData.images)) {
+        imagesUrls = variantData.images;
+      } else if (typeof variantData.images === 'string') {
+        try {
+          imagesUrls = JSON.parse(variantData.images);
+        } catch {
+          imagesUrls = [variantData.images];
+        }
+      }
+    }
+
+    // Handle specificationValues parsing
+    if (variantData.specificationValues) {
+      if (Array.isArray(variantData.specificationValues)) {
+        variantData.specificationValues = variantData.specificationValues;
+      } else if (typeof variantData.specificationValues === 'string') {
+        try {
+          variantData.specificationValues = JSON.parse(variantData.specificationValues);
+        } catch (error) {
+          console.error('Error parsing specificationValues:', error);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid specificationValues format'
+          });
+        }
+      }
+    }
+
+    // Handle specifications parsing
+    if (variantData.specifications) {
+      if (Array.isArray(variantData.specifications)) {
+        variantData.specifications = variantData.specifications;
+      } else if (typeof variantData.specifications === 'string') {
+        try {
+          variantData.specifications = JSON.parse(variantData.specifications);
+        } catch (error) {
+          console.error('Error parsing specifications:', error);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid specifications format'
+          });
+        }
+      }
+    }
+
+    // Handle barcodes parsing
+    if (variantData.barcodes) {
+      if (Array.isArray(variantData.barcodes)) {
+        variantData.barcodes = variantData.barcodes;
+      } else if (typeof variantData.barcodes === 'string') {
+        try {
+          variantData.barcodes = JSON.parse(variantData.barcodes);
+        } catch (error) {
+          console.error('Error parsing barcodes:', error);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid barcodes format'
+          });
+        }
+      }
+    }
+
+    // Create variant product
+    const variantProduct = new Product({
+      ...variantData,
+      store: storeId,
+      category: parentProduct.category, // Inherit category from parent
+      unit: parentProduct.unit, // Inherit unit from parent
+      hasVariants: false, // Variants cannot have their own variants
+      variants: [],
+      isParent: false, // Mark as variant
+      mainImage: mainImageUrl,
+      images: imagesUrls
+    });
+
+    await variantProduct.save();
+
+    // Add variant to parent's variants array
+    await Product.findByIdAndUpdate(productId, {
+      $push: { variants: variantProduct._id },
+      $set: { hasVariants: true, isParent: true }
+    });
+
+    const populatedVariant = await Product.findById(variantProduct._id)
+      .populate('category')
+      .populate('productLabels')
+      .populate('specifications')
+      .populate('unit')
+      .populate('store', 'name domain');
+
+    res.status(201).json({
+      success: true,
+      message: 'Variant added successfully',
+      data: populatedVariant
+    });
+  } catch (err) {
+    console.error('Add variant error:', err);
+    res.status(400).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+// Delete variant
+exports.deleteVariant = async (req, res) => {
+  try {
+    const { productId, variantId } = req.params;
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in query parameters'
+      });
+    }
+
+    // Check if parent product exists and belongs to store
+    const parentProduct = await Product.findOne({ _id: productId, store: storeId });
+    if (!parentProduct) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Parent product not found' 
+      });
+    }
+
+    // Check if variant exists and belongs to this parent
+    const variant = await Product.findOne({ _id: variantId, store: storeId });
+    if (!variant) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Variant not found' 
+      });
+    }
+
+    // Check if variant is actually a variant of this parent
+    if (!parentProduct.variants.includes(variantId)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Variant does not belong to this parent product' 
+      });
+    }
+
+    // Delete the variant
+    await Product.findByIdAndDelete(variantId);
+
+    // Remove variant from parent's variants array
+    const updatedParent = await Product.findByIdAndUpdate(productId, {
+      $pull: { variants: variantId }
+    }, { new: true });
+
+    // If no more variants, update parent flags
+    if (updatedParent.variants.length === 0) {
+      await Product.findByIdAndUpdate(productId, {
+        $set: { hasVariants: false, isParent: false }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Variant deleted successfully'
+    });
+  } catch (err) {
+    console.error('Delete variant error:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+// Update variant
+exports.updateVariant = async (req, res) => {
+  try {
+    const { productId, variantId } = req.params;
+    const { storeId, ...updateData } = req.body;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in request body'
+      });
+    }
+
+    // Check if parent product exists and belongs to store
+    const parentProduct = await Product.findOne({ _id: productId, store: storeId });
+    if (!parentProduct) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Parent product not found' 
+      });
+    }
+
+    // Check if variant exists and belongs to this parent
+    const variant = await Product.findOne({ _id: variantId, store: storeId });
+    if (!variant) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Variant not found' 
+      });
+    }
+
+    // Check if variant is actually a variant of this parent
+    if (!parentProduct.variants.includes(variantId)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Variant does not belong to this parent product' 
+      });
+    }
+
+    // Validate required fields for variant
+    if (updateData.nameAr !== undefined && !updateData.nameAr) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Arabic name cannot be empty'
+      });
+    }
+
+    if (updateData.nameEn !== undefined && !updateData.nameEn) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'English name cannot be empty'
+      });
+    }
+
+    if (updateData.price !== undefined && (!updateData.price || updateData.price <= 0)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Price must be greater than 0'
+      });
+    }
+
+    // Check variant barcodes uniqueness (excluding the current variant)
+    if (updateData.barcodes && Array.isArray(updateData.barcodes)) {
+      for (const barcode of updateData.barcodes) {
+        const existingProduct = await Product.findOne({ 
+          barcodes: barcode,
+          _id: { $ne: variantId } // Exclude current variant
+        });
+        if (existingProduct) {
+          return res.status(400).json({ 
+            success: false,
+            error: 'Variant barcode already exists',
+            message: `A product with barcode "${barcode}" already exists`
+          });
+        }
+      }
+    }
+
+    // Handle main image upload for variant
+    if (req.files && req.files.mainImage && req.files.mainImage[0]) {
+      const result = await uploadToCloudflare(
+        req.files.mainImage[0].buffer,
+        req.files.mainImage[0].originalname,
+        `products/${storeId}/variants/main`
+      );
+      updateData.mainImage = result.url;
+    }
+
+    // Handle gallery images upload for variant
+    if (req.files && req.files.images && req.files.images.length > 0) {
+      const uploadPromises = req.files.images.map(file =>
+        uploadToCloudflare(file.buffer, file.originalname, `products/${storeId}/variants/gallery`)
+      );
+      const results = await Promise.all(uploadPromises);
+      updateData.images = results.map(r => r.url);
+    } else if (updateData.images) {
+      if (Array.isArray(updateData.images)) {
+        updateData.images = updateData.images;
+      } else if (typeof updateData.images === 'string') {
+        try {
+          updateData.images = JSON.parse(updateData.images);
+        } catch {
+          updateData.images = [updateData.images];
+        }
+      }
+    }
+
+    // Handle specificationValues parsing
+    if (updateData.specificationValues) {
+      if (Array.isArray(updateData.specificationValues)) {
+        updateData.specificationValues = updateData.specificationValues;
+      } else if (typeof updateData.specificationValues === 'string') {
+        try {
+          updateData.specificationValues = JSON.parse(updateData.specificationValues);
+        } catch (error) {
+          console.error('Error parsing specificationValues:', error);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid specificationValues format'
+          });
+        }
+      }
+    }
+
+    // Handle specifications parsing
+    if (updateData.specifications) {
+      if (Array.isArray(updateData.specifications)) {
+        updateData.specifications = updateData.specifications;
+      } else if (typeof updateData.specifications === 'string') {
+        try {
+          updateData.specifications = JSON.parse(updateData.specifications);
+        } catch (error) {
+          console.error('Error parsing specifications:', error);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid specifications format'
+          });
+        }
+      }
+    }
+
+    // Handle barcodes parsing
+    if (updateData.barcodes) {
+      if (Array.isArray(updateData.barcodes)) {
+        updateData.barcodes = updateData.barcodes;
+      } else if (typeof updateData.barcodes === 'string') {
+        try {
+          updateData.barcodes = JSON.parse(updateData.barcodes);
+        } catch (error) {
+          console.error('Error parsing barcodes:', error);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid barcodes format'
+          });
+        }
+      }
+    }
+
+    // Update the variant
+    const updatedVariant = await Product.findByIdAndUpdate(
+      variantId,
+      { ...updateData },
+      { new: true, runValidators: true }
+    ).populate('category')
+     .populate('productLabels')
+     .populate('specifications')
+     .populate('unit')
+     .populate('store', 'name domain');
+
+    res.json({
+      success: true,
+      message: 'Variant updated successfully',
+      data: updatedVariant
+    });
+  } catch (err) {
+    console.error('Update variant error:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
 }; 
