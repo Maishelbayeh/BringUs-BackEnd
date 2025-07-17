@@ -2,6 +2,7 @@
 
 const SocialComment = require('../Models/SocialComment');
 const response = require('../utils/response');
+const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 
 /**
  * Get all social testimonials for the current store
@@ -79,6 +80,32 @@ exports.deleteSocialComment = async (req, res) => {
     return response.success(res, deleted);
   } catch (err) {
     return response.error(res, err.message || 'Failed to delete testimonial');
+  }
+};
+
+/**
+ * Upload image for social comment
+ */
+exports.uploadImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return response.error(res, 'No image file provided', 400);
+    }
+
+    // Upload to Cloudflare R2
+    const result = await uploadToCloudflare(
+      req.file.buffer,
+      req.file.originalname,
+      'social-comments'
+    );
+
+    return response.success(res, {
+      url: result.url,
+      key: result.key
+    });
+  } catch (err) {
+    console.error('Image upload error:', err);
+    return response.error(res, err.message || 'Failed to upload image');
   }
 };
 

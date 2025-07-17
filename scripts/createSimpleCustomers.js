@@ -4,8 +4,8 @@ const Store = require('../Models/Store');
 
 // Connect to MongoDB (local)
 mongoose.connect('mongodb://localhost:27017/bringus')
-  .then(() => //CONSOLE.log('✅ Connected to MongoDB'))
-  .catch(err => //CONSOLE.error('❌ MongoDB connection error:', err));
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // Customer data for TechStore (2 users)
 const techStoreCustomers = [
