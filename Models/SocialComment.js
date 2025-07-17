@@ -6,6 +6,7 @@ const { Schema } = mongoose;
 
 const socialCommentSchema = new Schema(
   {
+    
     store: {
       type: Schema.Types.ObjectId,
       ref: 'Store',
