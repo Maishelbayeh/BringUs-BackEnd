@@ -1,7 +1,7 @@
 // monjed start  editing
 const { body } = require('express-validator');
 
-const allowedPlatforms = ['Facebook', 'Instagram', 'Twitter', 'LinkedIn', 'TikTok'];
+const allowedPlatforms = ['Facebook', 'Instagram', 'Twitter', 'LinkedIn', 'TikTok', 'YouTube', 'WhatsApp'];
 
 exports.socialCommentValidation = [
   body('platform')
