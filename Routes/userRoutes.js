@@ -179,6 +179,7 @@ const validateUserCreation = [
  */
 router.post('/', protect, authorize('admin', 'superadmin'), validateUserCreation, createUser);
 
+
 /**
  * @swagger
  * /api/users:
