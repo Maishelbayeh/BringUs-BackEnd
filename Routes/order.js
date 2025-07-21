@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const Order = require('../Models/Order');
 const Product = require('../Models/Product');
 const jwt = require('jsonwebtoken');
+const OrderController = require('../Controllers/OrderController');
 
 const router = express.Router();
 
@@ -444,5 +445,82 @@ router.get('/number/:orderNumber', authenticateToken, async (req, res) => {
     });
   }
 });
+
+/**
+ * @swagger
+ * /api/orders/store/{storeId}:
+ *   get:
+ *     summary: Get all orders for a specific store (admin or store owner)
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The store ID
+ *     responses:
+ *       200:
+ *         description: List of orders
+ *       400:
+ *         description: storeId is required
+ */
+router.get('/store/:storeId', OrderController.getOrdersByStore);
+
+/**
+ * @swagger
+ * /api/orders/store/{storeId}:
+ *   post:
+ *     summary: Create a new order for a specific store
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The store ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               user:
+ *                 type: string
+ *                 description: User ID
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     product:
+ *                       type: string
+ *                     quantity:
+ *                       type: number
+ *               shippingAddress:
+ *                 type: object
+ *               billingAddress:
+ *                 type: object
+ *               paymentInfo:
+ *                 type: object
+ *               shippingInfo:
+ *                 type: object
+ *               notes:
+ *                 type: string
+ *               isGift:
+ *                 type: boolean
+ *               giftMessage:
+ *                 type: string
+ *               coupon:
+ *                 type: object
+ *     responses:
+ *       201:
+ *         description: Order created
+ *       400:
+ *         description: storeId is required or validation error
+ */
+router.post('/store/:storeId', OrderController.createOrder);
 
 module.exports = router; 

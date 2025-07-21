@@ -13,6 +13,11 @@ const unitSchema = new mongoose.Schema({
     trim: true,
     maxlength: [50, 'English name cannot exceed 50 characters']
   },
+  store: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Store',
+    required: [false  , 'Product store is required']
+  },
   symbol: {
     type: String,
     required: [true, 'Unit symbol is required'],

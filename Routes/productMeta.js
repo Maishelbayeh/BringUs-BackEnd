@@ -808,6 +808,33 @@ router.get('/product-specifications/by-store', require('../Controllers/ProductSp
 
 /**
  * @swagger
+ * /api/meta/stores/{storeId}/units:
+ *   get:
+ *     summary: Get all units for a specific store
+ *     tags: [Units]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID to filter units
+ *     responses:
+ *       200:
+ *         description: List of units for the store
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Unit'
+ *       400:
+ *         description: storeId is required
+ */
+router.get('/stores/:storeId/units', UnitController.getByStoreId);
+
+/**
+ * @swagger
  * /api/meta/products:
  *   get:
  *     summary: Get all products
@@ -925,6 +952,8 @@ router.get('/units/:id', UnitController.getById);
 router.post('/units', UnitController.create);
 router.put('/units/:id', UnitController.update);
 router.delete('/units/:id', UnitController.delete);
+// Add store-specific unit route
+// router.get('/stores/:storeId/units', UnitController.getByStoreId); // This line is now redundant as it's handled above
 
 // Product routes
 router.get('/products', ProductController.getAll);
