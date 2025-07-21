@@ -47,4 +47,17 @@ exports.delete = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+};
+
+exports.getByStoreId = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    if (!storeId) {
+      return res.status(400).json({ error: 'storeId is required' });
+    }
+    const units = await Unit.find({ store: storeId });
+    res.json(units);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 }; 
