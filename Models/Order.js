@@ -6,19 +6,20 @@ const orderSchema = new mongoose.Schema({
     required: true
   },
   store: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Store',
-    required: [true, 'Order store is required']
+    type: Object, // نسخة من بيانات المتجر وقت الطلب
+    required: true
   },
   user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: Object, // نسخة من بيانات المستخدم وقت الطلب
     required: true
   },
   items: [{
-    product: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Product',
+    productId: {
+      type: String, // فقط id نصي للمنتج (اختياري)
+      required: true
+    },
+    productSnapshot: {
+      type: Object,
       required: true
     },
     name: {
@@ -27,7 +28,7 @@ const orderSchema = new mongoose.Schema({
     },
     sku: {
       type: String,
-      required: true
+      required: false
     },
     quantity: {
       type: Number,
@@ -49,142 +50,7 @@ const orderSchema = new mongoose.Schema({
       option: String
     }
   }],
-  shippingAddress: {
-    firstName: {
-      type: String,
-      required: true
-    },
-    lastName: {
-      type: String,
-      required: true
-    },
-    email: {
-      type: String,
-      required: true
-    },
-    phone: {
-      type: String,
-      required: true
-    },
-    street: {
-      type: String,
-      required: true
-    },
-    city: {
-      type: String,
-      required: true
-    },
-    state: {
-      type: String,
-      required: true
-    },
-    zipCode: {
-      type: String,
-      required: true
-    },
-    country: {
-      type: String,
-      required: true,
-      default: 'United States'
-    }
-  },
-  billingAddress: {
-    firstName: {
-      type: String,
-      required: true
-    },
-    lastName: {
-      type: String,
-      required: true
-    },
-    email: {
-      type: String,
-      required: true
-    },
-    phone: {
-      type: String,
-      required: true
-    },
-    street: {
-      type: String,
-      required: true
-    },
-    city: {
-      type: String,
-      required: true
-    },
-    state: {
-      type: String,
-      required: true
-    },
-    zipCode: {
-      type: String,
-      required: true
-    },
-    country: {
-      type: String,
-      required: true,
-      default: 'United States'
-    }
-  },
-  paymentInfo: {
-    id: {
-      type: String
-    },
-    status: {
-      type: String,
-      enum: ['pending', 'completed', 'failed', 'refunded'],
-      default: 'pending'
-    },
-    method: {
-      type: String,
-      enum: ['credit_card', 'debit_card', 'paypal', 'stripe', 'cash_on_delivery'],
-      required: true
-    },
-    transactionId: String,
-    paidAt: Date
-  },
-  shippingInfo: {
-    method: {
-      type: String,
-      required: true
-    },
-    cost: {
-      type: Number,
-      required: true,
-      min: [0, 'Shipping cost cannot be negative']
-    },
-    estimatedDelivery: Date,
-    trackingNumber: String,
-    carrier: String
-  },
-  pricing: {
-    subtotal: {
-      type: Number,
-      required: true,
-      min: [0, 'Subtotal cannot be negative']
-    },
-    tax: {
-      type: Number,
-      required: true,
-      min: [0, 'Tax cannot be negative']
-    },
-    shipping: {
-      type: Number,
-      required: true,
-      min: [0, 'Shipping cannot be negative']
-    },
-    discount: {
-      type: Number,
-      default: 0,
-      min: [0, 'Discount cannot be negative']
-    },
-    total: {
-      type: Number,
-      required: true,
-      min: [0, 'Total cannot be negative']
-    }
-  },
+
   status: {
     type: String,
     enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'],
@@ -198,12 +64,67 @@ const orderSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-
+  affiliate: {
+    firstName: { type: String },
+    lastName: { type: String },
+    email: { type: String },
+    mobile: { type: String },
+    address: { type: String },
+    percent: { type: Number },
+    status: { type: String },
+    affiliateCode: { type: String },
+    affiliateLink: { type: String },
+    totalSales: { type: Number },
+    totalCommission: { type: Number },
+    totalPaid: { type: Number },
+    balance: { type: Number },
+    totalOrders: { type: Number },
+    totalCustomers: { type: Number },
+    conversionRate: { type: Number },
+    lastActivity: { type: Date },
+    registrationDate: { type: Date },
+    bankInfo: {
+      bankName: { type: String },
+      accountNumber: { type: String },
+      iban: { type: String },
+      swiftCode: { type: String }
+    },
+    settings: {
+      autoPayment: { type: Boolean },
+      paymentThreshold: { type: Number },
+      paymentMethod: { type: String },
+      notifications: {
+        email: { type: Boolean },
+        sms: { type: Boolean }
+      }
+    },
+    notes: { type: String },
+    isVerified: { type: Boolean },
+    verificationDate: { type: Date },
+    verifiedBy: { type: String },
+  },
+  deliveryArea: {
+    locationAr: { type: String },
+    locationEn: { type: String },
+    price: { type: Number },
+    estimatedDays: { type: Number },
+    whatsappNumber: { type: String },
+    isActive: { type: Boolean },
+    isDefault: { type: Boolean },
+    description: { type: String },
+    descriptionAr: { type: String },
+    descriptionEn: { type: String },
+    priority: { type: Number },
+  },
+  currency: {
+    type: String,
+    required: false
+  },
   estimatedDeliveryDate: Date,
   actualDeliveryDate: Date,
   cancelledAt: Date,
   cancelledBy: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String, // Changed from ObjectId to String
     ref: 'User'
   },
   cancellationReason: String
@@ -234,9 +155,9 @@ orderSchema.index({ store: 1, orderNumber: 1 }, { unique: true });
 orderSchema.virtual('orderSummary').get(function() {
   return {
     orderNumber: this.orderNumber,
-    total: this.pricing.total,
+    total: (this.pricing && typeof this.pricing.total !== 'undefined') ? this.pricing.total : 0,
     status: this.status,
-    itemCount: this.items.length,
+    itemCount: this.items ? this.items.length : 0,
     createdAt: this.createdAt
   };
 });
