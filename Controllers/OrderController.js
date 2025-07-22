@@ -232,6 +232,16 @@ exports.createOrder = async (req, res) => {
       currency
     });
 
+    // تحديث عمولة الأفلييت إذا كان الطلب عن طريقه
+    if (affiliateId && affiliateData) {
+      const Affiliation = require('../Models/Affiliation');
+      const affiliateDoc = await Affiliation.findById(affiliateId);
+      if (affiliateDoc) {
+        // استخدم الميثود الجاهز
+        await affiliateDoc.updateSales(total, order._id);
+      }
+    }
+
     res.status(201).json({
       success: true,
       message: 'Order created successfully',

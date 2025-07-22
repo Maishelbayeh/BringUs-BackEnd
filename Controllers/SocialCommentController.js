@@ -22,8 +22,9 @@ exports.getSocialComments = async (req, res) => {
  */
 exports.createSocialComment = async (req, res) => {
   try {
-    const storeId = req.store?._id || req.store;
+    // عدلنا هنا: يأخذ storeId من req.store أو من req.body.store
     const {
+      store,
       platform,
       image,
       personName,
@@ -33,7 +34,7 @@ exports.createSocialComment = async (req, res) => {
     } = req.body;
 
     const newComment = new SocialComment({
-      store: storeId,
+      store: store,
       platform,
       image,
       personName,
