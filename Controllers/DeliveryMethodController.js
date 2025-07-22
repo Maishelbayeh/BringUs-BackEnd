@@ -802,41 +802,13 @@ const setAsDefault = async (req, res) => {
 const getDeliveryMethodsByStoreId = async (req, res) => {
   try {
     const { storeId } = req.params;
-    const { isActive, isDefault } = req.query;
-
-    // Verify store exists
-    const Store = require('../Models/Store');
-    const store = await Store.findById(storeId);
-    if (!store) {
-      return res.status(404).json({
-        success: false,
-        message: 'Store not found'
-      });
+    if (!storeId) {
+      return res.status(400).json({ success: false, message: 'storeId is required' });
     }
-
-    // Build filter
-    let filter = { store: storeId };
-    
-    // Add additional filters
-    if (isActive !== undefined) filter.isActive = isActive === 'true';
-    if (isDefault !== undefined) filter.isDefault = isDefault === 'true';
-
-    // Get delivery methods
-    const deliveryMethods = await DeliveryMethod.find(filter)
-      .populate('store', 'name domain')
-      .sort({ priority: 1, createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      data: deliveryMethods
-    });
+    const deliveryMethods = await DeliveryMethod.find({ store: storeId });
+    res.status(200).json({ success: true, data: deliveryMethods });
   } catch (error) {
-    //CONSOLE.error('Get delivery methods by store ID error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching delivery methods',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
