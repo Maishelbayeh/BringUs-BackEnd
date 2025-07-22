@@ -751,6 +751,54 @@ router.get('/variants-only', ProductController.getVariantsOnly);
 
 /**
  * @swagger
+ * /api/products/by-store/{storeId}:
+ *   get:
+ *     summary: Get all products by storeId
+ *     description: Retrieve all products for a specific store by storeId
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: '507f1f77bcf86cd799439012'
+ *         description: Store ID (MongoDB ObjectId)
+ *     responses:
+ *       200:
+ *         description: Products retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *                 count:
+ *                   type: integer
+ *                   example: 10
+ *       400:
+ *         description: Bad request - storeId missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/by-store/:storeId', ProductController.getByStoreId);
+
+/**
+ * @swagger
  * /api/products/{id}:
  *   get:
  *     summary: Get single product by ID
