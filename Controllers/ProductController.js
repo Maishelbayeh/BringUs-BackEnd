@@ -85,7 +85,8 @@ exports.create = async (req, res) => {
       compareAtPrice, costPrice, productOrder = 0, visibility = true, isActive = true,
       isFeatured = false, isOnSale = false, salePercentage = 0, attributes = [],
       specifications = [], tags = [], weight, dimensions, rating = 0, numReviews = 0,
-      views = 0, soldCount = 0, seo
+      views = 0, soldCount = 0, seo,
+      specificationValues = []
     } = req.body;
 
     // Handle main image upload
@@ -125,7 +126,8 @@ exports.create = async (req, res) => {
       nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, store: storeId,
       availableQuantity, stock, productLabels, colors, images: imagesUrls, mainImage: mainImageUrl,
       compareAtPrice, costPrice, productOrder, visibility, isActive, isFeatured, isOnSale, salePercentage,
-      attributes, specifications, tags, weight, dimensions, rating, numReviews, views, soldCount, seo
+      attributes, specifications, tags, weight, dimensions, rating, numReviews, views, soldCount, seo,
+      specificationValues
     };
 
     const product = await Product.create(productData);
