@@ -73,34 +73,24 @@ const validateDeliveryMethod = [
  * @swagger
  * /api/delivery-methods:
  *   get:
- *     summary: Get all delivery methods
- *     description: Retrieve all delivery methods for the current store
+ *     summary: Get all delivery methods (paginated)
+ *     description: Retrieve all delivery methods for all stores (admin/superadmin only)
  *     tags: [Delivery Methods]
  *     security:
  *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Success
- *       403:
- *         description: Access denied
- */
-router.get('/', protect, authorize('admin', 'superadmin'), getAllDeliveryMethods);
-
-/**
- * @swagger
- * /api/delivery-methods/store/{storeId}:
- *   get:
- *     summary: Get delivery methods by store ID
- *     description: Retrieve all delivery methods for a specific store (public endpoint)
- *     tags: [Delivery Methods]
  *     parameters:
- *       - in: path
- *         name: storeId
- *         required: true
+ *       - in: query
+ *         name: page
  *         schema:
- *           type: string
- *         description: Store ID
- *         example: "507f1f77bcf86cd799439012"
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of methods per page
  *       - in: query
  *         name: isActive
  *         schema:
@@ -113,19 +103,31 @@ router.get('/', protect, authorize('admin', 'superadmin'), getAllDeliveryMethods
  *         description: Filter by default status
  *     responses:
  *       200:
- *         description: Success
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/DeliveryMethod'
+ *         description: List of delivery methods retrieved successfully
+ *       403:
+ *         description: Access denied
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/', protect, authorize('admin', 'superadmin'), getAllDeliveryMethods);
+
+/**
+ * @swagger
+ * /api/delivery-methods/store/{storeId}:
+ *   get:
+ *     summary: Get delivery methods by store ID (public)
+ *     description: Retrieve all delivery methods for a specific store (public endpoint)
+ *     tags: [Delivery Methods]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     responses:
+ *       200:
+ *         description: Delivery methods retrieved successfully
  *       404:
  *         description: Store not found
  *       500:

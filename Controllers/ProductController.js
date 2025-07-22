@@ -954,3 +954,33 @@ exports.updateVariant = async (req, res) => {
     });
   }
 }; 
+
+// Get products by storeId
+exports.getByStoreId = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'storeId is required'
+      });
+    }
+    const products = await Product.find({ store: storeId })
+      .populate('category', 'nameAr nameEn')
+      .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'descriptionAr descriptionEn')
+      .populate('unit', 'nameAr nameEn symbol')
+      .populate('store', 'name domain');
+    res.status(200).json({
+      success: true,
+      data: products,
+      count: products.length
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching products by storeId',
+      error: err.message
+    });
+  }
+}; 
