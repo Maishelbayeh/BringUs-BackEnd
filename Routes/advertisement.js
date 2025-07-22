@@ -9,10 +9,13 @@ const {
   deleteAdvertisement,
   toggleActiveStatus,
   incrementClick,
-  getAdvertisementStats
+  getAdvertisementStats,
+  uploadImage
 } = require('../Controllers/AdvertisementController');
 const { protect } = require('../middleware/auth');
 const { verifyStoreAccess } = require('../middleware/storeAuth');
+const multer = require('multer');
+const upload = multer(); // In-memory storage
 
 const router = express.Router();
 
@@ -405,5 +408,34 @@ router.patch('/stores/:storeId/advertisements/:advertisementId/toggle-active', t
  *         description: Not found
  */
 router.post('/stores/:storeId/advertisements/:advertisementId/click', incrementClick);
+
+/**
+ * @swagger
+ * /api/advertisements/upload-image:
+ *   post:
+ *     summary: Upload an image
+ *     description: Upload a new image file.
+ *     tags: [Advertisements]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *       400:
+ *         description: Validation error
+ */
+router.post('/upload-image', upload.single('file'), uploadImage);
 
 module.exports = router; 
