@@ -141,6 +141,7 @@ exports.create = async (req, res) => {
       message: 'Product created successfully',
       data: populatedProduct
     });
+    
   } catch (error) {
     //CONSOLE.error('Create product error:', error);
     res.status(500).json({
@@ -149,7 +150,7 @@ exports.create = async (req, res) => {
       error: error.message
     });
   }
-  
+
 };
 
 exports.update = async (req, res) => {
