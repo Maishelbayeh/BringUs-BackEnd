@@ -86,7 +86,9 @@ exports.create = async (req, res) => {
       isFeatured = false, isOnSale = false, salePercentage = 0, attributes = [],
       specifications = [], tags = [], weight, dimensions, rating = 0, numReviews = 0,
       views = 0, soldCount = 0, seo,
-      specificationValues = []
+      specificationValues = [],
+      barcodes = [], // أضف هذا السطر
+      lowStockThreshold = 5 // أضف هذا السطر
     } = req.body;
 
     // Handle main image upload
@@ -127,7 +129,9 @@ exports.create = async (req, res) => {
       availableQuantity, stock, productLabels, colors, images: imagesUrls, mainImage: mainImageUrl,
       compareAtPrice, costPrice, productOrder, visibility, isActive, isFeatured, isOnSale, salePercentage,
       attributes, specifications, tags, weight, dimensions, rating, numReviews, views, soldCount, seo,
-      specificationValues
+      specificationValues,
+      barcodes, // أضف هذا السطر
+      lowStockThreshold // أضف هذا السطر
     };
 
     const product = await Product.create(productData);
