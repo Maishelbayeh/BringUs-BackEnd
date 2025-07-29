@@ -799,6 +799,55 @@ router.get('/by-store/:storeId', ProductController.getByStoreId);
 
 /**
  * @swagger
+ * /api/products/{productId}/variants/{variantId}:
+ *   get:
+ *     summary: Get single variant by ID
+ *     description: Retrieve a specific variant of a parent product by its ID
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Parent product ID
+ *       - in: path
+ *         name: variantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Variant product ID
+ *       - in: query
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID
+ *     responses:
+ *       200:
+ *         description: Variant retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Product or variant not found
+ */
+router.get('/:productId/variants/:variantId', ProductController.getVariantById);
+
+/**
+ * @swagger
  * /api/products/{id}:
  *   get:
  *     summary: Get single product by ID

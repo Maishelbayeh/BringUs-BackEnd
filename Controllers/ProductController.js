@@ -671,8 +671,8 @@ exports.addVariant = async (req, res) => {
     const variantProduct = new Product({
       ...variantData,
       store: storeId,
-      category: parentProduct.category, // Inherit category from parent
-      unit: parentProduct.unit, // Inherit unit from parent
+      category: variantData.category || parentProduct.category,
+      unit: variantData.unit || parentProduct.unit,
       hasVariants: false, // Variants cannot have their own variants
       variants: [],
       isParent: false, // Mark as variant
@@ -986,6 +986,64 @@ exports.getByStoreId = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching products by storeId',
+      error: err.message
+    });
+  }
+}; 
+
+// Get single variant by ID
+exports.getVariantById = async (req, res) => {
+  try {
+    const { productId, variantId } = req.params;
+    const { storeId } = req.query;
+
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in query parameters'
+      });
+    }
+
+    // تحقق من أن المنتج الأب موجود وينتمي لنفس المتجر
+    const parentProduct = await Product.findOne({ _id: productId, store: storeId });
+    if (!parentProduct) {
+      return res.status(404).json({
+        success: false,
+        error: 'Parent product not found'
+      });
+    }
+
+    // جلب المتغير
+    const variant = await Product.findOne({ _id: variantId, store: storeId })
+      .populate('category')
+      .populate('productLabels')
+      .populate('specifications')
+      .populate('unit')
+      .populate('store', 'name domain');
+
+    if (!variant) {
+      return res.status(404).json({
+        success: false,
+        error: 'Variant not found'
+      });
+    }
+
+    // تحقق أن المتغير فعلاً ضمن متغيرات المنتج الأب
+    if (!parentProduct.variants.includes(variantId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Variant does not belong to this parent product'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: variant
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
       error: err.message
     });
   }

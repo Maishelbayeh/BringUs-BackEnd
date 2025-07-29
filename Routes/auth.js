@@ -293,22 +293,18 @@ router.post('/login', [
     user.lastLogin = new Date();
     await user.save();
 
-    // Generate JWT token
-    const token = user.getJwtToken();
-
     // Get store information for admin users
     let userStore = null;
     let userStores = [];
+    let storeIdForToken = null;
     if (user.role === 'admin') {
       try {
         const Owner = require('../Models/Owner');
         const Store = require('../Models/Store');
-        
         const owners = await Owner.find({ 
           userId: user._id, 
           status: 'active' 
         }).populate('storeId');
-        
         if (owners && owners.length > 0) {
           userStores = owners.map(owner => ({
             id: owner.storeId._id,
@@ -320,15 +316,20 @@ router.post('/login', [
             isOwner: true,
             permissions: owner.permissions
           }));
-          
           // Set the first store as default
           userStore = userStores[0];
+          storeIdForToken = userStores[0].id;
         }
       } catch (storeError) {
         //CONSOLE.error('Error fetching admin store:', storeError);
         // Don't fail login if store fetch fails
       }
+    } else if (user.role === 'client' && user.store) {
+      storeIdForToken = user.store;
     }
+
+    // Generate JWT token with storeId if available
+    const token = user.getJwtToken(storeIdForToken);
 
     // monjed update start
     // Cart merge logic after successful login
@@ -369,7 +370,8 @@ router.post('/login', [
         avatar: user.avatar,
         store: userStore, // Default store for admin
         stores: userStores // All stores for admin
-      }
+      },
+      storeId: storeIdForToken // أضف هذا الحقل لسهولة الوصول من الفرونت
     });
   } catch (error) {
     //CONSOLE.error('Login error:', error);

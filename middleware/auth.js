@@ -1,23 +1,63 @@
 const jwt = require('jsonwebtoken');
 const User = require('../Models/User');
 
-// Protect routes - require authentication (TEMPORARILY DISABLED FOR TESTING)
+// Protect routes - require authentication
 exports.protect = async (req, res, next) => {
   try {
-    // TEMPORARY: Skip JWT verification for testing
-    // Create a mock superadmin user for testing
-    req.user = {
-      _id: '6863f791f1a6dba57fe0e323', // Superadmin ID from database
-      firstName: 'Super',
-      lastName: 'Admin',
-      email: 'admin@bringus.com',
-      role: 'superadmin',
-      status: 'active',
-      isActive: true
-    };
-    
-    //CONSOLE.log('🔓 Auth bypassed - Using mock superadmin user');
-    next();
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access denied. No token provided.'
+      });
+    }
+
+    try {
+      // Verify token
+      const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+      const decoded = jwt.verify(token, jwtSecret);
+      
+      // Get user from database
+      const user = await User.findById(decoded.id);
+      
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token'
+        });
+      }
+
+      if (!user.isActive) {
+        return res.status(401).json({
+          success: false,
+          message: 'Account is deactivated'
+        });
+      }
+
+      // Add user and storeId from token to request
+      req.user = {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        isActive: user.isActive,
+        storeId: decoded.storeId // Add storeId from JWT token
+      };
+
+      next();
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+    }
   } catch (error) {
     //CONSOLE.error('Auth middleware error:', error);
     return res.status(500).json({
