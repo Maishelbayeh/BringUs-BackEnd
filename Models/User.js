@@ -141,11 +141,12 @@ userSchema.methods.comparePassword = async function(enteredPassword) {
 
 
 // Return JWT token
-userSchema.methods.getJwtToken = function() {
+userSchema.methods.getJwtToken = function(storeId) {
   const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
   const jwtExpire = process.env.JWT_EXPIRE || '7d';
-  
-  return jwt.sign({ id: this._id }, jwtSecret, {
+  const payload = { id: this._id, role: this.role };
+  if (storeId) payload.storeId = storeId;
+  return jwt.sign(payload, jwtSecret, {
     expiresIn: jwtExpire
   });
 };

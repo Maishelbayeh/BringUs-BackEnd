@@ -125,6 +125,7 @@ const termsConditionsRoutes = require('./Routes/termsConditions');
 const productRoutes = require('./Routes/product');
 const socialCommentRoutes = require('./Routes/socialComment');
 const orderRoutes = require('./Routes/order');
+const likesRoutes = require('./Routes/likes');
 
 // Route middleware
 app.use('/api/auth', authRoutes);
@@ -143,6 +144,7 @@ app.use('/api/terms-conditions', termsConditionsRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/social-comments', socialCommentRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/likes', likesRoutes);
 
 /**
  * @swagger

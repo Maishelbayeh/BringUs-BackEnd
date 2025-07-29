@@ -6,10 +6,15 @@ exports.verifyStoreAccess = async (req, res, next) => {
   try {
     let storeId = req.params.storeId || req.body.store || req.query.storeId;
     
-    // If no storeId is provided, try to get user's default store
+    // If no storeId is provided, try to get from JWT token first
+    if (!storeId && req.user && req.user.storeId) {
+      storeId = req.user.storeId;
+    }
+    
+    // If still no storeId, try to get user's default store from database
     if (!storeId && req.user) {
       const owner = await Owner.findOne({ 
-        userId: req.user.id,
+        userId: req.user._id || req.user.id,
         status: 'active'
       }).populate('storeId');
       

@@ -1,5 +1,6 @@
 const express = require('express');
 const { protect } = require('../middleware/auth');
+const { verifyStoreAccess } = require('../middleware/storeAuth');
 const { getLikedProducts, likeProduct, unlikeProduct } = require('../controllers/like.controller');
 
 const router = express.Router();
@@ -18,7 +19,7 @@ const router = express.Router();
  *       401:
  *         description: Unauthorized access
  */
-router.get('/api/likes', protect, getLikedProducts);
+router.get('/', protect, getLikedProducts);
 
 /**
  * @swagger
@@ -47,7 +48,7 @@ router.get('/api/likes', protect, getLikedProducts);
  *       404:
  *         description: Product not found
  */
-router.post('/api/likes/:productId', protect, likeProduct);
+router.post('/:productId', protect, verifyStoreAccess, likeProduct);
 
 /**
  * 
@@ -73,6 +74,6 @@ router.post('/api/likes/:productId', protect, likeProduct);
  *       401:
  *         description: Unauthorized
  */
-router.delete('/api/likes/:productId', protect, unlikeProduct);
+router.delete('/:productId', protect, verifyStoreAccess, unlikeProduct);
 
 module.exports = router; 
