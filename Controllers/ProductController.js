@@ -165,7 +165,6 @@ exports.create = async (req, res) => {
       specifications = [], tags = [], weight, dimensions, rating = 0, numReviews = 0,
       views = 0, soldCount = 0, seo,
       specificationValues = [],
-      barcodes = [], // أضف هذا السطر
       lowStockThreshold = 5 // أضف هذا السطر
     } = req.body;
 

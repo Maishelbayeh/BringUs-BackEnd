@@ -50,6 +50,7 @@ router.get('/api/likes', protect, getLikedProducts);
 router.post('/api/likes/:productId', protect, likeProduct);
 
 /**
+ * 
  * @swagger
  * /api/likes/{productId}:
  *   delete:
