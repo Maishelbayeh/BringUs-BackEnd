@@ -76,12 +76,90 @@ exports.getById = async (req, res) => {
   }
 };
 
+// exports.create = async (req, res) => {
+//   try {
+//     // Parse fields from body
+//     const {
+//       nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, storeId,
+//       availableQuantity = 0, stock = 0, productLabels = [], colors = [],
+//       compareAtPrice, costPrice, productOrder = 0, visibility = true, isActive = true,
+//       isFeatured = false, isOnSale = false, salePercentage = 0, attributes = [],
+//       specifications = [], tags = [], weight, dimensions, rating = 0, numReviews = 0,
+//       views = 0, soldCount = 0, seo
+//     } = req.body;
+
+//     // Handle main image upload
+//     let mainImageUrl = req.body.mainImage || null;
+//     if (req.files && req.files.mainImage && req.files.mainImage[0]) {
+//       const result = await uploadToCloudflare(
+//         req.files.mainImage[0].buffer,
+//         req.files.mainImage[0].originalname,
+//         `products/${storeId}/main`
+//       );
+//       mainImageUrl = result.url;
+//     }
+
+//     // Handle gallery images upload
+//     let imagesUrls = [];
+//     if (req.files && req.files.images && req.files.images.length > 0) {
+//       const uploadPromises = req.files.images.map(file =>
+//         uploadToCloudflare(file.buffer, file.originalname, `products/${storeId}/gallery`)
+//       );
+//       const results = await Promise.all(uploadPromises);
+//       imagesUrls = results.map(r => r.url);
+//     } else if (req.body.images) {
+//       // Support both array and single string
+//       if (Array.isArray(req.body.images)) {
+//         imagesUrls = req.body.images;
+//       } else if (typeof req.body.images === 'string') {
+//         try {
+//           imagesUrls = JSON.parse(req.body.images);
+//         } catch {
+//           imagesUrls = [req.body.images];
+//         }
+//       }
+//     }
+
+//     // Create product data
+//     const productData = {
+//       nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, store: storeId,
+//       availableQuantity, stock, productLabels, colors, images: imagesUrls, mainImage: mainImageUrl,
+//       compareAtPrice, costPrice, productOrder, visibility, isActive, isFeatured, isOnSale, salePercentage,
+//       attributes, specifications, tags, weight, dimensions, rating, numReviews, views, soldCount, seo
+//     };
+
+//     const product = await Product.create(productData);
+//     const populatedProduct = await Product.findById(product._id)
+//       .populate('category', 'nameAr nameEn')
+//       .populate('productLabels', 'nameAr nameEn color')
+//       .populate('specifications', 'descriptionAr descriptionEn')
+//       .populate('unit', 'nameAr nameEn symbol')
+//       .populate('store', 'name domain');
+
+//     res.status(201).json({
+//       success: true,
+//       message: 'Product created successfully',
+//       data: populatedProduct
+//     });
+
+//   } catch (error) {
+//     //CONSOLE.error('Create product error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error creating product',
+//       error: error.message
+//     });
+//   }
+
+// };
+
+
 exports.create = async (req, res) => {
   try {
     // Parse fields from body
     const {
       nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, storeId,
-      availableQuantity = 0, stock = 0, productLabels = [], colors = [],
+      availableQuantity = 0, stock = 0, productLabels = [], colors = [], barcodes = [], // تمت إضافة الباركود هنا
       compareAtPrice, costPrice, productOrder = 0, visibility = true, isActive = true,
       isFeatured = false, isOnSale = false, salePercentage = 0, attributes = [],
       specifications = [], tags = [], weight, dimensions, rating = 0, numReviews = 0,
@@ -125,7 +203,8 @@ exports.create = async (req, res) => {
       nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, store: storeId,
       availableQuantity, stock, productLabels, colors, images: imagesUrls, mainImage: mainImageUrl,
       compareAtPrice, costPrice, productOrder, visibility, isActive, isFeatured, isOnSale, salePercentage,
-      attributes, specifications, tags, weight, dimensions, rating, numReviews, views, soldCount, seo
+      attributes, specifications, tags, weight, dimensions, rating, numReviews, views, soldCount, seo,
+      barcodes // تمت إضافة الباركود هنا
     };
 
     const product = await Product.create(productData);
@@ -141,7 +220,7 @@ exports.create = async (req, res) => {
       message: 'Product created successfully',
       data: populatedProduct
     });
-    
+
   } catch (error) {
     //CONSOLE.error('Create product error:', error);
     res.status(500).json({
@@ -150,7 +229,6 @@ exports.create = async (req, res) => {
       error: error.message
     });
   }
-
 };
 
 exports.update = async (req, res) => {
