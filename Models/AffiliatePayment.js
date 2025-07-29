@@ -34,11 +34,10 @@ const affiliatePaymentSchema = new mongoose.Schema({
     default: 'pending'
   },
   
-  // Payment reference and tracking
   reference: {
     type: String,
     required: false,
-    unique: false,
+    unique: true,
     trim: true,
     maxlength: [100, 'Reference cannot exceed 100 characters']
   },

@@ -21,7 +21,7 @@ const advertisementSchema = new mongoose.Schema({
   // HTML content with inline CSS
   htmlContent: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 5000 // Increased for HTML content
   },
@@ -110,6 +110,15 @@ advertisementSchema.pre('save', async function(next) {
     } catch (error) {
       return next(error);
     }
+  }
+  next();
+});
+
+// Custom validator: either htmlContent or backgroundImageUrl must be present
+advertisementSchema.pre('validate', function(next) {
+  if (!this.htmlContent && !this.backgroundImageUrl) {
+    this.invalidate('htmlContent', 'Either htmlContent or backgroundImageUrl is required.');
+    this.invalidate('backgroundImageUrl', 'Either htmlContent or backgroundImageUrl is required.');
   }
   next();
 });

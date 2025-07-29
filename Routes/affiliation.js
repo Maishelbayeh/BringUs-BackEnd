@@ -10,7 +10,8 @@ const {
   updateAffiliate,
   verifyAffiliate,
   getAffiliatePayments,
-  createAffiliatePayment
+  createAffiliatePayment,
+  deleteAffiliate,
 } = require('../Controllers/AffiliationController');
 const { protect, authorize } = require('../middleware/auth');
 const { verifyStoreAccess } = require('../middleware/storeAuth');
@@ -579,5 +580,31 @@ router.get('/:id/payments', protect, authorize('admin', 'superadmin'), verifySto
  *         description: Access denied
  */
 router.post('/:id/payments', protect, authorize('admin', 'superadmin'), verifyStoreAccess, validateAffiliatePayment, createAffiliatePayment);
+
+/**
+ * @swagger
+ * /api/affiliations/{id}:
+ *   delete:
+ *     summary: Delete affiliate
+ *     description: Delete an affiliate by ID
+ *     tags: [Affiliation]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Affiliate ID
+ *     responses:
+ *       200:
+ *         description: Affiliate deleted successfully
+ *       404:
+ *         description: Affiliate not found
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess, deleteAffiliate);
 
 module.exports = router; 

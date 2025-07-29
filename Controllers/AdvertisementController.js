@@ -1,5 +1,8 @@
 const Advertisement = require('../Models/Advertisement');
 const { success, error } = require('../utils/response');
+const { uploadToCloudflare } = require('../utils/cloudflareUploader');
+const multer = require('multer');
+const upload = multer(); // In-memory storage
 
 /**
  * @swagger
@@ -8,9 +11,9 @@ const { success, error } = require('../utils/response');
  *     Advertisement:
  *       type: object
  *       required:
- *         - title
- *         - htmlContent
  *         - store
+ *         - title
+ *       description: 'Either htmlContent or backgroundImageUrl is required. At least one must be provided.'
  *       properties:
  *         title:
  *           type: string
@@ -22,11 +25,11 @@ const { success, error } = require('../utils/response');
  *           example: "Special discount for Ramadan"
  *         htmlContent:
  *           type: string
- *           description: HTML content with inline CSS
+ *           description: HTML content with inline CSS. Required if backgroundImageUrl is not provided.
  *           example: "<div style='background: red; color: white; padding: 20px;'>Special Offer!</div>"
  *         backgroundImageUrl:
  *           type: string
- *           description: Background image URL
+ *           description: Background image URL. Required if htmlContent is not provided.
  *           example: "https://example.com/bg.jpg"
  *         position:
  *           type: string
@@ -595,6 +598,41 @@ const getAdvertisementStats = async (req, res) => {
   }
 };
 
+// Image upload endpoint
+const uploadImage = async (req, res) => {
+  try {
+    console.log('uploadImage called', req.file ? req.file.originalname : 'no file');
+    if (!req.file) {
+      return error(res, { message: 'No file uploaded', statusCode: 400 });
+    }
+    // Use the same logic as ProductController.js
+    let imageUrl = null;
+    try {
+      const result = await uploadToCloudflare(
+        req.file.buffer,
+        req.file.originalname,
+        'advertisements'
+      );
+      imageUrl = result.url;
+      console.log('cloudflare upload result:', result);
+    } catch (err) {
+      console.log('Cloudflare upload error:', err);
+      return error(res, { message: 'Upload to Cloudflare failed', statusCode: 500 });
+    }
+    if (!imageUrl) {
+      return error(res, { message: 'Image upload failed', statusCode: 500 });
+    }
+    return res.status(200).json({
+      success: true,
+      message: 'Image uploaded successfully',
+      data: { url: imageUrl }
+    });
+  } catch (err) {
+    console.log('Error in uploadImage:', err);
+    return error(res, { message: err.message || 'Upload failed', statusCode: 500 });
+  }
+};
+
 module.exports = {
   getAllAdvertisements,
   getActiveAdvertisement,
@@ -604,5 +642,6 @@ module.exports = {
   deleteAdvertisement,
   toggleActiveStatus,
   incrementClick,
-  getAdvertisementStats
+  getAdvertisementStats,
+  uploadImage
 }; 

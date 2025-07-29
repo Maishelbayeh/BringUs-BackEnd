@@ -1027,6 +1027,66 @@ const createAffiliatePayment = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/affiliations/{id}:
+ *   delete:
+ *     summary: Delete affiliate
+ *     description: Delete an affiliate by ID
+ *     tags: [Affiliation]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Affiliate ID
+ *     responses:
+ *       200:
+ *         description: Affiliate deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Affiliate deleted successfully"
+ *       404:
+ *         description: Affiliate not found
+ *       500:
+ *         description: Internal server error
+ */
+const deleteAffiliate = async (req, res) => {
+  try {
+    // Add store filter for isolation
+    const filter = addStoreFilter(req, { _id: req.params.id });
+    const affiliate = await Affiliation.findOne(filter);
+    if (!affiliate) {
+      return res.status(404).json({
+        success: false,
+        message: 'Affiliate not found'
+      });
+    }
+    await Affiliation.deleteOne({ _id: affiliate._id });
+    res.status(200).json({
+      success: true,
+      message: 'Affiliate deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting affiliate',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllAffiliates,
   getAffiliateStats,
@@ -1037,5 +1097,6 @@ module.exports = {
   updateAffiliate,
   verifyAffiliate,
   getAffiliatePayments,
-  createAffiliatePayment
+  createAffiliatePayment,
+  deleteAffiliate,
 }; 

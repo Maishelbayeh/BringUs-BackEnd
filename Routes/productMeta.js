@@ -106,6 +106,7 @@ const ProductController = require('../Controllers/ProductController');
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *     responses:
  *       200:
  *         description: Category found
@@ -181,6 +182,7 @@ const ProductController = require('../Controllers/ProductController');
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *     responses:
  *       200:
  *         description: Product label found
@@ -234,6 +236,7 @@ const ProductController = require('../Controllers/ProductController');
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Store ID to filter product labels
  *     responses:
  *       200:
@@ -386,6 +389,7 @@ const ProductController = require('../Controllers/ProductController');
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Product specification ID
  *     responses:
  *       200:
@@ -422,6 +426,7 @@ const ProductController = require('../Controllers/ProductController');
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Product specification ID
  *     requestBody:
  *       required: true
@@ -532,6 +537,7 @@ const ProductController = require('../Controllers/ProductController');
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Product specification ID
  *     responses:
  *       200:
@@ -574,6 +580,7 @@ const ProductController = require('../Controllers/ProductController');
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Store ID to filter product specifications
  *         example: "507f1f77bcf86cd799439012"
  *     responses:
@@ -644,6 +651,7 @@ router.get('/product-specifications/by-store', require('../Controllers/ProductSp
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *     responses:
  *       200:
  *         description: Product variant found
@@ -718,6 +726,7 @@ router.get('/product-specifications/by-store', require('../Controllers/ProductSp
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Store ID to filter product variants
  *     responses:
  *       200:
@@ -765,6 +774,7 @@ router.get('/product-specifications/by-store', require('../Controllers/ProductSp
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *     responses:
  *       200:
  *         description: Unit found
@@ -818,6 +828,7 @@ router.get('/product-specifications/by-store', require('../Controllers/ProductSp
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Store ID to filter units
  *     responses:
  *       200:
@@ -867,6 +878,7 @@ router.get('/stores/:storeId/units', UnitController.getByStoreId);
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *     responses:
  *       200:
  *         description: Product found

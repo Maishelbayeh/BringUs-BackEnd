@@ -249,7 +249,7 @@ router.get('/', [
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Parent product ID
  *     requestBody:
  *       required: true
@@ -299,7 +299,7 @@ router.get('/', [
  *                 description: Stock quantity
  *               storeId:
  *                 type: string
- *                 format: uuid
+ *                 pattern: '^[a-fA-F0-9]{24}$'
  *                 description: Store ID
  *     responses:
  *       201:
@@ -345,14 +345,14 @@ router.post('/:productId/variants', [
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Parent product ID
  *       - in: query
  *         name: storeId
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Store ID
  *     responses:
  *       200:
@@ -395,7 +395,7 @@ router.get('/:productId/variants', [
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Parent product ID
  *     requestBody:
  *       required: true
@@ -445,7 +445,7 @@ router.get('/:productId/variants', [
  *                 description: Available quantity
  *               storeId:
  *                 type: string
- *                 format: uuid
+ *                 pattern: '^[a-fA-F0-9]{24}$'
  *                 description: Store ID
  *               mainImage:
  *                 type: string
@@ -504,7 +504,7 @@ router.post('/:productId/add-variant', upload.fields([
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Parent product ID
  *       - in: path
  *         name: variantId
@@ -518,7 +518,7 @@ router.post('/:productId/add-variant', upload.fields([
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Store ID
  *     responses:
  *       200:
@@ -557,7 +557,7 @@ router.delete('/:productId/variants/:variantId', [
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
+ *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Parent product ID
  *       - in: path
  *         name: variantId
@@ -611,7 +611,7 @@ router.delete('/:productId/variants/:variantId', [
  *                 description: Available quantity
  *               storeId:
  *                 type: string
- *                 format: uuid
+ *                 pattern: '^[a-fA-F0-9]{24}$'
  *                 description: Store ID
  *               mainImage:
  *                 type: string
@@ -1616,7 +1616,7 @@ const uploadProductImage = multer({ storage: imageStorage });
  *                 description: Product main image file
  *               storeId:
  *                 type: string
- *                 format: uuid
+ *                 pattern: '^[a-fA-F0-9]{24}$'
  *                 example: '507f1f77bcf86cd799439012'
  *                 description: Store ID for organizing uploads
  *     responses:
@@ -1706,7 +1706,7 @@ router.post('/upload-main-image', uploadProductImage.single('image'), async (req
  *                 description: Product gallery image files (max 10)
  *               storeId:
  *                 type: string
- *                 format: uuid
+ *                 pattern: '^[a-fA-F0-9]{24}$'
  *                 example: '507f1f77bcf86cd799439012'
  *                 description: Store ID for organizing uploads
  *     responses:
@@ -1807,7 +1807,7 @@ router.post('/upload-gallery-images', uploadProductImage.array('images', 10), as
  *                 description: Product gallery image file
  *               storeId:
  *                 type: string
- *                 format: uuid
+ *                 pattern: '^[a-fA-F0-9]{24}$'
  *                 example: '507f1f77bcf86cd799439012'
  *                 description: Store ID for organizing uploads
  *     responses:
