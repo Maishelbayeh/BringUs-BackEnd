@@ -40,7 +40,7 @@ const paymentMethodSchema = new mongoose.Schema({
   methodType: {
     type: String,
     required: [true, 'Method type is required'],
-    enum: ['cash', 'card', 'digital_wallet', 'bank_transfer', 'other'],
+    enum: ['cash', 'card', 'digital_wallet', 'bank_transfer', 'qr_code', 'other'],
     default: 'other'
   },
   
@@ -55,34 +55,9 @@ const paymentMethodSchema = new mongoose.Schema({
     default: false
   },
   
-  // Financial settings
-  processingFee: {
-    type: Number,
-    default: 0,
-    min: [0, 'Processing fee cannot be negative'],
-    max: [100, 'Processing fee cannot exceed 100%']
-  },
+
   
-  minimumAmount: {
-    type: Number,
-    default: 0,
-    min: [0, 'Minimum amount cannot be negative']
-  },
-  
-  maximumAmount: {
-    type: Number,
-    default: 100000,
-    min: [0, 'Maximum amount cannot be negative']
-  },
-  
-  // Supported currencies
-  supportedCurrencies: [{
-    type: String,
-    trim: true,
-    uppercase: true,
-    minlength: [3, 'Currency code must be at least 3 characters'],
-    maxlength: [3, 'Currency code must be at most 3 characters']
-  }],
+
   
   // Logo and branding
   logoUrl: {
@@ -90,34 +65,52 @@ const paymentMethodSchema = new mongoose.Schema({
     trim: true
   },
   
-  // Additional settings
-  requiresCardNumber: {
-    type: Boolean,
-    default: false
+  // QR Code settings
+  qrCode: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    qrCodeUrl: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: function(url) {
+          if (!this.qrCode.enabled) return true;
+          return url && url.length > 0;
+        },
+        message: 'QR Code URL is required when QR code is enabled'
+      }
+    },
+    qrCodeImage: {
+      type: String,
+      trim: true
+    },
+    qrCodeData: {
+      type: String,
+      trim: true
+    }
   },
   
-  requiresExpiryDate: {
-    type: Boolean,
-    default: false
-  },
-  
-  requiresCVV: {
-    type: Boolean,
-    default: false
-  },
-  
-  // Priority for sorting
-  priority: {
-    type: Number,
-    default: 0,
-    min: [0, 'Priority cannot be negative']
-  },
-  
-  // Configuration for specific payment providers
-  config: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {}
-  }
+  // Payment images (like reflect)
+  paymentImages: [{
+    imageUrl: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    imageType: {
+      type: String,
+      enum: ['logo', 'banner', 'qr_code', 'payment_screenshot', 'other'],
+      default: 'other'
+    },
+    altText: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Alt text cannot exceed 200 characters']
+    },
+
+  }]
 }, {
   timestamps: true
 });
@@ -127,7 +120,7 @@ paymentMethodSchema.index({ store: 1 });
 paymentMethodSchema.index({ store: 1, isActive: 1 });
 paymentMethodSchema.index({ store: 1, isDefault: 1 });
 paymentMethodSchema.index({ store: 1, methodType: 1 });
-paymentMethodSchema.index({ store: 1, priority: 1 });
+paymentMethodSchema.index({ store: 1, 'qrCode.enabled': 1 });
 
 // Ensure only one default method per store and prevent inactive default
 paymentMethodSchema.pre('save', async function(next) {
@@ -155,6 +148,12 @@ paymentMethodSchema.pre('save', async function(next) {
     this.isDefault = false;
   }
   
+  // Validate QR code settings
+  if (this.qrCode.enabled && !this.qrCode.qrCodeUrl && !this.qrCode.qrCodeData) {
+    const error = new Error('QR Code URL or data is required when QR code is enabled');
+    return next(error);
+  }
+  
   next();
 });
 
@@ -172,6 +171,25 @@ paymentMethodSchema.virtual('description').get(function() {
     ar: this.descriptionAr,
     en: this.descriptionEn
   };
+});
+
+// Virtual for QR code info
+paymentMethodSchema.virtual('qrCodeInfo').get(function() {
+  if (!this.qrCode.enabled) return null;
+  
+  return {
+    enabled: this.qrCode.enabled,
+    url: this.qrCode.qrCodeUrl,
+    image: this.qrCode.qrCodeImage,
+    data: this.qrCode.qrCodeData
+  };
+});
+
+// Virtual for payment images sorted by priority
+paymentMethodSchema.virtual('sortedPaymentImages').get(function() {
+  if (!this.paymentImages || this.paymentImages.length === 0) return [];
+  
+  return this.paymentImages.sort((a, b) => a.priority - b.priority);
 });
 
 // Ensure virtuals are included in JSON

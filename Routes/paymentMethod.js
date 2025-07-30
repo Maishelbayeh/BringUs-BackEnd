@@ -7,7 +7,12 @@ const {
   updatePaymentMethod,
   deletePaymentMethod,
   toggleActiveStatus,
-  setAsDefault
+  setAsDefault,
+  uploadLogo,
+  uploadQrCode,
+  uploadPaymentImage,
+  removePaymentImage,
+  upload
 } = require('../Controllers/PaymentMethodController');
 const { protect, authorize } = require('../middleware/auth');
 const { verifyStoreAccess } = require('../middleware/storeAuth');
@@ -39,8 +44,8 @@ const validatePaymentMethod = [
     .withMessage('English description cannot exceed 500 characters'),
   
   body('methodType')
-    .isIn(['cash', 'card', 'digital_wallet', 'bank_transfer', 'other'])
-    .withMessage('Method type must be one of: cash, card, digital_wallet, bank_transfer, other'),
+    .isIn(['cash', 'card', 'digital_wallet', 'bank_transfer', 'qr_code', 'other'])
+    .withMessage('Method type must be one of: cash, card, digital_wallet, bank_transfer, qr_code, other'),
   
   body('isActive')
     .optional()
@@ -52,55 +57,52 @@ const validatePaymentMethod = [
     .isBoolean()
     .withMessage('isDefault must be a boolean'),
   
-  body('processingFee')
-    .optional()
-    .isFloat({ min: 0, max: 100 })
-    .withMessage('Processing fee must be between 0 and 100'),
-  
-  body('minimumAmount')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Minimum amount must be non-negative'),
-  
-  body('maximumAmount')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Maximum amount must be non-negative'),
-  
-  body('supportedCurrencies')
-    .optional()
-    .isArray()
-    .withMessage('Supported currencies must be an array'),
-  
-  body('supportedCurrencies.*')
-    .optional()
-    .isLength({ min: 3, max: 3 })
-    .withMessage('Currency codes must be exactly 3 characters'),
-  
   body('logoUrl')
     .optional()
     .isURL()
     .withMessage('Logo URL must be a valid URL'),
   
-  body('requiresCardNumber')
+  // QR Code validation
+  body('qrCode.enabled')
     .optional()
     .isBoolean()
-    .withMessage('requiresCardNumber must be a boolean'),
+    .withMessage('qrCode.enabled must be a boolean'),
   
-  body('requiresExpiryDate')
+  body('qrCode.qrCodeUrl')
     .optional()
-    .isBoolean()
-    .withMessage('requiresExpiryDate must be a boolean'),
+    .isURL()
+    .withMessage('QR Code URL must be a valid URL'),
   
-  body('requiresCVV')
+  body('qrCode.qrCodeImage')
     .optional()
-    .isBoolean()
-    .withMessage('requiresCVV must be a boolean'),
+    .isURL()
+    .withMessage('QR Code image URL must be a valid URL'),
   
-  body('priority')
+  body('qrCode.qrCodeData')
     .optional()
-    .isInt({ min: 0 })
-    .withMessage('Priority must be a non-negative integer')
+    .isString()
+    .withMessage('QR Code data must be a string'),
+  
+  // Payment Images validation
+  body('paymentImages')
+    .optional()
+    .isArray()
+    .withMessage('Payment images must be an array'),
+  
+  body('paymentImages.*.imageUrl')
+    .optional()
+    .isURL()
+    .withMessage('Payment image URL must be a valid URL'),
+  
+  body('paymentImages.*.imageType')
+    .optional()
+    .isIn(['logo', 'banner', 'qr_code', 'payment_screenshot', 'other'])
+    .withMessage('Image type must be one of: logo, banner, qr_code, payment_screenshot, other'),
+  
+  body('paymentImages.*.altText')
+    .optional()
+    .isLength({ max: 200 })
+    .withMessage('Alt text cannot exceed 200 characters')
 ];
 
 /**
@@ -173,17 +175,53 @@ router.get('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess,
  *                 example: "Cash on Delivery"
  *               methodType:
  *                 type: string
- *                 enum: [cash, card, digital_wallet, bank_transfer, other]
+ *                 enum: [cash, card, digital_wallet, bank_transfer, qr_code, other]
  *                 example: "cash"
- *               processingFee:
- *                 type: number
- *                 example: 0
- *               minimumAmount:
- *                 type: number
- *                 example: 0
- *               maximumAmount:
- *                 type: number
- *                 example: 10000
+ *               descriptionAr:
+ *                 type: string
+ *                 example: "ادفع عند استلام طلبك"
+ *               descriptionEn:
+ *                 type: string
+ *                 example: "Pay when you receive your order"
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
+ *               isDefault:
+ *                 type: boolean
+ *                 example: false
+ *               logoUrl:
+ *                 type: string
+ *                 example: "https://example.com/logo.png"
+ *               qrCode:
+ *                 type: object
+ *                 properties:
+ *                   enabled:
+ *                     type: boolean
+ *                     example: false
+ *                   qrCodeUrl:
+ *                     type: string
+ *                     example: "https://example.com/qr.png"
+ *                   qrCodeImage:
+ *                     type: string
+ *                     example: "https://example.com/qr-image.png"
+ *                   qrCodeData:
+ *                     type: string
+ *                     example: "payment://qr-data"
+ *               paymentImages:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     imageUrl:
+ *                       type: string
+ *                       example: "https://example.com/payment-image.png"
+ *                     imageType:
+ *                       type: string
+ *                       enum: [logo, banner, qr_code, payment_screenshot, other]
+ *                       example: "payment_screenshot"
+ *                     altText:
+ *                       type: string
+ *                       example: "Payment method screenshot"
  *     responses:
  *       201:
  *         description: Created successfully
@@ -222,12 +260,20 @@ router.post('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, v
  *                 type: string
  *               methodType:
  *                 type: string
- *               processingFee:
- *                 type: number
- *               minimumAmount:
- *                 type: number
- *               maximumAmount:
- *                 type: number
+ *               descriptionAr:
+ *                 type: string
+ *               descriptionEn:
+ *                 type: string
+ *               isActive:
+ *                 type: boolean
+ *               isDefault:
+ *                 type: boolean
+ *               logoUrl:
+ *                 type: string
+ *               qrCode:
+ *                 type: object
+ *               paymentImages:
+ *                 type: array
  *     responses:
  *       200:
  *         description: Updated successfully
@@ -314,5 +360,166 @@ router.patch('/:id/toggle-active', protect, authorize('admin', 'superadmin'), ve
  *         description: Access denied
  */
 router.patch('/:id/set-default', protect, authorize('admin', 'superadmin'), verifyStoreAccess, setAsDefault);
+
+/**
+ * @swagger
+ * /api/payment-methods/{id}/upload-logo:
+ *   post:
+ *     summary: Upload payment method logo
+ *     description: Upload a logo image for a payment method
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment method ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               logo:
+ *                 type: string
+ *                 format: binary
+ *                 description: Logo image file
+ *     responses:
+ *       200:
+ *         description: Logo uploaded successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Payment method not found
+ *       403:
+ *         description: Access denied
+ */
+router.post('/:id/upload-logo', protect, authorize('admin', 'superadmin'), verifyStoreAccess, upload.single('logo'), uploadLogo);
+
+/**
+ * @swagger
+ * /api/payment-methods/{id}/upload-qr-code:
+ *   post:
+ *     summary: Upload QR code image
+ *     description: Upload a QR code image for a payment method
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment method ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               qrCodeImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: QR code image file
+ *               qrCodeData:
+ *                 type: string
+ *                 description: QR code data (optional)
+ *     responses:
+ *       200:
+ *         description: QR code uploaded successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Payment method not found
+ *       403:
+ *         description: Access denied
+ */
+router.post('/:id/upload-qr-code', protect, authorize('admin', 'superadmin'), verifyStoreAccess, upload.single('qrCodeImage'), uploadQrCode);
+
+/**
+ * @swagger
+ * /api/payment-methods/{id}/upload-payment-image:
+ *   post:
+ *     summary: Upload payment image
+ *     description: Upload a payment image (screenshot, banner, etc.) for a payment method
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment method ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Payment image file
+ *               imageType:
+ *                 type: string
+ *                 enum: [logo, banner, qr_code, payment_screenshot, other]
+ *                 description: Type of image
+ *               altText:
+ *                 type: string
+ *                 description: Alt text for the image
+ *     responses:
+ *       200:
+ *         description: Payment image uploaded successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Payment method not found
+ *       403:
+ *         description: Access denied
+ */
+router.post('/:id/upload-payment-image', protect, authorize('admin', 'superadmin'), verifyStoreAccess, upload.single('image'), uploadPaymentImage);
+
+/**
+ * @swagger
+ * /api/payment-methods/{id}/remove-payment-image/{imageIndex}:
+ *   delete:
+ *     summary: Remove payment image
+ *     description: Remove a specific payment image from a payment method
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment method ID
+ *       - in: path
+ *         name: imageIndex
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Index of the image to remove
+ *     responses:
+ *       200:
+ *         description: Payment image removed successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Payment method or image not found
+ *       403:
+ *         description: Access denied
+ */
+router.delete('/:id/remove-payment-image/:imageIndex', protect, authorize('admin', 'superadmin'), verifyStoreAccess, removePaymentImage);
 
 module.exports = router; 
