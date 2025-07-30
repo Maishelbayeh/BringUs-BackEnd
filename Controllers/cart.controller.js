@@ -5,6 +5,10 @@ const Product = require('../Models/Product');
 const { addStoreFilter } = require('../middleware/storeIsolation');
 
 function getCartQuery(req) {
+  console.log('getCartQuery - req.user:', req.user);
+  console.log('getCartQuery - req.store:', req.store);
+  console.log('getCartQuery - req.guestId:', req.guestId);
+  
   if (req.user) return { user: req.user._id, store: req.store._id };
   if (req.guestId) return { guestId: req.guestId, store: req.store._id };
   throw new Error('No user or guestId found');
@@ -31,6 +35,10 @@ exports.getCart = async (req, res) => {
  
 exports.addToCart = async (req, res) => {
   try {
+    console.log('addToCart - req.body:', req.body);
+    console.log('addToCart - req.user:', req.user);
+    console.log('addToCart - req.store:', req.store);
+    
     const { product, quantity, variant } = req.body;
     if (!product || !quantity || quantity < 1) {
       return res.status(400).json({ success: false, message: 'Product and quantity are required' });
@@ -50,6 +58,7 @@ exports.addToCart = async (req, res) => {
     await cart.populate('items.product');
     return res.json({ success: true, data: cart });
   } catch (error) {
+    console.error('addToCart error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
