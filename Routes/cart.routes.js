@@ -2,7 +2,7 @@
 const express = require('express');
 const { protect } = require('../middleware/auth');
 const guestCart = require('../middleware/guestCart');
-const { addStoreFilter } = require('../middleware/storeIsolation');
+const { verifyStoreAccess } = require('../middleware/storeAuth');
 const CartController = require('../controllers/cart.controller');
 
 const router = express.Router();
@@ -21,7 +21,7 @@ const router = express.Router();
  *       401:
  *         description: Unauthorized (if required)
  */
-router.get('/api/cart', protect, guestCart, addStoreFilter, CartController.getCart);
+router.get('/', protect, guestCart, verifyStoreAccess, CartController.getCart);
 
 /**
  * @swagger
@@ -55,7 +55,7 @@ router.get('/api/cart', protect, guestCart, addStoreFilter, CartController.getCa
  *       401:
  *         description: Unauthorized
  */
-router.post('/api/cart', protect, guestCart, addStoreFilter, CartController.addToCart);
+router.post('/', protect, guestCart, verifyStoreAccess, CartController.addToCart);
 
 /**
  * @swagger
@@ -92,7 +92,7 @@ router.post('/api/cart', protect, guestCart, addStoreFilter, CartController.addT
  *       401:
  *         description: Unauthorized
  */
-router.put('/api/cart/:productId', protect, guestCart, addStoreFilter, CartController.updateCartItem);
+router.put('/:productId', protect, guestCart, verifyStoreAccess, CartController.updateCartItem);
 
 /**
  * @swagger
@@ -114,7 +114,7 @@ router.put('/api/cart/:productId', protect, guestCart, addStoreFilter, CartContr
  *       401:
  *         description: Unauthorized
  */
-router.delete('/api/cart/:productId', protect, guestCart, addStoreFilter, CartController.removeCartItem);
+router.delete('/:productId', protect, guestCart, verifyStoreAccess, CartController.removeCartItem);
 
 /**
  * @swagger
@@ -130,7 +130,7 @@ router.delete('/api/cart/:productId', protect, guestCart, addStoreFilter, CartCo
  *       401:
  *         description: Unauthorized
  */
-router.delete('/api/cart', protect, guestCart, addStoreFilter, CartController.clearCart);
+router.delete('/', protect, guestCart, verifyStoreAccess, CartController.clearCart);
 
 module.exports = router;
 // monjed update end
