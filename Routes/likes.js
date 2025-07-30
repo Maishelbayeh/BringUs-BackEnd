@@ -51,6 +51,7 @@ router.get('/', protect, getLikedProducts);
 router.post('/:productId', protect, verifyStoreAccess, likeProduct);
 
 /**
+ * 
  * @swagger
  * /api/likes/{productId}:
  *   delete:
