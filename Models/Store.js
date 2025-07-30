@@ -115,6 +115,9 @@ const storeSchema = new mongoose.Schema({
 // Ensure unique slug
 storeSchema.index({ slug: 1 }, { unique: true });
 
+// Add index for active stores by slug
+storeSchema.index({ slug: 1, status: 1 });
+
 storeSchema.pre('remove', async function(next) {
   try {
     await mongoose.model('Like').deleteMany({ store: this._id });

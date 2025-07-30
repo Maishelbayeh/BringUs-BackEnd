@@ -2,6 +2,205 @@ const Product = require('../Models/Product');
 const { addStoreFilter } = require('../middleware/storeIsolation');
 const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 
+// دالة لحساب السعر الإجمالي للمنتج مع الصفات والألوان
+exports.calculateProductPrice = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { selectedSpecifications = [], selectedColors = [] } = req.body;
+    
+    // التحقق من وجود معرف المتجر أو slug
+    const storeId = req.query.storeId || req.body.storeId;
+    const storeSlug = req.query.storeSlug || req.body.storeSlug;
+    
+    if (!storeId && !storeSlug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID or Store Slug is required'
+      });
+    }
+    
+    // البحث عن المنتج
+    let product;
+    if (storeId) {
+      product = await Product.findOne({ _id: productId, store: storeId })
+        .populate('specifications')
+        .populate('category')
+        .populate('unit');
+    } else if (storeSlug) {
+      const Store = require('../Models/Store');
+      const store = await Store.findOne({ slug: storeSlug, status: 'active' });
+      if (!store) {
+        return res.status(404).json({
+          success: false,
+          message: 'Store not found'
+        });
+      }
+      product = await Product.findOne({ _id: productId, store: store._id })
+        .populate('specifications')
+        .populate('category')
+        .populate('unit');
+    }
+      
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    let basePrice = product.price;
+    let specificationsPrice = 0;
+    let colorsPrice = 0;
+    let specificationsDetails = [];
+    let colorsDetails = [];
+    
+    // حساب سعر الصفات المختارة
+    if (selectedSpecifications && selectedSpecifications.length > 0) {
+      for (const selectedSpec of selectedSpecifications) {
+        // البحث عن الصفة في المنتج
+        const productSpec = product.specifications.find(spec => 
+          spec._id.toString() === selectedSpec.specificationId
+        );
+        
+        if (productSpec) {
+          // البحث عن القيمة في الصفة
+          const specValue = productSpec.values.find(value => 
+            value._id === selectedSpec.valueId
+          );
+          
+          if (specValue && specValue.price) {
+            specificationsPrice += specValue.price;
+            specificationsDetails.push({
+              specificationId: selectedSpec.specificationId,
+              specificationTitle: productSpec.titleAr || productSpec.titleEn,
+              valueId: selectedSpec.valueId,
+              value: selectedSpec.value,
+              price: specValue.price
+            });
+          }
+        }
+      }
+    }
+    
+    // حساب سعر الألوان المختارة
+    if (selectedColors && selectedColors.length > 0) {
+      // يمكن إضافة منطق لحساب سعر الألوان هنا
+      // حالياً نفترض أن الألوان لا تضيف سعر إضافي
+      colorsPrice = 0;
+      colorsDetails = selectedColors.map(color => ({
+        color,
+        price: 0
+      }));
+    }
+    
+    const totalPrice = basePrice + specificationsPrice + colorsPrice;
+    
+    res.json({
+      success: true,
+      data: {
+        productId,
+        basePrice,
+        specificationsPrice,
+        colorsPrice,
+        totalPrice,
+        specificationsDetails,
+        colorsDetails,
+        selectedSpecifications,
+        selectedColors
+      }
+    });
+    
+  } catch (error) {
+    console.error('Calculate product price error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error calculating product price',
+      error: error.message
+    });
+  }
+};
+
+// دالة للحصول على تفاصيل الصفات والألوان للمنتج
+exports.getProductOptions = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    
+    // التحقق من وجود معرف المتجر أو slug
+    const storeId = req.query.storeId;
+    const storeSlug = req.query.storeSlug;
+    
+    if (!storeId && !storeSlug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID or Store Slug is required'
+      });
+    }
+    
+    // البحث عن المنتج مع الصفات
+    let product;
+    if (storeId) {
+      product = await Product.findOne({ _id: productId, store: storeId })
+        .populate('specifications')
+        .populate('category')
+        .populate('unit');
+    } else if (storeSlug) {
+      const Store = require('../Models/Store');
+      const store = await Store.findOne({ slug: storeSlug, status: 'active' });
+      if (!store) {
+        return res.status(404).json({
+          success: false,
+          message: 'Store not found'
+        });
+      }
+      product = await Product.findOne({ _id: productId, store: store._id })
+        .populate('specifications')
+        .populate('category')
+        .populate('unit');
+    }
+      
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    // تجهيز بيانات الصفات
+    const specifications = product.specifications.map(spec => ({
+      _id: spec._id,
+      titleAr: spec.titleAr,
+      titleEn: spec.titleEn,
+      values: spec.values.map(value => ({
+        _id: value._id,
+        valueAr: value.valueAr,
+        valueEn: value.valueEn,
+        price: value.price || 0
+      }))
+    }));
+    
+    // تجهيز بيانات الألوان
+    const colors = product.colors || [];
+    
+    res.json({
+      success: true,
+      data: {
+        productId,
+        specifications,
+        colors,
+        basePrice: product.price
+      }
+    });
+    
+  } catch (error) {
+    console.error('Get product options error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting product options',
+      error: error.message
+    });
+  }
+};
+
 exports.getAll = async (req, res) => {
   try {
     const query = addStoreFilter(req);
