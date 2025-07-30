@@ -8,6 +8,7 @@ const router = express.Router();
 
 /**
  * @swagger
+ * 
  * /api/likes:
  *   get:
  *     summary: Get all liked products for the current user (authenticated or guest)
