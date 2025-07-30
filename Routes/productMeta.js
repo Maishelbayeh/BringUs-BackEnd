@@ -974,4 +974,8 @@ router.post('/products', ProductController.create);
 router.put('/products/:id', ProductController.update);
 router.delete('/products/:id', ProductController.delete);
 
+// إضافة مسارات جديدة للصفات والألوان
+router.get('/products/:productId/options', ProductController.getProductOptions);
+router.post('/products/:productId/calculate-price', ProductController.calculateProductPrice);
+
 module.exports = router; 

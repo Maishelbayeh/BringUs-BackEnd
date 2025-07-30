@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../Models/User');
 
-// Protect routes - require authentication
+// Middleware to protect routes (requires authentication)
 exports.protect = async (req, res, next) => {
   try {
     let token;
@@ -18,13 +18,10 @@ exports.protect = async (req, res, next) => {
     }
 
     try {
-      // Verify token
       const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
       const decoded = jwt.verify(token, jwtSecret);
-      
-      // Get user from database
       const user = await User.findById(decoded.id);
-      
+
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -39,18 +36,7 @@ exports.protect = async (req, res, next) => {
         });
       }
 
-      // Add user and storeId from token to request
-      req.user = {
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        status: user.status,
-        isActive: user.isActive,
-        storeId: decoded.storeId // Add storeId from JWT token
-      };
-
+      req.user = user;
       next();
     } catch (error) {
       return res.status(401).json({
@@ -59,11 +45,52 @@ exports.protect = async (req, res, next) => {
       });
     }
   } catch (error) {
-    //CONSOLE.error('Auth middleware error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Authentication error',
+      error: error.message
     });
+  }
+};
+
+// Middleware for optional authentication (supports both authenticated and guest users)
+exports.optionalAuth = async (req, res, next) => {
+  try {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      // No token provided, continue as guest user
+      return next();
+    }
+
+    try {
+      const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+      const decoded = jwt.verify(token, jwtSecret);
+      const user = await User.findById(decoded.id);
+
+      if (!user) {
+        // Invalid token, continue as guest user
+        return next();
+      }
+
+      if (!user.isActive) {
+        // Deactivated account, continue as guest user
+        return next();
+      }
+
+      req.user = user;
+      next();
+    } catch (error) {
+      // Invalid token, continue as guest user
+      return next();
+    }
+  } catch (error) {
+    // Error occurred, continue as guest user
+    return next();
   }
 };
 
@@ -89,35 +116,4 @@ exports.isActive = (req, res, next) => {
     });
   }
   next();
-};
-
-// Optional authentication - doesn't fail if no token
-exports.optionalAuth = async (req, res, next) => {
-  try {
-    let token;
-
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-
-    if (token) {
-      try {
-        const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
-    const decoded = jwt.verify(token, jwtSecret);
-        const user = await User.findById(decoded.id);
-        
-        if (user && user.isActive) {
-          req.user = user;
-        }
-      } catch (error) {
-        // Token is invalid, but we don't fail the request
-        //CONSOLE.log('Invalid token in optional auth:', error.message);
-      }
-    }
-
-    next();
-  } catch (error) {
-    //CONSOLE.error('Optional auth middleware error:', error);
-    next();
-  }
 }; 
