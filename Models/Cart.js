@@ -15,6 +15,7 @@ const cartItemSchema = new mongoose.Schema({
       ref: 'ProductSpecification',
       required: true
     },
+    
     valueId: {
       type: String,
       required: true
