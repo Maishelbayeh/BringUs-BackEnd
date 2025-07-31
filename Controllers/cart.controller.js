@@ -98,10 +98,10 @@ exports.addToCart = async (req, res) => {
     // التحقق من صحة selectedSpecifications
     if (selectedSpecifications && selectedSpecifications.length > 0) {
       for (const spec of selectedSpecifications) {
-        if (!spec.specificationId || !spec.valueId || !spec.value || !spec.title) {
+        if (!spec.specificationId || !spec.valueId) {
           return res.status(400).json({ 
             success: false, 
-            message: 'selectedSpecifications must include specificationId, valueId, value, and title' 
+            message: 'selectedSpecifications must include specificationId and valueId' 
           });
         }
       }

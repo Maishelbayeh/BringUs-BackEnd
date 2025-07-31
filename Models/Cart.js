@@ -20,11 +20,19 @@ const cartItemSchema = new mongoose.Schema({
       type: String,
       required: true
     },
-    value: {
+    valueAr: {
       type: String,
       required: false
     },
-    title: {
+    valueEn: {
+      type: String,
+      required: false
+    },
+    titleAr: {
+      type: String,
+      required: false
+    },
+    titleEn: {
       type: String,
       required: false
     }
