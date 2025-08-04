@@ -205,6 +205,7 @@ router.get('/store/:storeId', protect, authorize('admin', 'superadmin','client')
  */
 router.get('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess, getPaymentMethodById);
 
+
 /**
  * @swagger
  * /api/payment-methods/with-files:
