@@ -115,8 +115,8 @@ router.get('/', protect, authorize('admin', 'superadmin'), getAllDeliveryMethods
  * @swagger
  * /api/delivery-methods/store/{storeId}:
  *   get:
- *     summary: Get delivery methods by store ID (public)
- *     description: Retrieve all delivery methods for a specific store (public endpoint)
+ *     summary: Get delivery methods by store ID (Public)
+ *     description: Retrieve all delivery methods for a specific store (public endpoint, no authentication required)
  *     tags: [Delivery Methods]
  *     parameters:
  *       - in: path
