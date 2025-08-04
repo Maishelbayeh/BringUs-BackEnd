@@ -498,6 +498,7 @@ router.put('/:id/with-files', protect, authorize('admin', 'superadmin'), verifyS
 router.put('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess, validatePaymentMethod, updatePaymentMethod);
 
 /**
+ * 
  * @swagger
  * /api/payment-methods/{id}:
  *   delete:
