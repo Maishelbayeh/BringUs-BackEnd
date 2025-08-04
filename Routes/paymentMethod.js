@@ -178,7 +178,7 @@ router.get('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, ge
  *       404:
  *         description: Store not found
  */
-router.get('/store/:storeId', protect, authorize('admin', 'superadmin'), getPaymentMethodsByStoreId);
+router.get('/store/:storeId', protect, authorize('admin', 'superadmin','client'), getPaymentMethodsByStoreId);
 
 /**
  * @swagger
