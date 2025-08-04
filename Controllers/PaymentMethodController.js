@@ -339,6 +339,427 @@ const getPaymentMethodById = async (req, res) => {
 
 /**
  * @swagger
+ * /api/payment-methods/store/{storeId}:
+ *   get:
+ *     summary: Get payment methods by store ID
+ *     description: Retrieve payment methods for a specific store (admin and superadmin users)
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *         example: "507f1f77bcf86cd799439012"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of methods per page
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
+ *       - in: query
+ *         name: isDefault
+ *         schema:
+ *           type: boolean
+ *         description: Filter by default status
+ *       - in: query
+ *         name: methodType
+ *         schema:
+ *           type: string
+ *           enum: [cash, card, digital_wallet, bank_transfer, qr_code, other]
+ *         description: Filter by method type
+ *     responses:
+ *       200:
+ *         description: List of payment methods retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/PaymentMethod'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 1
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 3
+ *                     itemsPerPage:
+ *                       type: integer
+ *                       example: 10
+ *                 store:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439012"
+ *                     name:
+ *                       type: string
+ *                       example: "My Store"
+ *                     domain:
+ *                       type: string
+ *                       example: "mystore.com"
+ *       403:
+ *         description: Access denied (admin/superadmin required or insufficient store access)
+ *       404:
+ *         description: Store not found
+ *       500:
+ *         description: Internal server error
+ */
+const getPaymentMethodsByStoreId = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { page = 1, limit = 10, isActive, isDefault, methodType } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Check if user has access to this store
+    if (req.user.role !== 'superadmin') {
+      // For non-superadmin users, verify they have access to this specific store
+      const Owner = require('../Models/Owner');
+      const owner = await Owner.findOne({ 
+        userId: req.user.id,
+        storeId: storeId,
+        status: 'active'
+      });
+      
+      if (!owner) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You do not have permission to access this store\'s payment methods.',
+          error: 'Insufficient permissions'
+        });
+      }
+    }
+
+    // Validate store exists
+    const Store = require('../Models/Store');
+    const store = await Store.findById(storeId).select('name domain');
+    
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found',
+        error: 'Invalid store ID'
+      });
+    }
+
+    // Build filter
+    let filter = { store: storeId };
+    
+    // Add additional filters
+    if (isActive !== undefined) filter.isActive = isActive === 'true';
+    if (isDefault !== undefined) filter.isDefault = isDefault === 'true';
+    if (methodType) filter.methodType = methodType;
+
+    // Get payment methods
+    const paymentMethods = await PaymentMethod.find(filter)
+      .populate('store', 'name domain')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await PaymentMethod.countDocuments(filter);
+    const totalPages = Math.ceil(total / parseInt(limit));
+
+    res.status(200).json({
+      success: true,
+      data: paymentMethods,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
+      },
+      store: {
+        _id: store._id,
+        name: store.name,
+        domain: store.domain
+      }
+    });
+  } catch (error) {
+    console.error('Get payment methods by store ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching payment methods for store',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/payment-methods/with-files:
+ *   post:
+ *     summary: Create a new payment method with files
+ *     description: Create a new payment method for the store with file uploads
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - titleAr
+ *               - titleEn
+ *               - methodType
+ *             properties:
+ *               titleAr:
+ *                 type: string
+ *                 example: "الدفع عند الاستلام"
+ *               titleEn:
+ *                 type: string
+ *                 example: "Cash on Delivery"
+ *               methodType:
+ *                 type: string
+ *                 enum: [cash, card, digital_wallet, bank_transfer, qr_code, other]
+ *                 example: "cash"
+ *               descriptionAr:
+ *                 type: string
+ *                 example: "ادفع عند استلام طلبك"
+ *               descriptionEn:
+ *                 type: string
+ *                 example: "Pay when you receive your order"
+ *               isActive:
+ *                 type: string
+ *                 example: "true"
+ *               isDefault:
+ *                 type: string
+ *                 example: "false"
+ *               logoUrl:
+ *                 type: string
+ *                 example: "https://example.com/logo.png"
+ *               logo:
+ *                 type: string
+ *                 format: binary
+ *                 description: Logo image file
+ *               qrCodeImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: QR code image file
+ *               qrCode[enabled]:
+ *                 type: string
+ *                 example: "true"
+ *               qrCode[qrCodeUrl]:
+ *                 type: string
+ *                 example: "https://example.com/qr.png"
+ *               qrCode[qrCodeData]:
+ *                 type: string
+ *                 example: "payment://qr-data"
+ *     responses:
+ *       201:
+ *         description: Payment method created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Payment method created successfully"
+ *                 data:
+ *                   $ref: '#/components/schemas/PaymentMethod'
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Internal server error
+ */
+const createPaymentMethodWithFiles = async (req, res) => {
+  try {
+    console.log('Request body:', req.body);
+    console.log('Request files:', req.files);
+
+    // Manual validation for multipart form data
+    const { titleAr, titleEn, methodType, descriptionAr, descriptionEn, isActive, isDefault } = req.body;
+
+    // Basic validation
+    if (!titleAr || titleAr.trim().length < 2 || titleAr.trim().length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Arabic title must be between 2 and 100 characters',
+        errors: [{ field: 'titleAr', message: 'Arabic title must be between 2 and 100 characters' }]
+      });
+    }
+
+    if (!titleEn || titleEn.trim().length < 2 || titleEn.trim().length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'English title must be between 2 and 100 characters',
+        errors: [{ field: 'titleEn', message: 'English title must be between 2 and 100 characters' }]
+      });
+    }
+
+    const validMethodTypes = ['cash', 'card', 'digital_wallet', 'bank_transfer', 'qr_code', 'other'];
+    if (!methodType || !validMethodTypes.includes(methodType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Method type must be one of: cash, card, digital_wallet, bank_transfer, qr_code, other',
+        errors: [{ field: 'methodType', message: 'Method type must be one of: cash, card, digital_wallet, bank_transfer, qr_code, other' }]
+      });
+    }
+
+    // Prevent creating default method as inactive
+    const isActiveBoolean = isActive === 'true' || isActive === true;
+    const isDefaultBoolean = isDefault === 'true' || isDefault === true;
+
+    if (isDefaultBoolean && !isActiveBoolean) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot create a default payment method as inactive. Default methods must be active.',
+        error: 'Default method cannot be inactive'
+      });
+    }
+
+    // Prepare payment method data
+    const paymentMethodData = {
+      titleAr: titleAr.trim(),
+      titleEn: titleEn.trim(),
+      methodType,
+      isActive: isActiveBoolean,
+      isDefault: isDefaultBoolean,
+      store: req.store._id
+    };
+
+    // Add optional fields
+    if (descriptionAr) paymentMethodData.descriptionAr = descriptionAr.trim();
+    if (descriptionEn) paymentMethodData.descriptionEn = descriptionEn.trim();
+    if (req.body.logoUrl) paymentMethodData.logoUrl = req.body.logoUrl;
+
+    // Handle QR code data
+    if (req.body['qrCode[enabled]'] === 'true') {
+      paymentMethodData.qrCode = {
+        enabled: true,
+        qrCodeUrl: req.body['qrCode[qrCodeUrl]'] || '',
+        qrCodeData: req.body['qrCode[qrCodeData]'] || ''
+      };
+
+      // Validate QR code settings
+      if (!paymentMethodData.qrCode.qrCodeUrl && !paymentMethodData.qrCode.qrCodeData) {
+        return res.status(400).json({
+          success: false,
+          message: 'QR Code URL or data is required when QR code is enabled',
+          error: 'QR code validation failed'
+        });
+      }
+    }
+
+    // Create payment method
+    const paymentMethod = await PaymentMethod.create(paymentMethodData);
+
+    // Handle file uploads after creation
+    if (req.files) {
+      // Upload logo
+      if (req.files.logo) {
+        const { url: logoUrl } = await uploadToCloudflare(
+          req.files.logo[0].buffer,
+          req.files.logo[0].originalname,
+          'payment-methods/logos'
+        );
+        paymentMethod.logoUrl = logoUrl;
+      }
+
+      // Upload QR code image
+      if (req.files.qrCodeImage) {
+        const { url: qrCodeImageUrl } = await uploadToCloudflare(
+          req.files.qrCodeImage[0].buffer,
+          req.files.qrCodeImage[0].originalname,
+          'payment-methods/qr-codes'
+        );
+        
+        if (!paymentMethod.qrCode) {
+          paymentMethod.qrCode = { enabled: true };
+        }
+        paymentMethod.qrCode.qrCodeImage = qrCodeImageUrl;
+      }
+
+      // Handle payment images
+      if (req.files.paymentImages) {
+        paymentMethod.paymentImages = [];
+        for (let i = 0; i < req.files.paymentImages.length; i++) {
+          const file = req.files.paymentImages[i];
+          const { url: imageUrl } = await uploadToCloudflare(
+            file.buffer,
+            file.originalname,
+            'payment-methods/images'
+          );
+          
+          paymentMethod.paymentImages.push({
+            imageUrl,
+            imageType: req.body[`paymentImages[${i}][imageType]`] || 'other',
+            altText: req.body[`paymentImages[${i}][altText]`] || ''
+          });
+        }
+      }
+
+      // Save with uploaded files
+      await paymentMethod.save();
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Payment method created successfully',
+      data: paymentMethod
+    });
+  } catch (error) {
+    console.error('Create payment method with files error:', error);
+    
+    // Handle model validation errors
+    if (error.message === 'Default payment method cannot be inactive') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot create a default payment method as inactive. Default methods must be active.',
+        error: 'Default method cannot be inactive'
+      });
+    }
+    
+    if (error.message === 'QR Code URL or data is required when QR code is enabled') {
+      return res.status(400).json({
+        success: false,
+        message: 'QR Code URL or data is required when QR code is enabled',
+        error: 'QR code validation failed'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Error creating payment method',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
  * /api/payment-methods:
  *   post:
  *     summary: Create a new payment method
@@ -441,6 +862,289 @@ const createPaymentMethod = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating payment method',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/payment-methods/{id}/with-files:
+ *   put:
+ *     summary: Update payment method with files
+ *     description: Update an existing payment method with file uploads
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment method ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               titleAr:
+ *                 type: string
+ *                 example: "الدفع عند الاستلام"
+ *               titleEn:
+ *                 type: string
+ *                 example: "Cash on Delivery"
+ *               methodType:
+ *                 type: string
+ *                 enum: [cash, card, digital_wallet, bank_transfer, qr_code, other]
+ *                 example: "cash"
+ *               descriptionAr:
+ *                 type: string
+ *                 example: "ادفع عند استلام طلبك"
+ *               descriptionEn:
+ *                 type: string
+ *                 example: "Pay when you receive your order"
+ *               isActive:
+ *                 type: string
+ *                 example: "true"
+ *               isDefault:
+ *                 type: string
+ *                 example: "false"
+ *               logoUrl:
+ *                 type: string
+ *                 example: "https://example.com/logo.png"
+ *               logo:
+ *                 type: string
+ *                 format: binary
+ *                 description: Logo image file
+ *               qrCodeImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: QR code image file
+ *               qrCode[enabled]:
+ *                 type: string
+ *                 example: "true"
+ *               qrCode[qrCodeUrl]:
+ *                 type: string
+ *                 example: "https://example.com/qr.png"
+ *               qrCode[qrCodeData]:
+ *                 type: string
+ *                 example: "payment://qr-data"
+ *     responses:
+ *       200:
+ *         description: Payment method updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Payment method updated successfully"
+ *                 data:
+ *                   $ref: '#/components/schemas/PaymentMethod'
+ *       404:
+ *         description: Payment method not found
+ *       500:
+ *         description: Internal server error
+ */
+const updatePaymentMethodWithFiles = async (req, res) => {
+  try {
+    console.log('=== UPDATE PAYMENT METHOD WITH FILES ===');
+    console.log('Update Request body:', req.body);
+    console.log('Update Request files:', req.files);
+    console.log('Method ID:', req.params.id);
+
+    // Manual validation for multipart form data
+    const { titleAr, titleEn, methodType, descriptionAr, descriptionEn, isActive, isDefault } = req.body;
+
+    // Basic validation
+    if (titleAr !== undefined && (!titleAr || titleAr.trim().length < 2 || titleAr.trim().length > 100)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Arabic title must be between 2 and 100 characters',
+        errors: [{ field: 'titleAr', message: 'Arabic title must be between 2 and 100 characters' }]
+      });
+    }
+
+    if (titleEn !== undefined && (!titleEn || titleEn.trim().length < 2 || titleEn.trim().length > 100)) {
+      return res.status(400).json({
+        success: false,
+        message: 'English title must be between 2 and 100 characters',
+        errors: [{ field: 'titleEn', message: 'English title must be between 2 and 100 characters' }]
+      });
+    }
+
+    const validMethodTypes = ['cash', 'card', 'digital_wallet', 'bank_transfer', 'qr_code', 'other'];
+    if (methodType !== undefined && (!methodType || !validMethodTypes.includes(methodType))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Method type must be one of: cash, card, digital_wallet, bank_transfer, qr_code, other',
+        errors: [{ field: 'methodType', message: 'Method type must be one of: cash, card, digital_wallet, bank_transfer, qr_code, other' }]
+      });
+    }
+
+    // Get existing payment method
+    const filter = addStoreFilter(req, { _id: req.params.id });
+    const existingMethod = await PaymentMethod.findOne(filter);
+    
+    if (!existingMethod) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment method not found'
+      });
+    }
+
+    // Check if trying to deactivate a default method
+    const isActiveBoolean = isActive !== undefined ? (isActive === 'true' || isActive === true) : existingMethod.isActive;
+    const isDefaultBoolean = isDefault !== undefined ? (isDefault === 'true' || isDefault === true) : existingMethod.isDefault;
+
+    if (isActiveBoolean === false && existingMethod.isDefault) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot deactivate the default payment method. Please set another method as default first.',
+        error: 'Default method cannot be inactive'
+      });
+    }
+
+    // Prepare update data
+    const updateData = {};
+    if (titleAr !== undefined) updateData.titleAr = titleAr.trim();
+    if (titleEn !== undefined) updateData.titleEn = titleEn.trim();
+    if (methodType !== undefined) updateData.methodType = methodType;
+    if (isActive !== undefined) updateData.isActive = isActiveBoolean;
+    if (isDefault !== undefined) updateData.isDefault = isDefaultBoolean;
+    if (descriptionAr !== undefined) updateData.descriptionAr = descriptionAr.trim();
+    if (descriptionEn !== undefined) updateData.descriptionEn = descriptionEn.trim();
+    if (req.body.logoUrl !== undefined) updateData.logoUrl = req.body.logoUrl;
+
+    // Handle QR code data
+    if (req.body['qrCode[enabled]'] !== undefined) {
+      if (req.body['qrCode[enabled]'] === 'true') {
+        updateData.qrCode = {
+          enabled: true,
+          qrCodeUrl: req.body['qrCode[qrCodeUrl]'] || existingMethod.qrCode?.qrCodeUrl || '',
+          qrCodeData: req.body['qrCode[qrCodeData]'] || existingMethod.qrCode?.qrCodeData || '',
+          qrCodeImage: existingMethod.qrCode?.qrCodeImage || ''
+        };
+
+        // Validate QR code settings
+        if (!updateData.qrCode.qrCodeUrl && !updateData.qrCode.qrCodeData) {
+          return res.status(400).json({
+            success: false,
+            message: 'QR Code URL or data is required when QR code is enabled',
+            error: 'QR code validation failed'
+          });
+        }
+      } else {
+        updateData.qrCode = { enabled: false };
+      }
+    }
+
+    // Update payment method
+    const paymentMethod = await PaymentMethod.findOneAndUpdate(
+      filter,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('store', 'name domain');
+
+    // If setting this method as default, remove default from other methods
+    if (updateData.isDefault === true) {
+      await PaymentMethod.updateMany(
+        { 
+          store: existingMethod.store, 
+          _id: { $ne: paymentMethod._id } 
+        },
+        { isDefault: false }
+      );
+    }
+
+    // Handle file uploads after update
+    if (req.files) {
+      // Upload logo
+      if (req.files.logo) {
+        const { url: logoUrl } = await uploadToCloudflare(
+          req.files.logo[0].buffer,
+          req.files.logo[0].originalname,
+          'payment-methods/logos'
+        );
+        paymentMethod.logoUrl = logoUrl;
+      }
+
+      // Upload QR code image
+      if (req.files.qrCodeImage) {
+        const { url: qrCodeImageUrl } = await uploadToCloudflare(
+          req.files.qrCodeImage[0].buffer,
+          req.files.qrCodeImage[0].originalname,
+          'payment-methods/qr-codes'
+        );
+        
+        if (!paymentMethod.qrCode) {
+          paymentMethod.qrCode = { enabled: true };
+        }
+        paymentMethod.qrCode.qrCodeImage = qrCodeImageUrl;
+      }
+
+      // Handle payment images
+      if (req.files.paymentImages) {
+        if (!paymentMethod.paymentImages) {
+          paymentMethod.paymentImages = [];
+        }
+        
+        for (let i = 0; i < req.files.paymentImages.length; i++) {
+          const file = req.files.paymentImages[i];
+          const { url: imageUrl } = await uploadToCloudflare(
+            file.buffer,
+            file.originalname,
+            'payment-methods/images'
+          );
+          
+          paymentMethod.paymentImages.push({
+            imageUrl,
+            imageType: req.body[`paymentImages[${i}][imageType]`] || 'other',
+            altText: req.body[`paymentImages[${i}][altText]`] || ''
+          });
+        }
+      }
+
+      // Save with uploaded files
+      await paymentMethod.save();
+    }
+
+    console.log('Payment method updated successfully:', paymentMethod._id);
+    res.status(200).json({
+      success: true,
+      message: 'Payment method updated successfully',
+      data: paymentMethod
+    });
+  } catch (error) {
+    console.error('Update payment method with files error:', error);
+    
+    // Handle model validation errors
+    if (error.message === 'Default payment method cannot be inactive') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot deactivate the default payment method. Please set another method as default first.',
+        error: 'Default method cannot be inactive'
+      });
+    }
+    
+    if (error.message === 'QR Code URL or data is required when QR code is enabled') {
+      return res.status(400).json({
+        success: false,
+        message: 'QR Code URL or data is required when QR code is enabled',
+        error: 'QR code validation failed'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Error updating payment method',
       error: error.message
     });
   }
@@ -1271,8 +1975,11 @@ const removePaymentImage = async (req, res) => {
 module.exports = {
   getAllPaymentMethods,
   getPaymentMethodById,
+  getPaymentMethodsByStoreId,
   createPaymentMethod,
+  createPaymentMethodWithFiles,
   updatePaymentMethod,
+  updatePaymentMethodWithFiles,
   deletePaymentMethod,
   toggleActiveStatus,
   setAsDefault,

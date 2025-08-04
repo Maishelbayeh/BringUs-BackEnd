@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { createUser, getAllUsers, getUserById, getCustomers, getStoreStaff } = require('../Controllers/UserController');
+const { createUser, getAllUsers, getUserById, updateUser, updateCurrentUserProfile, deleteUser, getCustomers, getStoreStaff } = require('../Controllers/UserController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -104,6 +104,142 @@ const validateUserCreation = [
     .withMessage('Status must be active, inactive, or banned')
 ];
 
+// Validation middleware for user updates
+const validateUserUpdate = [
+  body('firstName')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('First name must be between 2 and 50 characters'),
+  body('lastName')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Last name must be between 2 and 50 characters'),
+  body('email')
+    .optional()
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please enter a valid email'),
+  body('phone')
+    .optional()
+    .matches(/^[\+]?[1-9][\d]{0,15}$/)
+    .withMessage('Please enter a valid phone number'),
+  body('role')
+    .optional()
+    .isIn(['superadmin', 'admin', 'client'])
+    .withMessage('Role must be superadmin, admin, or client'),
+  body('status')
+    .optional()
+    .isIn(['active', 'inactive', 'suspended'])
+    .withMessage('Status must be active, inactive, or suspended'),
+  body('isActive')
+    .optional()
+    .isBoolean()
+    .withMessage('isActive must be a boolean'),
+  body('isEmailVerified')
+    .optional()
+    .isBoolean()
+    .withMessage('isEmailVerified must be a boolean'),
+  body('addresses')
+    .optional()
+    .isArray()
+    .withMessage('Addresses must be an array'),
+  body('addresses.*.type')
+    .optional()
+    .isIn(['home', 'work', 'other'])
+    .withMessage('Address type must be home, work, or other'),
+  body('addresses.*.street')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Street address cannot be empty'),
+  body('addresses.*.city')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('City cannot be empty'),
+  body('addresses.*.state')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('State cannot be empty'),
+  body('addresses.*.zipCode')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Zip code cannot be empty'),
+  body('addresses.*.country')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Country cannot be empty'),
+  body('addresses.*.isDefault')
+    .optional()
+    .isBoolean()
+    .withMessage('isDefault must be a boolean')
+];
+
+// Validation middleware for profile updates (current user)
+const validateProfileUpdate = [
+  body('firstName')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('First name must be between 2 and 50 characters'),
+  body('lastName')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Last name must be between 2 and 50 characters'),
+  body('email')
+    .optional()
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please enter a valid email'),
+  body('phone')
+    .optional()
+    .matches(/^[\+]?[1-9][\d]{0,15}$/)
+    .withMessage('Please enter a valid phone number'),
+  body('addresses')
+    .optional()
+    .isArray()
+    .withMessage('Addresses must be an array'),
+  body('addresses.*.type')
+    .optional()
+    .isIn(['home', 'work', 'other'])
+    .withMessage('Address type must be home, work, or other'),
+  body('addresses.*.street')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Street address cannot be empty'),
+  body('addresses.*.city')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('City cannot be empty'),
+  body('addresses.*.state')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('State cannot be empty'),
+  body('addresses.*.zipCode')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Zip code cannot be empty'),
+  body('addresses.*.country')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Country cannot be empty'),
+  body('addresses.*.isDefault')
+    .optional()
+    .isBoolean()
+    .withMessage('isDefault must be a boolean')
+];
+
 /**
  * @swagger
  * /api/users:
@@ -177,7 +313,7 @@ const validateUserCreation = [
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', protect, authorize('admin', 'superadmin','client'), validateUserCreation, createUser);
+router.post('/', protect, authorize('admin', 'superadmin'), validateUserCreation, createUser);
 
 
 /**
@@ -229,45 +365,6 @@ router.post('/', protect, authorize('admin', 'superadmin','client'), validateUse
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/', protect, authorize('admin', 'superadmin'), getAllUsers);
-
-/**
- * @swagger
- * /api/users/{id}:
- *   get:
- *     summary: Get user by ID (Admin/Superadmin only)
- *     description: Retrieve a specific user by their ID
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         example: "507f1f77bcf86cd799439011"
- *         description: "User ID"
- *     responses:
- *       200:
- *         description: User retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Success'
- *       403:
- *         description: Admin access required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.get('/:id', protect, authorize('admin', 'superadmin','client'), getUserById);
 
 /**
  * @swagger
@@ -356,5 +453,297 @@ router.get('/customers', protect, authorize('admin', 'superadmin'), getCustomers
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/staff', protect, authorize('admin', 'superadmin'), getStoreStaff);
+
+/**
+ * @swagger
+ * /api/users/profile:
+ *   put:
+ *     summary: Update current user profile
+ *     description: Update the authenticated user's own profile using token
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 50
+ *                 example: "أحمد"
+ *               lastName:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 50
+ *                 example: "محمد"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "ahmed@example.com"
+ *               phone:
+ *                 type: string
+ *                 pattern: "^[\\+]?[1-9][\\d]{0,15}$"
+ *                 example: "+966501234567"
+ *               addresses:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       enum: [home, work, other]
+ *                       example: "home"
+ *                     street:
+ *                       type: string
+ *                       example: "شارع الملك فهد"
+ *                     city:
+ *                       type: string
+ *                       example: "الرياض"
+ *                     state:
+ *                       type: string
+ *                       example: "الرياض"
+ *                     zipCode:
+ *                       type: string
+ *                       example: "12345"
+ *                     country:
+ *                       type: string
+ *                       example: "السعودية"
+ *                     isDefault:
+ *                       type: boolean
+ *                       example: true
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Profile updated successfully"
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Email already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized - No token provided
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put('/profile', protect, validateProfileUpdate, updateCurrentUserProfile);
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   get:
+ *     summary: Get user by ID (Admin/Superadmin only)
+ *     description: Retrieve a specific user by their ID
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439011"
+ *         description: "User ID"
+ *     responses:
+ *       200:
+ *         description: User retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/:id', protect, authorize('admin', 'superadmin'), getUserById);
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   put:
+ *     summary: Update user (Admin/Superadmin only)
+ *     description: Update an existing user by their ID
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439011"
+ *         description: "User ID"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 50
+ *                 example: "John"
+ *               lastName:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 50
+ *                 example: "Doe"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "john.doe@example.com"
+ *               phone:
+ *                 type: string
+ *                 pattern: "^[\\+]?[1-9][\\d]{0,15}$"
+ *                 example: "+1234567890"
+ *               role:
+ *                 type: string
+ *                 enum: [client, admin, superadmin]
+ *                 example: "client"
+ *               status:
+ *                 type: string
+ *                 enum: [active, inactive, suspended]
+ *                 example: "active"
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
+ *               isEmailVerified:
+ *                 type: boolean
+ *                 example: true
+ *               addresses:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       enum: [home, work, other]
+ *                     street:
+ *                       type: string
+ *                     city:
+ *                       type: string
+ *                     state:
+ *                       type: string
+ *                     zipCode:
+ *                       type: string
+ *                     country:
+ *                       type: string
+ *                     isDefault:
+ *                       type: boolean
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Email already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put('/:id', protect, authorize('admin', 'superadmin'), validateUserUpdate, updateUser);
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Delete user (Admin/Superadmin only)
+ *     description: Delete a user by their ID
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439011"
+ *         description: "User ID"
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Cannot delete yourself or other restrictions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required or insufficient permissions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.delete('/:id', protect, authorize('admin', 'superadmin'), deleteUser);
 
 module.exports = router; 
