@@ -483,10 +483,434 @@ const getStoreStaff = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   put:
+ *     summary: Update user
+ *     description: Update an existing user (Admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 example: "John"
+ *               lastName:
+ *                 type: string
+ *                 example: "Doe"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "john.doe@example.com"
+ *               phone:
+ *                 type: string
+ *                 example: "+1234567890"
+ *               role:
+ *                 type: string
+ *                 enum: [client, admin, superadmin]
+ *                 example: "client"
+ *               status:
+ *                 type: string
+ *                 enum: [active, inactive, suspended]
+ *                 example: "active"
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
+ *               isEmailVerified:
+ *                 type: boolean
+ *                 example: true
+ *               addresses:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       enum: [home, work, other]
+ *                     street:
+ *                       type: string
+ *                     city:
+ *                       type: string
+ *                     state:
+ *                       type: string
+ *                     zipCode:
+ *                       type: string
+ *                     country:
+ *                       type: string
+ *                     isDefault:
+ *                       type: boolean
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User updated successfully"
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Bad request - validation errors
+ *       404:
+ *         description: User not found
+ *       409:
+ *         description: Email already exists
+ *       500:
+ *         description: Internal server error
+ */
+const updateUser = async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { id } = req.params;
+    const { firstName, lastName, email, phone, role, status, isActive, isEmailVerified, addresses, store } = req.body;
+
+    // Add store filter for isolation
+    const filter = addStoreFilter(req, { _id: id });
+
+    // Check if user exists
+    const existingUser = await User.findOne(filter);
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if email is being changed and if it already exists
+    if (email && email !== existingUser.email) {
+      const emailExists = await User.findOne({ email, _id: { $ne: id } });
+      if (emailExists) {
+        return res.status(409).json({
+          success: false,
+          message: 'Email already exists'
+        });
+      }
+    }
+
+    // Prepare update data
+    const updateData = {};
+    if (firstName !== undefined) updateData.firstName = firstName.trim();
+    if (lastName !== undefined) updateData.lastName = lastName.trim();
+    if (email !== undefined) updateData.email = email.trim().toLowerCase();
+    if (phone !== undefined) updateData.phone = phone;
+    if (role !== undefined) updateData.role = role;
+    if (status !== undefined) updateData.status = status;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (isEmailVerified !== undefined) updateData.isEmailVerified = isEmailVerified;
+
+    // Handle addresses - filter out addresses with empty required fields
+    if (addresses && Array.isArray(addresses)) {
+      updateData.addresses = addresses.filter(addr => 
+        addr.street && addr.street.trim() && 
+        addr.city && addr.city.trim() && 
+        addr.state && addr.state.trim() && 
+        addr.zipCode && addr.zipCode.trim() && 
+        addr.country && addr.country.trim()
+      );
+    }
+
+    // Handle store update (only for admin/superadmin roles)
+    if (store !== undefined && (role === 'admin' || role === 'client' || existingUser.role === 'admin' || existingUser.role === 'client')) {
+      // If store is an object with _id, extract the _id
+      updateData.store = typeof store === 'object' && store._id ? store._id : store;
+    }
+
+    // Update user
+    const updatedUser = await User.findOneAndUpdate(
+      filter,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password').populate('store', 'name domain');
+
+    res.status(200).json({
+      success: true,
+      message: 'User updated successfully',
+      data: updatedUser
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating user',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Delete user
+ *     description: Delete a user (Admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User deleted successfully"
+ *       404:
+ *         description: User not found
+ *       400:
+ *         description: Cannot delete yourself or other admins
+ *       500:
+ *         description: Internal server error
+ */
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Add store filter for isolation
+    const filter = addStoreFilter(req, { _id: id });
+
+    // Check if user exists
+    const userToDelete = await User.findOne(filter);
+    if (!userToDelete) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Prevent user from deleting themselves
+    if (userToDelete._id.toString() === req.user.id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot delete yourself'
+      });
+    }
+
+    // Prevent non-superadmin from deleting other admins/superadmins
+    if (req.user.role !== 'superadmin' && (userToDelete.role === 'admin' || userToDelete.role === 'superadmin')) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot delete admin or superadmin users'
+      });
+    }
+
+    // Delete user
+    await User.findOneAndDelete(filter);
+
+    res.status(200).json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting user',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/users/profile:
+ *   put:
+ *     summary: Update current user profile
+ *     description: Update the current authenticated user's profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 50
+ *                 example: "John"
+ *               lastName:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 50
+ *                 example: "Doe"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "john.doe@example.com"
+ *               phone:
+ *                 type: string
+ *                 pattern: "^[\\+]?[1-9][\\d]{0,15}$"
+ *                 example: "+1234567890"
+ *               addresses:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       enum: [home, work, other]
+ *                     street:
+ *                       type: string
+ *                     city:
+ *                       type: string
+ *                     state:
+ *                       type: string
+ *                     zipCode:
+ *                       type: string
+ *                     country:
+ *                       type: string
+ *                     isDefault:
+ *                       type: boolean
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Profile updated successfully"
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Bad request - validation errors
+ *       409:
+ *         description: Email already exists
+ *       500:
+ *         description: Internal server error
+ */
+const updateCurrentUserProfile = async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const userId = req.user.id; // Get user ID from token
+    const { firstName, lastName, email, phone, addresses } = req.body;
+
+    // Check if user exists
+    const existingUser = await User.findById(userId);
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if email is being changed and if it already exists
+    if (email && email !== existingUser.email) {
+      const emailExists = await User.findOne({ email, _id: { $ne: userId } });
+      if (emailExists) {
+        return res.status(409).json({
+          success: false,
+          message: 'Email already exists'
+        });
+      }
+    }
+
+    // Prepare update data (users can only update certain fields)
+    const updateData = {};
+    if (firstName !== undefined) updateData.firstName = firstName.trim();
+    if (lastName !== undefined) updateData.lastName = lastName.trim();
+    if (email !== undefined) updateData.email = email.trim().toLowerCase();
+    if (phone !== undefined) updateData.phone = phone;
+
+    // Handle addresses - filter out addresses with empty required fields
+    if (addresses && Array.isArray(addresses)) {
+      updateData.addresses = addresses.filter(addr => 
+        addr.street && addr.street.trim() && 
+        addr.city && addr.city.trim() && 
+        addr.state && addr.state.trim() && 
+        addr.zipCode && addr.zipCode.trim() && 
+        addr.country && addr.country.trim()
+      );
+    }
+
+    // Update user profile
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password').populate('store', 'name domain');
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: updatedUser
+    });
+  } catch (error) {
+    console.error('Update current user profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating profile',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createUser,
   getAllUsers,
   getUserById,
+  updateUser,
+  updateCurrentUserProfile,
+  deleteUser,
   getCustomers,
   getStoreStaff
 }; 
