@@ -92,7 +92,7 @@ const validateSliderType = (req, res, next) => {
  *       403:
  *         description: Access denied
  */
-router.get('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, getAllStoreSliders);
+router.get('/', protect, authorize('admin', 'superadmin','client'), verifyStoreAccess, getAllStoreSliders);
 
 /**
  * @swagger

@@ -20,24 +20,49 @@ const cartItemSchema = new mongoose.Schema({
       type: String,
       required: true
     },
-    value: {
+    valueAr: {
       type: String,
       required: false
     },
-    title: {
+    valueEn: {
+      type: String,
+      required: false
+    },
+    titleAr: {
+      type: String,
+      required: false
+    },
+    titleEn: {
       type: String,
       required: false
     }
   }],
   // إضافة الألوان المختارة للمنتج
   selectedColors: [{
-    type: String, // Array of color codes (hex, rgb, etc.)
+    type: mongoose.Schema.Types.Mixed,
     validate: {
-      validator: function(color) {
-        const colorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$|^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$|^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\)$/;
-        return colorRegex.test(color);
+      validator: function(colorOption) {
+        // دالة للتحقق من صحة لون hex
+        const isValidHexColor = (color) => {
+          const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+          return hexRegex.test(color);
+        };
+        
+        // إذا كان لون واحد (string) - مثل "red" أو "#ff0000"
+        if (typeof colorOption === 'string') {
+          // يقبل أسماء الألوان أو ألوان hex
+          return true;
+        }
+        
+        // إذا كان مصفوفة من ألوان hex
+        if (Array.isArray(colorOption)) {
+          return colorOption.every(color => typeof color === 'string' && isValidHexColor(color));
+        }
+        
+        // إذا كان أي نوع آخر، رفض
+        return false;
       },
-      message: 'Invalid color format. Use hex (#RRGGBB), rgb(r,g,b), or rgba(r,g,b,a) format'
+      message: 'Invalid color format. Each color option must be either a string (color name or hex) or an array of hex colors. Examples: "red", "#ff0000", or ["#ff0000", "#ffffff"]'
     }
   }]
 }, { _id: false });
