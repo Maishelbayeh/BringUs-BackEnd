@@ -129,11 +129,9 @@ router.get('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, ge
  * @swagger
  * /api/payment-methods/store/{storeId}:
  *   get:
- *     summary: Get payment methods by store ID
- *     description: Retrieve payment methods for a specific store (admin and superadmin users)
+ *     summary: Get payment methods by store ID (Public)
+ *     description: Retrieve payment methods for a specific store (public endpoint, no authentication required)
  *     tags: [Payment Methods]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: storeId
@@ -173,12 +171,10 @@ router.get('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, ge
  *     responses:
  *       200:
  *         description: Success
- *       403:
- *         description: Access denied (admin/superadmin required or insufficient store access)
  *       404:
  *         description: Store not found
  */
-router.get('/store/:storeId', protect, authorize('admin', 'superadmin'), getPaymentMethodsByStoreId);
+router.get('/store/:storeId', getPaymentMethodsByStoreId);
 
 /**
  * @swagger

@@ -758,8 +758,8 @@ const setAsDefault = async (req, res) => {
  * @swagger
  * /api/delivery-methods/store/{storeId}:
  *   get:
- *     summary: Get delivery methods by store ID
- *     description: Retrieve all delivery methods for a specific store (public endpoint)
+ *     summary: Get delivery methods by store ID (Public)
+ *     description: Retrieve all delivery methods for a specific store (public endpoint, no authentication required)
  *     tags: [Delivery Methods]
  *     parameters:
  *       - in: path
@@ -773,7 +773,7 @@ const setAsDefault = async (req, res) => {
  *         name: isActive
  *         schema:
  *           type: boolean
- *         description: Filter by active status
+ *         description: Filter by active status (defaults to true for public access)
  *       - in: query
  *         name: isDefault
  *         schema:
@@ -794,6 +794,20 @@ const setAsDefault = async (req, res) => {
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/DeliveryMethod'
+ *                 store:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439012"
+ *                     name:
+ *                       type: string
+ *                       example: "My Store"
+ *                     domain:
+ *                       type: string
+ *                       example: "mystore.com"
+ *       400:
+ *         description: Bad request - storeId required
  *       404:
  *         description: Store not found
  *       500:
@@ -802,13 +816,60 @@ const setAsDefault = async (req, res) => {
 const getDeliveryMethodsByStoreId = async (req, res) => {
   try {
     const { storeId } = req.params;
+    const { isActive, isDefault } = req.query;
+    
     if (!storeId) {
-      return res.status(400).json({ success: false, message: 'storeId is required' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'storeId is required' 
+      });
     }
-    const deliveryMethods = await DeliveryMethod.find({ store: storeId });
-    res.status(200).json({ success: true, data: deliveryMethods });
+
+    // Validate store exists
+    const Store = require('../Models/Store');
+    const store = await Store.findById(storeId).select('name domain');
+    
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found',
+        error: 'Invalid store ID'
+      });
+    }
+
+    // Build filter - only show active delivery methods by default for public access
+    let filter = { store: storeId };
+    
+    // Add additional filters
+    if (isActive !== undefined) {
+      filter.isActive = isActive === 'true';
+    } else {
+      // For public access, only show active methods by default
+      filter.isActive = true;
+    }
+    
+    if (isDefault !== undefined) filter.isDefault = isDefault === 'true';
+
+    const deliveryMethods = await DeliveryMethod.find(filter)
+      .populate('store', 'name domain')
+      .sort({ priority: 1, createdAt: -1 });
+
+    res.status(200).json({ 
+      success: true, 
+      data: deliveryMethods,
+      store: {
+        _id: store._id,
+        name: store.name,
+        domain: store.domain
+      }
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Get delivery methods by store ID error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching delivery methods for store',
+      error: error.message 
+    });
   }
 };
 

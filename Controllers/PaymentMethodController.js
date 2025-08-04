@@ -341,11 +341,9 @@ const getPaymentMethodById = async (req, res) => {
  * @swagger
  * /api/payment-methods/store/{storeId}:
  *   get:
- *     summary: Get payment methods by store ID
- *     description: Retrieve payment methods for a specific store (admin and superadmin users)
+ *     summary: Get payment methods by store ID (Public)
+ *     description: Retrieve payment methods for a specific store (public endpoint, no authentication required)
  *     tags: [Payment Methods]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: storeId
@@ -370,7 +368,7 @@ const getPaymentMethodById = async (req, res) => {
  *         name: isActive
  *         schema:
  *           type: boolean
- *         description: Filter by active status
+ *         description: Filter by active status (defaults to true for public access)
  *       - in: query
  *         name: isDefault
  *         schema:
@@ -424,8 +422,8 @@ const getPaymentMethodById = async (req, res) => {
  *                     domain:
  *                       type: string
  *                       example: "mystore.com"
- *       403:
- *         description: Access denied (admin/superadmin required or insufficient store access)
+ *       400:
+ *         description: Bad request - storeId required
  *       404:
  *         description: Store not found
  *       500:
@@ -436,25 +434,6 @@ const getPaymentMethodsByStoreId = async (req, res) => {
     const { storeId } = req.params;
     const { page = 1, limit = 10, isActive, isDefault, methodType } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    // Check if user has access to this store
-    if (req.user.role !== 'superadmin') {
-      // For non-superadmin users, verify they have access to this specific store
-      const Owner = require('../Models/Owner');
-      const owner = await Owner.findOne({ 
-        userId: req.user.id,
-        storeId: storeId,
-        status: 'active'
-      });
-      
-      if (!owner) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied. You do not have permission to access this store\'s payment methods.',
-          error: 'Insufficient permissions'
-        });
-      }
-    }
 
     // Validate store exists
     const Store = require('../Models/Store');
@@ -468,11 +447,17 @@ const getPaymentMethodsByStoreId = async (req, res) => {
       });
     }
 
-    // Build filter
+    // Build filter - only show active payment methods by default for public access
     let filter = { store: storeId };
     
     // Add additional filters
-    if (isActive !== undefined) filter.isActive = isActive === 'true';
+    if (isActive !== undefined) {
+      filter.isActive = isActive === 'true';
+    } else {
+      // For public access, only show active methods by default
+      filter.isActive = true;
+    }
+    
     if (isDefault !== undefined) filter.isDefault = isDefault === 'true';
     if (methodType) filter.methodType = methodType;
 
