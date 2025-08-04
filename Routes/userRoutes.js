@@ -177,7 +177,7 @@ const validateUserCreation = [
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', protect, authorize('admin', 'superadmin'), validateUserCreation, createUser);
+router.post('/', protect, authorize('admin', 'superadmin','client'), validateUserCreation, createUser);
 
 
 /**
@@ -267,7 +267,7 @@ router.get('/', protect, authorize('admin', 'superadmin'), getAllUsers);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:id', protect, authorize('admin', 'superadmin'), getUserById);
+router.get('/:id', protect, authorize('admin', 'superadmin','client'), getUserById);
 
 /**
  * @swagger
