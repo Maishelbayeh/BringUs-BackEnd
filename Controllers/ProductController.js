@@ -942,6 +942,114 @@ exports.addVariant = async (req, res) => {
       }
     }
 
+    // Handle colors parsing
+    if (variantData.colors) {
+      if (Array.isArray(variantData.colors)) {
+        // Check if it's already parsed (contains actual color values)
+        if (variantData.colors.length > 0 && typeof variantData.colors[0] === 'string' && variantData.colors[0].startsWith('#')) {
+          // Already parsed, keep as is
+          variantData.colors = variantData.colors;
+        } else if (variantData.colors.length > 0 && typeof variantData.colors[0] === 'string' && variantData.colors[0].startsWith('[')) {
+          // It's a JSON string, parse it
+          try {
+            variantData.colors = JSON.parse(variantData.colors[0]);
+          } catch (error) {
+            console.error('Error parsing colors from array:', error);
+            return res.status(400).json({
+              success: false,
+              error: 'Invalid colors format'
+            });
+          }
+        } else {
+          // Normal array, keep as is
+          variantData.colors = variantData.colors;
+        }
+      } else if (typeof variantData.colors === 'string') {
+        try {
+          variantData.colors = JSON.parse(variantData.colors);
+        } catch (error) {
+          console.error('Error parsing colors:', error);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid colors format'
+          });
+        }
+      }
+    }
+
+    // Handle allColors parsing
+    if (variantData.allColors) {
+      if (Array.isArray(variantData.allColors)) {
+        // Check if it's already parsed (contains actual color values)
+        if (variantData.allColors.length > 0 && typeof variantData.allColors[0] === 'string' && variantData.allColors[0].startsWith('#')) {
+          // Already parsed, keep as is
+          variantData.allColors = variantData.allColors;
+        } else if (variantData.allColors.length > 0 && typeof variantData.allColors[0] === 'string' && variantData.allColors[0].startsWith('[')) {
+          // It's a JSON string, parse it
+          try {
+            variantData.allColors = JSON.parse(variantData.allColors[0]);
+          } catch (error) {
+            console.error('Error parsing allColors from array:', error);
+            return res.status(400).json({
+              success: false,
+              error: 'Invalid allColors format'
+            });
+          }
+        } else if (variantData.allColors.length > 0 && typeof variantData.allColors[0] === 'string' && variantData.allColors[0].includes('\\"')) {
+          // It's a string like "[\"#C0C0C0\"]", parse each element
+          try {
+            const parsedColors = variantData.allColors.map(colorStr => {
+              const parsed = JSON.parse(colorStr);
+              return Array.isArray(parsed) ? parsed[0] : parsed;
+            });
+            variantData.allColors = parsedColors;
+          } catch (error) {
+            console.error('Error parsing allColors from escaped strings:', error);
+            return res.status(400).json({
+              success: false,
+              error: 'Invalid allColors format'
+            });
+          }
+        } else if (variantData.allColors.length > 0 && typeof variantData.allColors[0] === 'string' && variantData.allColors[0].startsWith('#')) {
+          // It's already an array of color strings like ['#C0C0C0', '#FFD700']
+          // Keep as is
+          variantData.allColors = variantData.allColors;
+        } else {
+          // Normal array, keep as is
+          variantData.allColors = variantData.allColors;
+        }
+      } else if (typeof variantData.allColors === 'string') {
+        try {
+          variantData.allColors = JSON.parse(variantData.allColors);
+        } catch (error) {
+          console.error('Error parsing allColors:', error);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid allColors format'
+          });
+        }
+      }
+    }
+
+    // Handle productLabels parsing for addVariant
+    if (variantData.productLabels) {
+      if (Array.isArray(variantData.productLabels)) {
+        // If it's already an array, keep it as is
+        variantData.productLabels = variantData.productLabels;
+      } else if (typeof variantData.productLabels === 'string') {
+        // If it's a string, try to parse it as JSON first
+        try {
+          variantData.productLabels = JSON.parse(variantData.productLabels);
+        } catch (error) {
+          // If JSON parsing fails, treat it as a single ID
+          variantData.productLabels = [variantData.productLabels];
+        }
+      }
+    } else {
+      // If productLabels is not provided, set it as empty array
+      variantData.productLabels = [];
+    }
+
     // Create variant product
     const variantProduct = new Product({
       ...variantData,
@@ -1057,6 +1165,20 @@ exports.updateVariant = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
     const { storeId, ...updateData } = req.body;
+    
+    console.log('🔍 updateVariant - Received data:', {
+      productId,
+      variantId,
+      storeId,
+      updateData: Object.keys(updateData)
+    });
+    console.log('🔍 updateVariant - Full updateData:', updateData);
+    console.log('🔍 updateVariant - Specifications before processing:', updateData.specifications);
+    console.log('🔍 updateVariant - SpecificationValues before processing:', updateData.specificationValues);
+    console.log('🔍 updateVariant - SelectedSpecifications before processing:', updateData.selectedSpecifications);
+    console.log('🔍 updateVariant - Colors before processing:', updateData.colors);
+    console.log('🔍 updateVariant - AllColors before processing:', updateData.allColors);
+    console.log('🔍 updateVariant - ProductLabels before processing:', updateData.productLabels);
     
     if (!storeId) {
       return res.status(400).json({ 
@@ -1211,6 +1333,167 @@ exports.updateVariant = async (req, res) => {
       }
     }
 
+    // Handle colors parsing
+    if (updateData.colors) {
+      if (Array.isArray(updateData.colors)) {
+        // Check if it's already parsed (contains actual color values)
+        if (updateData.colors.length > 0 && typeof updateData.colors[0] === 'string' && updateData.colors[0].startsWith('#')) {
+          // Already parsed, keep as is
+          updateData.colors = updateData.colors;
+        } else if (updateData.colors.length > 0 && typeof updateData.colors[0] === 'string' && updateData.colors[0].startsWith('[')) {
+          // It's a JSON string, parse it
+          try {
+            updateData.colors = JSON.parse(updateData.colors[0]);
+          } catch (error) {
+            console.error('Error parsing colors from array:', error);
+            return res.status(400).json({
+              success: false,
+              error: 'Invalid colors format'
+            });
+          }
+        } else {
+          // Normal array, keep as is
+          updateData.colors = updateData.colors;
+        }
+      } else if (typeof updateData.colors === 'string') {
+        try {
+          updateData.colors = JSON.parse(updateData.colors);
+        } catch (error) {
+          console.error('Error parsing colors:', error);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid colors format'
+          });
+        }
+      }
+    }
+
+    // Handle allColors parsing
+    if (updateData.allColors) {
+      if (Array.isArray(updateData.allColors)) {
+        // Check if it's already parsed (contains actual color values)
+        if (updateData.allColors.length > 0 && typeof updateData.allColors[0] === 'string' && updateData.allColors[0].startsWith('#')) {
+          // Already parsed, keep as is
+          updateData.allColors = updateData.allColors;
+        } else if (updateData.allColors.length > 0 && typeof updateData.allColors[0] === 'string' && updateData.allColors[0].startsWith('[')) {
+          // It's a JSON string, parse it
+          try {
+            updateData.allColors = JSON.parse(updateData.allColors[0]);
+          } catch (error) {
+            console.error('Error parsing allColors from array:', error);
+            return res.status(400).json({
+              success: false,
+              error: 'Invalid allColors format'
+            });
+          }
+        } else if (updateData.allColors.length > 0 && typeof updateData.allColors[0] === 'string' && updateData.allColors[0].includes('\\"')) {
+          // It's a string like "[\"#C0C0C0\"]", parse each element
+          try {
+            const parsedColors = updateData.allColors.map(colorStr => {
+              const parsed = JSON.parse(colorStr);
+              return Array.isArray(parsed) ? parsed[0] : parsed;
+            });
+            updateData.allColors = parsedColors;
+          } catch (error) {
+            console.error('Error parsing allColors from escaped strings:', error);
+            return res.status(400).json({
+              success: false,
+              error: 'Invalid allColors format'
+            });
+          }
+        } else if (updateData.allColors.length > 0 && typeof updateData.allColors[0] === 'string' && updateData.allColors[0].startsWith('#')) {
+          // It's already an array of color strings like ['#C0C0C0', '#FFD700']
+          // Keep as is
+          updateData.allColors = updateData.allColors;
+        } else {
+          // Normal array, keep as is
+          updateData.allColors = updateData.allColors;
+        }
+      } else if (typeof updateData.allColors === 'string') {
+        try {
+          updateData.allColors = JSON.parse(updateData.allColors);
+        } catch (error) {
+          console.error('Error parsing allColors:', error);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid allColors format'
+          });
+        }
+      }
+    }
+
+    console.log('🔍 updateVariant - Colors after processing:', updateData.colors);
+    console.log('🔍 updateVariant - AllColors after processing:', updateData.allColors);
+    console.log('🔍 updateVariant - ProductLabels after processing:', updateData.productLabels);
+    console.log('🔍 updateVariant - AllColors type:', typeof updateData.allColors);
+    console.log('🔍 updateVariant - AllColors is array:', Array.isArray(updateData.allColors));
+    if (Array.isArray(updateData.allColors) && updateData.allColors.length > 0) {
+      console.log('🔍 updateVariant - First allColors element:', updateData.allColors[0]);
+      console.log('🔍 updateVariant - First allColors element type:', typeof updateData.allColors[0]);
+      console.log('🔍 updateVariant - First allColors element starts with #:', updateData.allColors[0].startsWith('#'));
+    }
+
+    // Handle unit parsing
+    if (updateData.unit) {
+      if (typeof updateData.unit === 'string') {
+        updateData.unit = updateData.unit;
+      } else if (updateData.unit && typeof updateData.unit === 'object' && updateData.unit._id) {
+        updateData.unit = updateData.unit._id;
+      }
+    }
+
+    // Handle category parsing
+    if (updateData.categoryId) {
+      updateData.category = updateData.categoryId;
+      delete updateData.categoryId;
+    } else if (updateData.category) {
+      if (typeof updateData.category === 'string') {
+        updateData.category = updateData.category;
+      } else if (updateData.category && typeof updateData.category === 'object' && updateData.category._id) {
+        updateData.category = updateData.category._id;
+      }
+    }
+
+    // Handle productLabels parsing
+    if (updateData.productLabels) {
+      if (Array.isArray(updateData.productLabels)) {
+        // If it's already an array, keep it as is
+        updateData.productLabels = updateData.productLabels;
+      } else if (typeof updateData.productLabels === 'string') {
+        // If it's a string, try to parse it as JSON first
+        try {
+          updateData.productLabels = JSON.parse(updateData.productLabels);
+        } catch (error) {
+          // If JSON parsing fails, treat it as a single ID
+          updateData.productLabels = [updateData.productLabels];
+        }
+      }
+    } else {
+      // If productLabels is not provided, set it as empty array
+      updateData.productLabels = [];
+    }
+
+    // Handle selectedSpecifications parsing
+    if (updateData.selectedSpecifications) {
+      if (Array.isArray(updateData.selectedSpecifications)) {
+        updateData.selectedSpecifications = updateData.selectedSpecifications;
+      } else if (typeof updateData.selectedSpecifications === 'string') {
+        try {
+          updateData.selectedSpecifications = JSON.parse(updateData.selectedSpecifications);
+        } catch (error) {
+          console.error('Error parsing selectedSpecifications:', error);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid selectedSpecifications format'
+          });
+        }
+      }
+    }
+
+    console.log('🔍 updateVariant - Specifications after processing:', updateData.specifications);
+    console.log('🔍 updateVariant - SpecificationValues after processing:', updateData.specificationValues);
+    console.log('🔍 updateVariant - SelectedSpecifications after processing:', updateData.selectedSpecifications);
+
     // Update the variant
     const updatedVariant = await Product.findByIdAndUpdate(
       variantId,
@@ -1221,6 +1504,20 @@ exports.updateVariant = async (req, res) => {
      .populate('specifications')
      .populate('unit')
      .populate('store', 'name domain');
+
+    console.log('🔍 updateVariant - Updated variant data:', {
+      _id: updatedVariant._id,
+      nameAr: updatedVariant.nameAr,
+      nameEn: updatedVariant.nameEn,
+      price: updatedVariant.price,
+      barcodes: updatedVariant.barcodes,
+      colors: updatedVariant.colors,
+      allColors: updatedVariant.allColors,
+      unit: updatedVariant.unit,
+      category: updatedVariant.category,
+      productLabels: updatedVariant.productLabels,
+      specificationValues: updatedVariant.specificationValues
+    });
 
     res.json({
       success: true,
