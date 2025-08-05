@@ -53,7 +53,7 @@ exports.getOrdersByStore = async (req, res) => {
       currency: order.currency,
       price: order.pricing?.total,
       date: order.createdAt,
-      paid: order.paymentInfo?.status === 'completed',
+      paid: order.paymentStatus === 'paid',
       status: order.status,
       itemsCount: order.items.length,
       notes: order.notes?.customer || order.notes?.admin || '',
@@ -285,7 +285,16 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
-    const order = await Order.findById(orderId);
+    // Check if orderId is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(orderId)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(orderId);
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: orderId });
+    }
+
     if (!order) {
       return res.status(404).json({ 
         success: false, 
@@ -362,15 +371,24 @@ exports.updatePaymentStatus = async (req, res) => {
     }
 
     // Validate payment status
-    const validPaymentStatuses = ['pending', 'paid', 'refunded'];
+    const validPaymentStatuses = ['unpaid', 'paid'];
     if (!validPaymentStatuses.includes(paymentStatus)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalid payment status. Must be one of: pending, paid, refunded' 
+        message: 'Invalid payment status. Must be one of: unpaid, paid' 
       });
     }
 
-    const order = await Order.findById(orderId);
+    // Check if orderId is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(orderId)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(orderId);
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: orderId });
+    }
+
     if (!order) {
       return res.status(404).json({ 
         success: false, 

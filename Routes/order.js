@@ -4,6 +4,7 @@ const Order = require('../Models/Order');
 const Product = require('../Models/Product');
 const jwt = require('jsonwebtoken');
 const OrderController = require('../Controllers/OrderController');
+const mongoose = require('mongoose');
 
 const router = express.Router();
 
@@ -227,8 +228,17 @@ router.get('/', authenticateToken, async (req, res) => {
 // @access  Private
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id)
-      .populate('user', 'firstName lastName email');
+    // Check if id is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(req.params.id)
+        .populate('user', 'firstName lastName email');
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: req.params.id })
+        .populate('user', 'firstName lastName email');
+    }
 
     if (!order) {
       return res.status(404).json({
@@ -286,7 +296,16 @@ router.put('/:id/status', [
       });
     }
 
-    const order = await Order.findById(req.params.id);
+    // Check if id is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(req.params.id);
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: req.params.id });
+    }
+
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -359,7 +378,16 @@ router.put('/:id/cancel', [
       });
     }
 
-    const order = await Order.findById(req.params.id);
+    // Check if id is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(req.params.id);
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: req.params.id });
+    }
+
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -708,7 +736,7 @@ router.put('/:orderId/status', [
  */
 router.put('/:orderId/payment-status', [
   authenticateToken,
-  body('paymentStatus').isIn(['pending', 'paid', 'refunded']).withMessage('Valid payment status is required'),
+  body('paymentStatus').isIn(['unpaid', 'paid']).withMessage('Valid payment status is required'),
   body('notes').optional().isString().withMessage('Notes must be a string')
 ], async (req, res) => {
   try {
