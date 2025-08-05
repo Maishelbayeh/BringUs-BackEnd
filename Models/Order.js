@@ -53,8 +53,15 @@ const orderSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'],
+    enum: ['pending', 'shipped', 'delivered', 'cancelled'],
+    enumAr:['قيد المراجعة','مؤكد','منتهي','ملغي'],
     default: 'pending'
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['unpaid', 'paid'],
+    enumAr:['غير مدفوع','مدفوع'],
+    default: 'unpaid'
   },
   notes: {
     customer: String,

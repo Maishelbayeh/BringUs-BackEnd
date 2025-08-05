@@ -50,6 +50,13 @@ const productSchema = new mongoose.Schema({
       message: 'Barcode cannot be empty'
     }
   }],
+  // تغيير من category واحد إلى array من categories
+  categories: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: [true, 'Product categories are required']
+  }],
+  // الاحتفاظ بـ category للتوافق مع الكود القديم
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
@@ -121,7 +128,7 @@ const productSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ProductSpecification'
   }],
-  // قيم المواصفات المختارة
+  // قيم المواصفات المختارة مع الكمية المنفصلة لكل specification
   specificationValues: [{
     specificationId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -139,6 +146,19 @@ const productSchema = new mongoose.Schema({
     title: {
       type: String,
       required: true
+    },
+    // إضافة كمية منفصلة لكل specification
+    quantity: {
+      type: Number,
+      required: [false, 'Specification quantity is required'],
+      min: [0, 'Specification quantity cannot be negative'],
+      default: 0
+    },
+    // إضافة سعر منفصل لكل specification (اختياري)
+    price: {
+      type: Number,
+      min: [0, 'Specification price cannot be negative'],
+      default: 0
     }
   }],
   stock: {
@@ -172,20 +192,30 @@ const productSchema = new mongoose.Schema({
   },
   
 
-  // Product colors - array of color arrays
-  // Each inner array represents a color option (can be single color or multiple colors)
-  // Example: [['#000000'], ['#FFFFFF', '#FF0000']] - first option is black only, second is white+red
-  colors: [{
-    type: [String], // Array of color codes (hex, rgb, etc.)
+  // Product colors - تغيير ليقبل JSON دائماً
+  colors: {
+    type: String, // JSON string
+    default: '[]',
     validate: {
       validator: function(colors) {
-        // Validate that each color is a valid color format
-        const colorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$|^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$|^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\)$/;
-        return colors.every(color => colorRegex.test(color));
+        try {
+          const parsedColors = JSON.parse(colors);
+          if (!Array.isArray(parsedColors)) {
+            return false;
+          }
+          // Validate that each color group is an array of valid color codes
+          const colorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$|^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$|^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\)$/;
+          return parsedColors.every(colorGroup => 
+            Array.isArray(colorGroup) && 
+            colorGroup.every(color => typeof color === 'string' && colorRegex.test(color))
+          );
+        } catch (error) {
+          return false;
+        }
       },
-      message: 'Invalid color format. Use hex (#RRGGBB), rgb(r,g,b), or rgba(r,g,b,a) format'
+      message: 'Colors must be a valid JSON array of color arrays. Use hex (#RRGGBB), rgb(r,g,b), or rgba(r,g,b,a) format'
     }
-  }],
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -250,6 +280,9 @@ productSchema.index({
 // Create index for category
 productSchema.index({ category: 1 });
 
+// Create index for categories array
+productSchema.index({ categories: 1 });
+
 // Create index for category path
 productSchema.index({ categoryPath: 1 });
 
@@ -261,6 +294,9 @@ productSchema.index({ specifications: 1 });
 
 // Create index for specification values
 productSchema.index({ specificationValues: 1 });
+
+// Create index for specification quantities
+productSchema.index({ 'specificationValues.quantity': 1 });
 
 // Create index for unit
 productSchema.index({ unit: 1 });
@@ -314,16 +350,30 @@ productSchema.virtual('stockStatus').get(function() {
 
 // Virtual for all unique colors
 productSchema.virtual('allColors').get(function() {
-  if (!this.colors || this.colors.length === 0) return [];
+  if (!this.colors) return [];
   
-  // Flatten all color arrays and get unique colors
-  const allColors = this.colors.flat();
-  return [...new Set(allColors)];
+  try {
+    const parsedColors = typeof this.colors === 'string' ? JSON.parse(this.colors) : this.colors;
+    if (!Array.isArray(parsedColors) || parsedColors.length === 0) return [];
+    
+    // Flatten all color arrays and get unique colors
+    const allColors = parsedColors.flat();
+    return [...new Set(allColors)];
+  } catch (error) {
+    return [];
+  }
 });
 
 // Virtual for color options count
 productSchema.virtual('colorOptionsCount').get(function() {
-  return this.colors ? this.colors.length : 0;
+  if (!this.colors) return 0;
+  
+  try {
+    const parsedColors = typeof this.colors === 'string' ? JSON.parse(this.colors) : this.colors;
+    return Array.isArray(parsedColors) ? parsedColors.length : 0;
+  } catch (error) {
+    return 0;
+  }
 });
 
 // Virtual for total variants count
@@ -346,6 +396,26 @@ productSchema.virtual('totalStock').get(function() {
   return total;
 });
 
+// Virtual for total specification quantities
+productSchema.virtual('totalSpecificationQuantities').get(function() {
+  if (!this.specificationValues || !Array.isArray(this.specificationValues)) {
+    return 0;
+  }
+  return this.specificationValues.reduce((total, spec) => total + (spec.quantity || 0), 0);
+});
+
+// Virtual for specification stock status
+productSchema.virtual('specificationStockStatus').get(function() {
+  if (!this.specificationValues || !Array.isArray(this.specificationValues)) {
+    return 'no_specifications';
+  }
+  
+  const totalQuantity = this.specificationValues.reduce((total, spec) => total + (spec.quantity || 0), 0);
+  if (totalQuantity === 0) return 'out_of_stock';
+  if (totalQuantity <= this.lowStockThreshold) return 'low_stock';
+  return 'in_stock';
+});
+
 // Virtual to check if product is a parent
 productSchema.virtual('isParent').get(function() {
   return this.hasVariants && this.variants && this.variants.length > 0;
@@ -355,11 +425,22 @@ productSchema.virtual('isParent').get(function() {
 productSchema.set('toJSON', { virtuals: true });
 productSchema.set('toObject', { virtuals: true });
 
-// Add pre-save middleware to log barcodes
+// Add pre-save middleware to log barcodes and sync categories
 productSchema.pre('save', function(next) {
   //CONSOLE.log('🔍 Pre-save - barcodes:', this.barcodes);
   //CONSOLE.log('🔍 Pre-save - barcodes type:', typeof this.barcodes);
   //CONSOLE.log('🔍 Pre-save - barcodes is array:', Array.isArray(this.barcodes));
+  
+  // تحديث category من categories إذا كان categories موجود
+  if (this.categories && this.categories.length > 0 && !this.category) {
+    this.category = this.categories[0];
+  }
+  
+  // تحويل colors إلى JSON إذا كان array
+  if (Array.isArray(this.colors)) {
+    this.colors = JSON.stringify(this.colors);
+  }
+  
   next();
 });
 
@@ -372,7 +453,7 @@ productSchema.pre('remove', async function(next) {
   }
 });
 
-// Add pre-findOneAndUpdate middleware to log barcodes
+// Add pre-findOneAndUpdate middleware to log barcodes and sync categories
 productSchema.pre('findOneAndUpdate', function(next) {
   //CONSOLE.log('🔍 Pre-findOneAndUpdate - update data:', this._update);
   if (this._update.barcodes) {
@@ -380,6 +461,17 @@ productSchema.pre('findOneAndUpdate', function(next) {
     //CONSOLE.log('🔍 Pre-findOneAndUpdate - barcodes type:', typeof this._update.barcodes);
     //CONSOLE.log('🔍 Pre-findOneAndUpdate - barcodes is array:', Array.isArray(this._update.barcodes));
   }
+  
+  // تحديث category من categories إذا كان categories موجود
+  if (this._update.categories && this._update.categories.length > 0 && !this._update.category) {
+    this._update.category = this._update.categories[0];
+  }
+  
+  // تحويل colors إلى JSON إذا كان array
+  if (this._update.colors && Array.isArray(this._update.colors)) {
+    this._update.colors = JSON.stringify(this._update.colors);
+  }
+  
   next();
 });
 

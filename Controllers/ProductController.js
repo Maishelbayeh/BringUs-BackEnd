@@ -2,6 +2,47 @@ const Product = require('../Models/Product');
 const { addStoreFilter } = require('../middleware/storeIsolation');
 const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 
+// Helper function to process specificationValues and ensure all required fields
+const processSpecificationValues = (specificationValues) => {
+  if (!specificationValues) return [];
+  
+  if (Array.isArray(specificationValues)) {
+    return specificationValues.map(spec => {
+      // Ensure all required fields are present
+      return {
+        specificationId: spec.specificationId,
+        valueId: spec.valueId,
+        value: spec.value,
+        title: spec.title,
+        quantity: spec.quantity || 0,
+        price: spec.price || 0
+      };
+    });
+  } else if (typeof specificationValues === 'string') {
+    try {
+      const parsed = JSON.parse(specificationValues);
+      if (Array.isArray(parsed)) {
+        return parsed.map(spec => {
+          // Ensure all required fields are present
+          return {
+            specificationId: spec.specificationId,
+            valueId: spec.valueId,
+            value: spec.value,
+            title: spec.title,
+            quantity: spec.quantity || 0,
+            price: spec.price || 0
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Error parsing specificationValues:', error);
+      throw new Error('Invalid specificationValues format');
+    }
+  }
+  
+  return [];
+};
+
 // دالة لحساب السعر الإجمالي للمنتج مع الصفات والألوان
 exports.calculateProductPrice = async (req, res) => {
   try {
@@ -25,6 +66,7 @@ exports.calculateProductPrice = async (req, res) => {
       product = await Product.findOne({ _id: productId, store: storeId })
         .populate('specifications')
         .populate('category')
+        .populate('categories')
         .populate('unit');
     } else if (storeSlug) {
       const Store = require('../Models/Store');
@@ -38,6 +80,7 @@ exports.calculateProductPrice = async (req, res) => {
       product = await Product.findOne({ _id: productId, store: store._id })
         .populate('specifications')
         .populate('category')
+        .populate('categories')
         .populate('unit');
     }
       
@@ -142,6 +185,7 @@ exports.getProductOptions = async (req, res) => {
       product = await Product.findOne({ _id: productId, store: storeId })
         .populate('specifications')
         .populate('category')
+        .populate('categories')
         .populate('unit');
     } else if (storeSlug) {
       const Store = require('../Models/Store');
@@ -155,6 +199,7 @@ exports.getProductOptions = async (req, res) => {
       product = await Product.findOne({ _id: productId, store: store._id })
         .populate('specifications')
         .populate('category')
+        .populate('categories')
         .populate('unit');
     }
       
@@ -179,7 +224,15 @@ exports.getProductOptions = async (req, res) => {
     }));
     
     // تجهيز بيانات الألوان
-    const colors = product.colors || [];
+    let colors = [];
+    if (product.colors) {
+      try {
+        colors = typeof product.colors === 'string' ? JSON.parse(product.colors) : product.colors;
+      } catch (error) {
+        console.error('Error parsing product colors:', error);
+        colors = [];
+      }
+    }
     
     res.json({
       success: true,
@@ -207,6 +260,7 @@ exports.getAll = async (req, res) => {
     
     const products = await Product.find(query)
       .populate('category')
+      .populate('categories')
       .populate('productLabels')
       .populate('unit')
       .populate('store', 'name domain')
@@ -239,6 +293,7 @@ exports.getById = async (req, res) => {
     
     const product = await Product.findOne(query)
       .populate('category')
+      .populate('categories')
       .populate('productLabels')
       .populate('unit')
       .populate('costPrice')
@@ -357,14 +412,14 @@ exports.create = async (req, res) => {
   try {
     // Parse fields from body
     const {
-      nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, storeId,
-      availableQuantity = 0, stock = 0, productLabels = [], colors = [], barcodes = [], // تمت إضافة الباركود هنا
+      nameAr, nameEn, descriptionAr, descriptionEn, price, category, categories, unit, storeId,
+      availableQuantity = 0, stock = 0, productLabels = [], colors = [], barcodes = [],
       compareAtPrice, costPrice, productOrder = 0, visibility = true, isActive = true,
       isFeatured = false, isOnSale = false, salePercentage = 0, attributes = [],
       specifications = [], tags = [], weight, dimensions, rating = 0, numReviews = 0,
       views = 0, soldCount = 0, seo,
       specificationValues = [],
-      lowStockThreshold = 5 // أضف هذا السطر
+      lowStockThreshold = 5
     } = req.body;
 
     // Handle main image upload
@@ -399,20 +454,53 @@ exports.create = async (req, res) => {
       }
     }
 
+    // Handle categories - support both single category and categories array
+    let finalCategories = [];
+    if (categories && Array.isArray(categories) && categories.length > 0) {
+      finalCategories = categories;
+    } else if (category) {
+      finalCategories = [category];
+    }
+
+    // Handle colors - ensure it's JSON string
+    let finalColors = '[]';
+    if (colors) {
+      if (typeof colors === 'string') {
+        finalColors = colors;
+      } else if (Array.isArray(colors)) {
+        finalColors = JSON.stringify(colors);
+      }
+    }
+
+    // Handle specificationValues - ensure quantity and price are included
+    let finalSpecificationValues = [];
+    try {
+      finalSpecificationValues = processSpecificationValues(specificationValues);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+
     // Create product data
     const productData = {
-      nameAr, nameEn, descriptionAr, descriptionEn, price, category, unit, store: storeId,
-      availableQuantity, stock, productLabels, colors, images: imagesUrls, mainImage: mainImageUrl,
+      nameAr, nameEn, descriptionAr, descriptionEn, price, 
+      category: finalCategories[0] || category, // للتوافق مع الكود القديم
+      categories: finalCategories, // الحقل الجديد
+      unit, store: storeId,
+      availableQuantity, stock, productLabels, colors: finalColors, images: imagesUrls, mainImage: mainImageUrl,
       compareAtPrice, costPrice, productOrder, visibility, isActive, isFeatured, isOnSale, salePercentage,
       attributes, specifications, tags, weight, dimensions, rating, numReviews, views, soldCount, seo,
-      specificationValues,
-      barcodes, // أضف هذا السطر
-      lowStockThreshold // أضف هذا السطر
+      specificationValues: finalSpecificationValues,
+      barcodes,
+      lowStockThreshold
     };
 
     const product = await Product.create(productData);
     const populatedProduct = await Product.findById(product._id)
       .populate('category', 'nameAr nameEn')
+      .populate('categories', 'nameAr nameEn')
       .populate('productLabels', 'nameAr nameEn color')
       .populate('specifications', 'descriptionAr descriptionEn')
       .populate('unit', 'nameAr nameEn symbol')
@@ -437,7 +525,8 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { storeId } = req.body;
+    const { storeId, categories, colors, specificationValues } = req.body;
+    
     // Build update filter
     const filter = { _id: id };
     if (storeId) {
@@ -450,11 +539,39 @@ exports.update = async (req, res) => {
         message: 'Product not found'
       });
     }
+    
     // Prepare update data
     const updateData = { ...req.body };
     if (storeId) {
       updateData.store = storeId;
       delete updateData.storeId;
+    }
+
+    // Handle categories - support both single category and categories array
+    if (categories && Array.isArray(categories) && categories.length > 0) {
+      updateData.categories = categories;
+      updateData.category = categories[0]; // للتوافق مع الكود القديم
+    } else if (req.body.category && !categories) {
+      updateData.categories = [req.body.category];
+    }
+
+    // Handle colors - ensure it's JSON string
+    if (colors) {
+      if (typeof colors === 'string') {
+        updateData.colors = colors;
+      } else if (Array.isArray(colors)) {
+        updateData.colors = JSON.stringify(colors);
+      }
+    }
+
+    // Handle specificationValues - ensure quantity and price are included
+    try {
+      updateData.specificationValues = processSpecificationValues(specificationValues);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
     }
     // Handle main image upload
     if (req.files && req.files.mainImage && req.files.mainImage[0]) {
@@ -488,6 +605,7 @@ exports.update = async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     ).populate('category', 'nameAr nameEn')
+     .populate('categories', 'nameAr nameEn')
      .populate('productLabels', 'nameAr nameEn color')
      .populate('specifications', 'descriptionAr descriptionEn')
      .populate('unit', 'nameAr nameEn symbol')
@@ -606,6 +724,7 @@ exports.createVariant = async (req, res) => {
 
     const populatedVariant = await Product.findById(variantProduct._id)
       .populate('category')
+      .populate('categories')
       .populate('productLabels')
       .populate('specifications')
       .populate('unit')
@@ -651,6 +770,7 @@ exports.getVariants = async (req, res) => {
     // Get variants with full population
     const variants = await Product.find({ _id: { $in: product.variants } })
       .populate('category')
+      .populate('categories')
       .populate('productLabels')
       .populate('specifications')
       .populate('unit')
@@ -677,6 +797,7 @@ exports.getByCategory = async (req, res) => {
     
     const products = await Product.find(query)
       .populate('category')
+      .populate('categories')
       .populate('productLabel')
       .populate('unit')
       .populate('variants');
@@ -734,6 +855,7 @@ exports.getWithFilters = async (req, res) => {
     
     const products = await Product.find(query)
       .populate('category')
+      .populate('categories')
       .populate('productLabel')
       .populate('unit')
       .populate('variants')
@@ -768,6 +890,7 @@ exports.getWithVariants = async (req, res) => {
     
     const products = await Product.find(query)
       .populate('category')
+      .populate('categories')
       .populate('productLabels')
       .populate('unit')
       .populate('store', 'name domain')
@@ -793,6 +916,7 @@ exports.getVariantsOnly = async (req, res) => {
     
     const variants = await Product.find(query)
       .populate('category')
+      .populate('categories')
       .populate('productLabels')
       .populate('unit')
       .populate('store', 'name domain');
@@ -891,21 +1015,14 @@ exports.addVariant = async (req, res) => {
       }
     }
 
-    // Handle specificationValues parsing
-    if (variantData.specificationValues) {
-      if (Array.isArray(variantData.specificationValues)) {
-        variantData.specificationValues = variantData.specificationValues;
-      } else if (typeof variantData.specificationValues === 'string') {
-        try {
-          variantData.specificationValues = JSON.parse(variantData.specificationValues);
-        } catch (error) {
-          console.error('Error parsing specificationValues:', error);
-          return res.status(400).json({
-            success: false,
-            error: 'Invalid specificationValues format'
-          });
-        }
-      }
+    // Handle specificationValues parsing - ensure quantity and price are included
+    try {
+      variantData.specificationValues = processSpecificationValues(variantData.specificationValues);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
     }
 
     // Handle specifications parsing
@@ -942,94 +1059,31 @@ exports.addVariant = async (req, res) => {
       }
     }
 
-    // Handle colors parsing
+    // Handle colors parsing - ensure it's JSON string
     if (variantData.colors) {
-      if (Array.isArray(variantData.colors)) {
-        // Check if it's already parsed (contains actual color values)
-        if (variantData.colors.length > 0 && typeof variantData.colors[0] === 'string' && variantData.colors[0].startsWith('#')) {
-          // Already parsed, keep as is
-          variantData.colors = variantData.colors;
-        } else if (variantData.colors.length > 0 && typeof variantData.colors[0] === 'string' && variantData.colors[0].startsWith('[')) {
-          // It's a JSON string, parse it
-          try {
-            variantData.colors = JSON.parse(variantData.colors[0]);
-          } catch (error) {
-            console.error('Error parsing colors from array:', error);
-            return res.status(400).json({
-              success: false,
-              error: 'Invalid colors format'
-            });
-          }
-        } else {
-          // Normal array, keep as is
-          variantData.colors = variantData.colors;
-        }
-      } else if (typeof variantData.colors === 'string') {
+      if (typeof variantData.colors === 'string') {
+        // Already a JSON string, validate it
         try {
-          variantData.colors = JSON.parse(variantData.colors);
+          JSON.parse(variantData.colors);
+          variantData.colors = variantData.colors;
         } catch (error) {
-          console.error('Error parsing colors:', error);
+          console.error('Error validating colors JSON:', error);
           return res.status(400).json({
             success: false,
-            error: 'Invalid colors format'
+            error: 'Invalid colors JSON format'
           });
         }
+      } else if (Array.isArray(variantData.colors)) {
+        // Convert array to JSON string
+        variantData.colors = JSON.stringify(variantData.colors);
       }
+    } else {
+      variantData.colors = '[]';
     }
 
-    // Handle allColors parsing
-    if (variantData.allColors) {
-      if (Array.isArray(variantData.allColors)) {
-        // Check if it's already parsed (contains actual color values)
-        if (variantData.allColors.length > 0 && typeof variantData.allColors[0] === 'string' && variantData.allColors[0].startsWith('#')) {
-          // Already parsed, keep as is
-          variantData.allColors = variantData.allColors;
-        } else if (variantData.allColors.length > 0 && typeof variantData.allColors[0] === 'string' && variantData.allColors[0].startsWith('[')) {
-          // It's a JSON string, parse it
-          try {
-            variantData.allColors = JSON.parse(variantData.allColors[0]);
-          } catch (error) {
-            console.error('Error parsing allColors from array:', error);
-            return res.status(400).json({
-              success: false,
-              error: 'Invalid allColors format'
-            });
-          }
-        } else if (variantData.allColors.length > 0 && typeof variantData.allColors[0] === 'string' && variantData.allColors[0].includes('\\"')) {
-          // It's a string like "[\"#C0C0C0\"]", parse each element
-          try {
-            const parsedColors = variantData.allColors.map(colorStr => {
-              const parsed = JSON.parse(colorStr);
-              return Array.isArray(parsed) ? parsed[0] : parsed;
-            });
-            variantData.allColors = parsedColors;
-          } catch (error) {
-            console.error('Error parsing allColors from escaped strings:', error);
-            return res.status(400).json({
-              success: false,
-              error: 'Invalid allColors format'
-            });
-          }
-        } else if (variantData.allColors.length > 0 && typeof variantData.allColors[0] === 'string' && variantData.allColors[0].startsWith('#')) {
-          // It's already an array of color strings like ['#C0C0C0', '#FFD700']
-          // Keep as is
-          variantData.allColors = variantData.allColors;
-        } else {
-          // Normal array, keep as is
-          variantData.allColors = variantData.allColors;
-        }
-      } else if (typeof variantData.allColors === 'string') {
-        try {
-          variantData.allColors = JSON.parse(variantData.allColors);
-        } catch (error) {
-          console.error('Error parsing allColors:', error);
-          return res.status(400).json({
-            success: false,
-            error: 'Invalid allColors format'
-          });
-        }
-      }
-    }
+    // Handle allColors parsing - this is now handled by the virtual field
+    // Remove allColors from variantData as it's computed automatically
+    delete variantData.allColors;
 
     // Handle productLabels parsing for addVariant
     if (variantData.productLabels) {
@@ -1282,21 +1336,14 @@ exports.updateVariant = async (req, res) => {
       }
     }
 
-    // Handle specificationValues parsing
-    if (updateData.specificationValues) {
-      if (Array.isArray(updateData.specificationValues)) {
-        updateData.specificationValues = updateData.specificationValues;
-      } else if (typeof updateData.specificationValues === 'string') {
-        try {
-          updateData.specificationValues = JSON.parse(updateData.specificationValues);
-        } catch (error) {
-          console.error('Error parsing specificationValues:', error);
-          return res.status(400).json({
-            success: false,
-            error: 'Invalid specificationValues format'
-          });
-        }
-      }
+    // Handle specificationValues parsing - ensure quantity and price are included
+    try {
+      updateData.specificationValues = processSpecificationValues(updateData.specificationValues);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
     }
 
     // Handle specifications parsing
@@ -1333,105 +1380,34 @@ exports.updateVariant = async (req, res) => {
       }
     }
 
-    // Handle colors parsing
+    // Handle colors parsing - ensure it's JSON string
     if (updateData.colors) {
-      if (Array.isArray(updateData.colors)) {
-        // Check if it's already parsed (contains actual color values)
-        if (updateData.colors.length > 0 && typeof updateData.colors[0] === 'string' && updateData.colors[0].startsWith('#')) {
-          // Already parsed, keep as is
-          updateData.colors = updateData.colors;
-        } else if (updateData.colors.length > 0 && typeof updateData.colors[0] === 'string' && updateData.colors[0].startsWith('[')) {
-          // It's a JSON string, parse it
-          try {
-            updateData.colors = JSON.parse(updateData.colors[0]);
-          } catch (error) {
-            console.error('Error parsing colors from array:', error);
-            return res.status(400).json({
-              success: false,
-              error: 'Invalid colors format'
-            });
-          }
-        } else {
-          // Normal array, keep as is
-          updateData.colors = updateData.colors;
-        }
-      } else if (typeof updateData.colors === 'string') {
+      if (typeof updateData.colors === 'string') {
+        // Already a JSON string, validate it
         try {
-          updateData.colors = JSON.parse(updateData.colors);
+          JSON.parse(updateData.colors);
+          updateData.colors = updateData.colors;
         } catch (error) {
-          console.error('Error parsing colors:', error);
+          console.error('Error validating colors JSON:', error);
           return res.status(400).json({
             success: false,
-            error: 'Invalid colors format'
+            error: 'Invalid colors JSON format'
           });
         }
+      } else if (Array.isArray(updateData.colors)) {
+        // Convert array to JSON string
+        updateData.colors = JSON.stringify(updateData.colors);
       }
+    } else {
+      updateData.colors = '[]';
     }
 
-    // Handle allColors parsing
-    if (updateData.allColors) {
-      if (Array.isArray(updateData.allColors)) {
-        // Check if it's already parsed (contains actual color values)
-        if (updateData.allColors.length > 0 && typeof updateData.allColors[0] === 'string' && updateData.allColors[0].startsWith('#')) {
-          // Already parsed, keep as is
-          updateData.allColors = updateData.allColors;
-        } else if (updateData.allColors.length > 0 && typeof updateData.allColors[0] === 'string' && updateData.allColors[0].startsWith('[')) {
-          // It's a JSON string, parse it
-          try {
-            updateData.allColors = JSON.parse(updateData.allColors[0]);
-          } catch (error) {
-            console.error('Error parsing allColors from array:', error);
-            return res.status(400).json({
-              success: false,
-              error: 'Invalid allColors format'
-            });
-          }
-        } else if (updateData.allColors.length > 0 && typeof updateData.allColors[0] === 'string' && updateData.allColors[0].includes('\\"')) {
-          // It's a string like "[\"#C0C0C0\"]", parse each element
-          try {
-            const parsedColors = updateData.allColors.map(colorStr => {
-              const parsed = JSON.parse(colorStr);
-              return Array.isArray(parsed) ? parsed[0] : parsed;
-            });
-            updateData.allColors = parsedColors;
-          } catch (error) {
-            console.error('Error parsing allColors from escaped strings:', error);
-            return res.status(400).json({
-              success: false,
-              error: 'Invalid allColors format'
-            });
-          }
-        } else if (updateData.allColors.length > 0 && typeof updateData.allColors[0] === 'string' && updateData.allColors[0].startsWith('#')) {
-          // It's already an array of color strings like ['#C0C0C0', '#FFD700']
-          // Keep as is
-          updateData.allColors = updateData.allColors;
-        } else {
-          // Normal array, keep as is
-          updateData.allColors = updateData.allColors;
-        }
-      } else if (typeof updateData.allColors === 'string') {
-        try {
-          updateData.allColors = JSON.parse(updateData.allColors);
-        } catch (error) {
-          console.error('Error parsing allColors:', error);
-          return res.status(400).json({
-            success: false,
-            error: 'Invalid allColors format'
-          });
-        }
-      }
-    }
+    // Handle allColors parsing - this is now handled by the virtual field
+    // Remove allColors from updateData as it's computed automatically
+    delete updateData.allColors;
 
     console.log('🔍 updateVariant - Colors after processing:', updateData.colors);
-    console.log('🔍 updateVariant - AllColors after processing:', updateData.allColors);
     console.log('🔍 updateVariant - ProductLabels after processing:', updateData.productLabels);
-    console.log('🔍 updateVariant - AllColors type:', typeof updateData.allColors);
-    console.log('🔍 updateVariant - AllColors is array:', Array.isArray(updateData.allColors));
-    if (Array.isArray(updateData.allColors) && updateData.allColors.length > 0) {
-      console.log('🔍 updateVariant - First allColors element:', updateData.allColors[0]);
-      console.log('🔍 updateVariant - First allColors element type:', typeof updateData.allColors[0]);
-      console.log('🔍 updateVariant - First allColors element starts with #:', updateData.allColors[0].startsWith('#'));
-    }
 
     // Handle unit parsing
     if (updateData.unit) {
@@ -1500,6 +1476,7 @@ exports.updateVariant = async (req, res) => {
       { ...updateData },
       { new: true, runValidators: true }
     ).populate('category')
+     .populate('categories')
      .populate('productLabels')
      .populate('specifications')
      .populate('unit')
@@ -1512,9 +1489,9 @@ exports.updateVariant = async (req, res) => {
       price: updatedVariant.price,
       barcodes: updatedVariant.barcodes,
       colors: updatedVariant.colors,
-      allColors: updatedVariant.allColors,
       unit: updatedVariant.unit,
       category: updatedVariant.category,
+      categories: updatedVariant.categories,
       productLabels: updatedVariant.productLabels,
       specificationValues: updatedVariant.specificationValues
     });
@@ -1545,6 +1522,7 @@ exports.getByStoreId = async (req, res) => {
     }
     const products = await Product.find({ store: storeId })
       .populate('category', 'nameAr nameEn')
+      .populate('categories', 'nameAr nameEn')
       .populate('productLabels', 'nameAr nameEn color')
       .populate('specifications', 'descriptionAr descriptionEn')
       .populate('unit', 'nameAr nameEn symbol')
@@ -1589,6 +1567,7 @@ exports.getVariantById = async (req, res) => {
     // جلب المتغير
     const variant = await Product.findOne({ _id: variantId, store: storeId })
       .populate('category')
+      .populate('categories')
       .populate('productLabels')
       .populate('specifications')
       .populate('unit')
