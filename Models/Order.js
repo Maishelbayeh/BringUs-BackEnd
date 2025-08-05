@@ -9,6 +9,7 @@ const orderSchema = new mongoose.Schema({
     type: Object, // نسخة من بيانات المتجر وقت الطلب
     required: true
   },
+  
   user: {
     type: Object, // نسخة من بيانات المستخدم وقت الطلب
     required: true
