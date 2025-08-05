@@ -201,6 +201,7 @@ router.get('/store/:storeId', getPaymentMethodsByStoreId);
  */
 router.get('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess, getPaymentMethodById);
 
+
 /**
  * @swagger
  * /api/payment-methods/with-files:
@@ -497,6 +498,7 @@ router.put('/:id/with-files', protect, authorize('admin', 'superadmin'), verifyS
 router.put('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess, validatePaymentMethod, updatePaymentMethod);
 
 /**
+ * 
  * @swagger
  * /api/payment-methods/{id}:
  *   delete:

@@ -589,7 +589,7 @@ router.put('/profile', protect, validateProfileUpdate, updateCurrentUserProfile)
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:id', protect, authorize('admin', 'superadmin'), getUserById);
+router.get('/:id', protect, authorize('admin', 'superadmin','client'), getUserById);
 
 /**
  * @swagger
