@@ -3,12 +3,13 @@ const mongoose = require('mongoose');
 const orderSchema = new mongoose.Schema({
   orderNumber: {
     type: String,
-    required: true
+    required: false
   },
   store: {
     type: Object, // نسخة من بيانات المتجر وقت الطلب
     required: true
   },
+  
   user: {
     type: Object, // نسخة من بيانات المستخدم وقت الطلب
     required: true
