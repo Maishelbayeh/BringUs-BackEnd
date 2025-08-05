@@ -47,6 +47,10 @@ const storeSchema = new mongoose.Schema({
     default: 'active'
   },
   settings: {
+    currency: {
+      type: String,
+      default: 'ILS'
+    },
     mainColor: {
       type: String,
       default: '#000000'
