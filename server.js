@@ -352,6 +352,7 @@ const swaggerOptions = {
             settings: {
               type: 'object',
               properties: {
+                currency: { type: 'string', example: 'ILS' },
                 mainColor: { type: 'string', example: '#000000' },
                 language: { type: 'string', example: 'en' },
                 storeDiscount: { type: 'number', example: 0 },

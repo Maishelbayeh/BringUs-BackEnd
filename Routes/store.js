@@ -203,6 +203,10 @@ router.get('/', isSuperAdmin, StoreController.getAllStores);
  *               settings:
  *                 type: object
  *                 properties:
+ *                   currency:
+ *                     type: string
+ *                     example: "ILS"
+ *                     description: "Store currency"
  *                   mainColor:
  *                     type: string
  *                     example: "#000000"
@@ -363,6 +367,10 @@ router.post('/', upload.single('logo'), StoreController.createStore);
  *               settings:
  *                 type: object
  *                 properties:
+ *                   currency:
+ *                     type: string
+ *                     example: "ILS"
+ *                     description: "Store currency"
  *                   mainColor:
  *                     type: string
  *                     example: "#FF0000"
