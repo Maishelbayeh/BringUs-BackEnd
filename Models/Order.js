@@ -145,6 +145,7 @@ orderSchema.pre('save', function(next) {
   next();
 });
 
+
 // Create indexes for store isolation
 orderSchema.index({ store: 1 });
 orderSchema.index({ store: 1, user: 1 });
