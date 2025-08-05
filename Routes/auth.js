@@ -45,11 +45,11 @@ const router = express.Router();
  *               email:
  *                 type: string
  *                 format: email
- *                 example: "john@example.com"
+ *                 example: "moon95@gmail.com"
  *               password:
  *                 type: string
  *                 minLength: 6
- *                 example: "password123"
+ *                 example: "123123"
  *               phone:
  *                 type: string
  *                 pattern: "^[\\+]?[1-9][\\d]{0,15}$"
@@ -183,10 +183,10 @@ router.post('/register', [
  *               email:
  *                 type: string
  *                 format: email
- *                 example: "john@example.com"
+ *                 example: "moon95@gmail.com"
  *               password:
  *                 type: string
- *                 example: "password123"
+ *                 example: "123123"
  *     responses:
  *       200:
  *         description: Login successful

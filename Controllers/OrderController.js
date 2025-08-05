@@ -58,13 +58,13 @@ exports.getOrdersByStore = async (req, res) => {
       itemsCount: order.items.length,
       notes: order.notes?.customer || order.notes?.admin || '',
       items: order.items.map(item => ({
-        image: item.product?.images?.[0],
-        name: item.product?.nameEn,
+        image: item.productSnapshot?.images?.[0],
+        name: item.productSnapshot?.nameEn || item.name,
         quantity: item.quantity,
-        unit: item.product?.unit?.nameEn,
-        pricePerUnit: item.product?.price,
+        unit: item.productSnapshot?.unit?.nameEn,
+        pricePerUnit: item.price,
         total: item.totalPrice,
-        color: item.product?.color,
+        color: item.productSnapshot?.color,
       })),
     }));
     res.json({ success: true, data: shapedOrders, count: shapedOrders.length });
@@ -250,5 +250,164 @@ exports.createOrder = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Update order status
+ * @route PUT /api/orders/:orderId/status
+ */
+exports.updateOrderStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status, notes } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Order ID is required' 
+      });
+    }
+
+    if (!status) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Status is required' 
+      });
+    }
+
+    // Validate status
+    const validStatuses = ['pending', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid status. Must be one of: pending, shipped, delivered, cancelled' 
+      });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Order not found' 
+      });
+    }
+
+    // Update order status
+    order.status = status;
+    
+    // Add admin notes if provided
+    if (notes) {
+      order.notes = {
+        ...order.notes,
+        admin: notes
+      };
+    }
+
+    // Set delivery date if status is delivered
+    if (status === 'delivered') {
+      order.actualDeliveryDate = new Date();
+    }
+
+    // Handle cancellation
+    if (status === 'cancelled' && order.status !== 'cancelled') {
+      order.cancelledAt = new Date();
+      order.cancelledBy = req.user?.id || 'system';
+    }
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: 'Order status updated successfully',
+      data: {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        updatedAt: order.updatedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Update order status error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating order status',
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * Update payment status
+ * @route PUT /api/orders/:orderId/payment-status
+ */
+exports.updatePaymentStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { paymentStatus, notes } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Order ID is required' 
+      });
+    }
+
+    if (!paymentStatus) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Payment status is required' 
+      });
+    }
+
+    // Validate payment status
+    const validPaymentStatuses = ['pending', 'paid', 'refunded'];
+    if (!validPaymentStatuses.includes(paymentStatus)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid payment status. Must be one of: pending, paid, refunded' 
+      });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Order not found' 
+      });
+    }
+
+    // Update payment status
+    order.paymentStatus = paymentStatus;
+    
+    // Add admin notes if provided
+    if (notes) {
+      order.notes = {
+        ...order.notes,
+        admin: notes
+      };
+    }
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: 'Payment status updated successfully',
+      data: {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        paymentStatus: order.paymentStatus,
+        updatedAt: order.updatedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Update payment status error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating payment status',
+      error: error.message 
+    });
   }
 }; 

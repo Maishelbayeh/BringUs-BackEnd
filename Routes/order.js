@@ -7,6 +7,17 @@ const OrderController = require('../Controllers/OrderController');
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *       description: Enter your JWT token in the format: Bearer <token>
+ */
+
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
   try {
@@ -155,8 +166,7 @@ router.post('/', [
     });
 
     const populatedOrder = await Order.findById(order._id)
-      .populate('user', 'firstName lastName email')
-      .populate('items.product', 'name images');
+      .populate('user', 'firstName lastName email');
 
     res.status(201).json({
       success: true,
@@ -185,7 +195,6 @@ router.get('/', authenticateToken, async (req, res) => {
     if (status) filter.status = status;
 
     const orders = await Order.find(filter)
-      .populate('items.product', 'name images')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -219,8 +228,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate('user', 'firstName lastName email')
-      .populate('items.product', 'name images description');
+      .populate('user', 'firstName lastName email');
 
     if (!order) {
       return res.status(404).json({
@@ -306,7 +314,7 @@ router.put('/:id/status', [
 
       // Restore product stock
       for (const item of order.items) {
-        const product = await Product.findById(item.product);
+        const product = await Product.findById(item.productId);
         if (product) {
           product.stock += item.quantity;
           product.soldCount -= item.quantity;
@@ -318,8 +326,7 @@ router.put('/:id/status', [
     await order.save();
 
     const updatedOrder = await Order.findById(order._id)
-      .populate('user', 'firstName lastName email')
-      .populate('items.product', 'name images');
+      .populate('user', 'firstName lastName email');
 
     res.status(200).json({
       success: true,
@@ -384,7 +391,7 @@ router.put('/:id/cancel', [
 
     // Restore product stock
     for (const item of order.items) {
-      const product = await Product.findById(item.product);
+      const product = await Product.findById(item.productId);
       if (product) {
         product.stock += item.quantity;
         product.soldCount -= item.quantity;
@@ -414,8 +421,7 @@ router.put('/:id/cancel', [
 router.get('/number/:orderNumber', authenticateToken, async (req, res) => {
   try {
     const order = await Order.findOne({ orderNumber: req.params.orderNumber })
-      .populate('user', 'firstName lastName email')
-      .populate('items.product', 'name images description');
+      .populate('user', 'firstName lastName email');
 
     if (!order) {
       return res.status(404).json({
@@ -452,6 +458,8 @@ router.get('/number/:orderNumber', authenticateToken, async (req, res) => {
  *   get:
  *     summary: Get all orders for a specific store (admin or store owner)
  *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: storeId
@@ -464,6 +472,10 @@ router.get('/number/:orderNumber', authenticateToken, async (req, res) => {
  *         description: List of orders
  *       400:
  *         description: storeId is required
+ *       401:
+ *         description: Access denied. No token provided.
+ *       403:
+ *         description: Access denied. Invalid token or insufficient permissions.
  */
 router.get('/store/:storeId', OrderController.getOrdersByStore);
 
@@ -473,6 +485,8 @@ router.get('/store/:storeId', OrderController.getOrdersByStore);
  *   post:
  *     summary: Create a new order for a specific store
  *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: storeId
@@ -520,7 +534,209 @@ router.get('/store/:storeId', OrderController.getOrdersByStore);
  *         description: Order created
  *       400:
  *         description: storeId is required or validation error
+ *       401:
+ *         description: Access denied. No token provided.
+ *       403:
+ *         description: Access denied. Invalid token or insufficient permissions.
  */
 router.post('/store/:storeId', OrderController.createOrder);
+
+/**
+ * @swagger
+ * /api/orders/{orderId}/status:
+ *   put:
+ *     summary: Update order status
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The order ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pending, shipped, delivered, cancelled]
+ *                 description: New order status
+ *               notes:
+ *                 type: string
+ *                 description: Admin notes (optional)
+ *     responses:
+ *       200:
+ *         description: Order status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orderId:
+ *                       type: string
+ *                     orderNumber:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Invalid request data
+ *       401:
+ *         description: Access denied. No token provided.
+ *       403:
+ *         description: Access denied. Admin or store owner only.
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
+router.put('/:orderId/status', [
+  authenticateToken,
+  body('status').isIn(['pending', 'shipped', 'delivered', 'cancelled']).withMessage('Valid status is required'),
+  body('notes').optional().isString().withMessage('Notes must be a string')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    // Check if user is admin or store owner
+    if (req.user.role !== 'admin' && req.user.role !== 'store_owner') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin or store owner only.'
+      });
+    }
+
+    await OrderController.updateOrderStatus(req, res);
+  } catch (error) {
+    console.error('Update order status route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating order status',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/orders/{orderId}/payment-status:
+ *   put:
+ *     summary: Update payment status
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The order ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentStatus
+ *             properties:
+ *               paymentStatus:
+ *                 type: string
+ *                 enum: [pending, paid, refunded]
+ *                 description: New payment status
+ *               notes:
+ *                 type: string
+ *                 description: Admin notes (optional)
+ *     responses:
+ *       200:
+ *         description: Payment status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orderId:
+ *                       type: string
+ *                     orderNumber:
+ *                       type: string
+ *                     paymentStatus:
+ *                       type: string
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Invalid request data
+ *       401:
+ *         description: Access denied. No token provided.
+ *       403:
+ *         description: Access denied. Admin or store owner only.
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
+router.put('/:orderId/payment-status', [
+  authenticateToken,
+  body('paymentStatus').isIn(['pending', 'paid', 'refunded']).withMessage('Valid payment status is required'),
+  body('notes').optional().isString().withMessage('Notes must be a string')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    // Check if user is admin or store owner
+    if (req.user.role !== 'admin' && req.user.role !== 'store_owner') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin or store owner only.'
+      });
+    }
+
+    await OrderController.updatePaymentStatus(req, res);
+  } catch (error) {
+    console.error('Update payment status route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating payment status',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router; 
