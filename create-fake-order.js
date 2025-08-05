@@ -108,12 +108,8 @@ async function main() {
   const discount = 0;
   const total = subtotal + tax + deliveryCost - discount;
 
-  // توليد رقم الطلب
-  const orderNumber = `ORD-${Date.now()}`;
-
   // إنشاء الطلب
   const order = await Order.create({
-    orderNumber, // إضافة رقم الطلب
     store: storeSnapshot,
     user: userSnapshot,
     items: processedItems,
