@@ -53,7 +53,7 @@ exports.getOrdersByStore = async (req, res) => {
       currency: order.currency,
       price: order.pricing?.total,
       date: order.createdAt,
-      paid: order.paymentInfo?.status === 'completed',
+      paid: order.paymentStatus === 'paid',
       status: order.status,
       itemsCount: order.items.length,
       notes: order.notes?.customer || order.notes?.admin || '',
@@ -285,7 +285,16 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
-    const order = await Order.findById(orderId);
+    // Check if orderId is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(orderId)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(orderId);
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: orderId });
+    }
+
     if (!order) {
       return res.status(404).json({ 
         success: false, 
@@ -362,15 +371,24 @@ exports.updatePaymentStatus = async (req, res) => {
     }
 
     // Validate payment status
-    const validPaymentStatuses = ['pending', 'paid', 'refunded'];
+    const validPaymentStatuses = ['unpaid', 'paid'];
     if (!validPaymentStatuses.includes(paymentStatus)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalid payment status. Must be one of: pending, paid, refunded' 
+        message: 'Invalid payment status. Must be one of: unpaid, paid' 
       });
     }
 
-    const order = await Order.findById(orderId);
+    // Check if orderId is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(orderId)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(orderId);
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: orderId });
+    }
+
     if (!order) {
       return res.status(404).json({ 
         success: false, 
@@ -410,4 +428,166 @@ exports.updatePaymentStatus = async (req, res) => {
       error: error.message 
     });
   }
-}; 
+};
+
+/**
+ * Get order details by ID or order number
+ * @route GET /api/orders/details/:identifier
+ */
+exports.getOrderDetails = async (req, res) => {
+  try {
+    const { identifier } = req.params;
+    const { includeItems = 'true', includeUser = 'true', includeStore = 'true' } = req.query;
+
+    if (!identifier) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Order identifier (ID or order number) is required' 
+      });
+    }
+
+    // Check if identifier is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(identifier)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(identifier);
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: identifier });
+    }
+
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Order not found' 
+      });
+    }
+
+    // Check permissions - user can only access their own orders unless they're admin
+    const isOwner = order.user?.id === req.user._id.toString() || 
+                   order.user?._id?.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
+    const isStoreOwner = req.user.role === 'store_owner' && 
+                        order.store?.id === req.store?._id?.toString();
+
+    if (!isOwner && !isAdmin && !isStoreOwner) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only view your own orders.' 
+      });
+    }
+
+    // Shape the response based on query parameters
+    const response = {
+      id: order._id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      currency: order.currency,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      isGift: order.isGift,
+      giftMessage: order.giftMessage,
+      notes: order.notes,
+      cancelledAt: order.cancelledAt,
+      cancelledBy: order.cancelledBy,
+      cancellationReason: order.cancellationReason,
+      estimatedDeliveryDate: order.estimatedDeliveryDate,
+      actualDeliveryDate: order.actualDeliveryDate
+    };
+
+    // Add pricing information
+    if (order.pricing) {
+      response.pricing = {
+        subtotal: order.pricing.subtotal,
+        tax: order.pricing.tax,
+        shipping: order.pricing.shipping,
+        discount: order.pricing.discount,
+        total: order.pricing.total
+      };
+    }
+
+    // Add shipping information
+    if (order.shippingAddress) {
+      response.shippingAddress = order.shippingAddress;
+    }
+
+    if (order.billingAddress) {
+      response.billingAddress = order.billingAddress;
+    }
+
+    if (order.shippingInfo) {
+      response.shippingInfo = order.shippingInfo;
+    }
+
+    if (order.paymentInfo) {
+      response.paymentInfo = order.paymentInfo;
+    }
+
+    // Add delivery area information
+    if (order.deliveryArea) {
+      response.deliveryArea = order.deliveryArea;
+    }
+
+    // Add affiliate information
+    if (order.affiliate) {
+      response.affiliate = order.affiliate;
+    }
+
+    // Add coupon information
+    if (order.coupon) {
+      response.coupon = order.coupon;
+    }
+
+    // Add items if requested
+    if (includeItems === 'true') {
+      response.items = order.items.map(item => ({
+        productId: item.productId,
+        name: item.name,
+        sku: item.sku,
+        quantity: item.quantity,
+        price: item.price,
+        totalPrice: item.totalPrice,
+        variant: item.variant,
+        productSnapshot: item.productSnapshot
+      }));
+      response.itemsCount = order.items.length;
+    }
+
+    // Add user information if requested
+    if (includeUser === 'true' && order.user) {
+      response.user = {
+        id: order.user.id || order.user._id,
+        firstName: order.user.firstName,
+        lastName: order.user.lastName,
+        email: order.user.email,
+        phone: order.user.phone
+      };
+    }
+
+    // Add store information if requested
+    if (includeStore === 'true' && order.store) {
+      response.store = {
+        id: order.store.id || order.store._id,
+        nameAr: order.store.nameAr,
+        nameEn: order.store.nameEn,
+        phone: order.store.phone,
+        slug: order.store.slug
+      };
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Order details retrieved successfully',
+      data: response
+    });
+
+  } catch (error) {
+    console.error('Get order details error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching order details',
+      error: error.message 
+    });
+  }
+};

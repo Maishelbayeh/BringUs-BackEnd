@@ -4,6 +4,7 @@ const Order = require('../Models/Order');
 const Product = require('../Models/Product');
 const jwt = require('jsonwebtoken');
 const OrderController = require('../Controllers/OrderController');
+const mongoose = require('mongoose');
 
 const router = express.Router();
 
@@ -227,8 +228,17 @@ router.get('/', authenticateToken, async (req, res) => {
 // @access  Private
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id)
-      .populate('user', 'firstName lastName email');
+    // Check if id is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(req.params.id)
+        .populate('user', 'firstName lastName email');
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: req.params.id })
+        .populate('user', 'firstName lastName email');
+    }
 
     if (!order) {
       return res.status(404).json({
@@ -286,7 +296,16 @@ router.put('/:id/status', [
       });
     }
 
-    const order = await Order.findById(req.params.id);
+    // Check if id is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(req.params.id);
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: req.params.id });
+    }
+
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -359,7 +378,16 @@ router.put('/:id/cancel', [
       });
     }
 
-    const order = await Order.findById(req.params.id);
+    // Check if id is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(req.params.id);
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: req.params.id });
+    }
+
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -708,7 +736,7 @@ router.put('/:orderId/status', [
  */
 router.put('/:orderId/payment-status', [
   authenticateToken,
-  body('paymentStatus').isIn(['pending', 'paid', 'refunded']).withMessage('Valid payment status is required'),
+  body('paymentStatus').isIn(['unpaid', 'paid']).withMessage('Valid payment status is required'),
   body('notes').optional().isString().withMessage('Notes must be a string')
 ], async (req, res) => {
   try {
@@ -734,6 +762,134 @@ router.put('/:orderId/payment-status', [
     res.status(500).json({
       success: false,
       message: 'Error updating payment status',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/orders/details/{identifier}:
+ *   get:
+ *     summary: Get detailed order information by ID or order number
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: identifier
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Order ID or order number
+ *       - in: query
+ *         name: includeItems
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Include order items in response
+ *       - in: query
+ *         name: includeUser
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Include user information in response
+ *       - in: query
+ *         name: includeStore
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Include store information in response
+ *     responses:
+ *       200:
+ *         description: Order details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     orderNumber:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                     paymentStatus:
+ *                       type: string
+ *                     pricing:
+ *                       type: object
+ *                       properties:
+ *                         subtotal:
+ *                           type: number
+ *                         tax:
+ *                           type: number
+ *                         shipping:
+ *                           type: number
+ *                         discount:
+ *                           type: number
+ *                         total:
+ *                           type: number
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           productId:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           quantity:
+ *                             type: number
+ *                           price:
+ *                             type: number
+ *                           totalPrice:
+ *                             type: number
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         firstName:
+ *                           type: string
+ *                         lastName:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         phone:
+ *                           type: string
+ *                     store:
+ *                       type: object
+ *                       properties:
+ *                         nameEn:
+ *                           type: string
+ *                         nameAr:
+ *                           type: string
+ *                         phone:
+ *                           type: string
+ *       400:
+ *         description: Invalid request data
+ *       401:
+ *         description: Access denied. No token provided.
+ *       403:
+ *         description: Access denied. Insufficient permissions.
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/details/:identifier', authenticateToken, async (req, res) => {
+  try {
+    await OrderController.getOrderDetails(req, res);
+  } catch (error) {
+    console.error('Get order details route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching order details',
       error: error.message
     });
   }
