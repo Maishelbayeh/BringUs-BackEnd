@@ -427,6 +427,68 @@ router.get('/my-orders/:orderId', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/orders/{orderId}:
+ *   delete:
+ *     summary: Delete an order
+ *     description: Delete an order (Admin only or order owner)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Order ID or order number
+ *     responses:
+ *       200:
+ *         description: Order deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orderId:
+ *                       type: string
+ *                     orderNumber:
+ *                       type: string
+ *                     deletedAt:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Invalid request or order cannot be deleted
+ *       401:
+ *         description: Access denied. No token provided.
+ *       403:
+ *         description: Access denied. Insufficient permissions.
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/:orderId', authenticateToken, async (req, res) => {
+  try {
+    await OrderController.deleteOrder(req, res);
+  } catch (error) {
+    console.error('Delete order route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting order',
+      error: error.message
+    });
+  }
+});
+
 // @desc    Get single order
 // @route   GET /api/orders/:id
 // @access  Private

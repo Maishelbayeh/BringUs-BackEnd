@@ -812,9 +812,11 @@ exports.getOrderDetails = async (req, res) => {
  */
 exports.getMyOrders = async (req, res) => {
   try {
-    const userId = req.user.id; // Get user ID from token
+    const userId = req.user._id; // Get user ID from token
+    const storeId = req.user.storeId || req.user.store; // Get storeId from token
     
     console.log('🔍 getMyOrders - userId from token:', userId);
+    console.log('🔍 getMyOrders - storeId from token:', storeId);
     console.log('🔍 getMyOrders - req.user:', req.user);
     
     if (!userId) {
@@ -824,112 +826,54 @@ exports.getMyOrders = async (req, res) => {
       });
     }
 
-    // Get orders for the authenticated user
-    console.log('🔍 getMyOrders - searching for orders with user.id:', userId);
+    // Build query based on user role and store
+    let query = {};
     
-    // First, let's check what orders exist and their user structure
-    const allOrders = await Order.find({}).limit(10);
-    console.log('🔍 getMyOrders - sample orders user structure:', allOrders.map(order => ({
-      orderNumber: order.orderNumber,
-      userId: order.user?.id,
-      userEmail: order.user?.email,
-      userName: `${order.user?.firstName} ${order.user?.lastName}`
-    })));
+    if (req.user.role === 'client') {
+      // For clients, get orders from their store AND for their user ID
+      if (storeId) {
+        query['store.id'] = storeId;
+        query['user.id'] = userId; // Add user filter for clients
+      } else {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Store ID not found in user token' 
+        });
+      }
+    } else if (req.user.role === 'admin' || req.user.role === 'superadmin') {
+      // For admins, get orders from their stores (all orders in the store)
+      if (storeId) {
+        query['store.id'] = storeId;
+      } else {
+        // If no specific store, get all orders (for superadmin)
+        if (req.user.role !== 'superadmin') {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Store ID not found in user token' 
+          });
+        }
+      }
+    }
+
+    console.log('🔍 getMyOrders - query:', query);
     
-    // Check if current user has any orders
-    const userOrdersCount = await Order.countDocuments({ 'user.id': userId });
-    console.log('🔍 getMyOrders - total orders for current user:', userOrdersCount);
-    
-    // Try different query patterns
-    let orders = await Order.find({ 'user.id': userId })
+    // Get orders
+    let orders = await Order.find(query)
       .populate('store', 'nameAr nameEn whatsappNumber slug')
       .populate('deliveryArea', 'locationAr locationEn price estimatedDays')
       .sort({ createdAt: -1 }); // Latest orders first
-    
-    // If no orders found, try alternative queries
-    if (orders.length === 0) {
-      console.log('🔍 getMyOrders - trying alternative queries...');
-      
-      // Try with user._id
-      orders = await Order.find({ 'user._id': userId })
-        .populate('store', 'nameAr nameEn whatsappNumber slug')
-        .populate('deliveryArea', 'locationAr locationEn price estimatedDays')
-        .sort({ createdAt: -1 });
-      
-      console.log('🔍 getMyOrders - found orders with user._id:', orders.length);
-      
-      // If still no orders, try with string comparison
-      if (orders.length === 0) {
-        orders = await Order.find({ 'user.id': userId.toString() })
-          .populate('store', 'nameAr nameEn whatsappNumber slug')
-          .populate('deliveryArea', 'locationAr locationEn price estimatedDays')
-          .sort({ createdAt: -1 });
-        
-        console.log('🔍 getMyOrders - found orders with user.id (string):', orders.length);
-      }
-    }
     
     console.log('🔍 getMyOrders - found orders count:', orders.length);
 
     // If no orders found, create a test order for the current user (for testing purposes)
     if (orders.length === 0) {
-      console.log('🔍 getMyOrders - No orders found for user, creating test order...');
+      console.log('🔍 getMyOrders - No orders found for user in store, creating test order...');
       
       try {
         // Get user details
         const currentUser = await User.findById(userId);
         if (currentUser) {
-          // Create a test order
-          const testOrder = await Order.create({
-            orderNumber: `TEST-${Date.now()}`,
-            store: {
-              id: currentUser.store || '687c9bb0a7b3f2a0831c4675',
-              nameAr: 'متجر تجريبي',
-              nameEn: 'Test Store',
-              phone: '+966501234567',
-              slug: 'test-store'
-            },
-            user: {
-              id: currentUser._id,
-              firstName: currentUser.firstName,
-              lastName: currentUser.lastName,
-              email: currentUser.email,
-              phone: currentUser.phone
-            },
-            items: [{
-              productId: 'test-product-1',
-              productSnapshot: {
-                nameAr: 'منتج تجريبي',
-                nameEn: 'Test Product',
-                images: ['https://via.placeholder.com/150'],
-                price: 100,
-                unit: { nameEn: 'piece' },
-                color: '#ff0000',
-                sku: 'TEST-001'
-              },
-              name: 'Test Product',
-              sku: 'TEST-001',
-              quantity: 1,
-              price: 100,
-              totalPrice: 100,
-              variant: {},
-              selectedSpecifications: [],
-              selectedColors: []
-            }],
-            pricing: {
-              subtotal: 100,
-              tax: 10,
-              shipping: 20,
-              discount: 0,
-              total: 130
-            },
-            status: 'pending',
-            paymentStatus: 'unpaid',
-            currency: 'SAR',
-            notes: { customer: 'طلب تجريبي للاختبار' }
-          });
-          
-          console.log('🔍 getMyOrders - Test order created:', testOrder.orderNumber);
+     
           
           // Add the test order to the results and populate it
           orders = await Order.find({ _id: testOrder._id })
@@ -1019,7 +963,8 @@ exports.getMyOrders = async (req, res) => {
  */
 exports.getMyOrderById = async (req, res) => {
   try {
-    const userId = req.user.id; // Get user ID from token
+    const userId = req.user._id; // Get user ID from token
+    const storeId = req.user.storeId || req.user.store; // Get storeId from token
     const { orderId } = req.params;
     
     if (!userId) {
@@ -1036,30 +981,45 @@ exports.getMyOrderById = async (req, res) => {
       });
     }
 
+    // Build query based on user role and store
+    let query = {};
+    
+    if (req.user.role === 'client') {
+      // For clients, get orders from their store AND for their user ID
+      if (storeId) {
+        query['store.id'] = storeId;
+        query['user.id'] = userId; // Add user filter for clients
+      } else {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Store ID not found in user token' 
+        });
+      }
+    } else if (req.user.role === 'admin' || req.user.role === 'superadmin') {
+      // For admins, get orders from their stores (all orders in the store)
+      if (storeId) {
+        query['store.id'] = storeId;
+      } else {
+        // If no specific store, get all orders (for superadmin)
+        if (req.user.role !== 'superadmin') {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Store ID not found in user token' 
+          });
+        }
+      }
+    }
+
     // Check if orderId is a valid ObjectId or orderNumber
     let order;
     if (mongoose.Types.ObjectId.isValid(orderId)) {
-      // If it's a valid ObjectId, search by _id and user
-      order = await Order.findOne({ _id: orderId, 'user.id': userId });
-      
-      // If not found, try alternative queries
-      if (!order) {
-        order = await Order.findOne({ _id: orderId, 'user._id': userId });
-      }
-      if (!order) {
-        order = await Order.findOne({ _id: orderId, 'user.id': userId.toString() });
-      }
+      // If it's a valid ObjectId, search by _id and store/user
+      query._id = orderId;
+      order = await Order.findOne(query);
     } else {
-      // If it's not a valid ObjectId, search by orderNumber and user
-      order = await Order.findOne({ orderNumber: orderId, 'user.id': userId });
-      
-      // If not found, try alternative queries
-      if (!order) {
-        order = await Order.findOne({ orderNumber: orderId, 'user._id': userId });
-      }
-      if (!order) {
-        order = await Order.findOne({ orderNumber: orderId, 'user.id': userId.toString() });
-      }
+      // If it's not a valid ObjectId, search by orderNumber and store/user
+      query.orderNumber = orderId;
+      order = await Order.findOne(query);
     }
 
     if (!order) {
@@ -1141,6 +1101,100 @@ exports.getMyOrderById = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Error fetching order details',
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * Delete an order (Admin only or order owner)
+ * @route DELETE /api/orders/:orderId
+ */
+exports.deleteOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    if (!orderId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Order ID is required' 
+      });
+    }
+
+    // Check if orderId is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(orderId)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(orderId);
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: orderId });
+    }
+
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Order not found' 
+      });
+    }
+
+    // Check permissions - only admin or order owner can delete
+    const isOwner = order.user?.id === userId || order.user?._id?.toString() === userId;
+    const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+    const isStoreOwner = userRole === 'store_owner' && 
+                        order.store?.id === req.store?._id?.toString();
+
+    if (!isOwner && !isAdmin && !isStoreOwner) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only delete your own orders or must be admin.' 
+      });
+    }
+
+    // Additional checks for order deletion
+    if (order.status === 'delivered' || order.status === 'shipped') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot delete orders that are already shipped or delivered' 
+      });
+    }
+
+    // Restore product stock if order is being deleted
+    if (order.items && order.items.length > 0) {
+      for (const item of order.items) {
+        try {
+          const product = await Product.findById(item.productId);
+          if (product) {
+            product.stock += item.quantity;
+            product.soldCount = Math.max(0, product.soldCount - item.quantity);
+            await product.save();
+          }
+        } catch (error) {
+          console.log('Error restoring product stock:', error.message);
+        }
+      }
+    }
+
+    // Delete the order
+    await Order.findByIdAndDelete(order._id);
+
+    res.json({
+      success: true,
+      message: 'Order deleted successfully',
+      data: {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        deletedAt: new Date()
+      }
+    });
+
+  } catch (error) {
+    console.error('Delete order error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting order',
       error: error.message 
     });
   }
