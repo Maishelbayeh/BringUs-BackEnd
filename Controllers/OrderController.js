@@ -805,6 +805,7 @@ exports.getOrderDetails = async (req, res) => {
   }
 };
 
+
 /**
  * Get orders for the authenticated user
  * @route GET /api/orders/my-orders
