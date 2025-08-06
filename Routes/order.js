@@ -571,6 +571,82 @@ router.post('/store/:storeId', OrderController.createOrder);
 
 /**
  * @swagger
+ * /api/orders/store/{storeId}/from-cart:
+ *   post:
+ *     summary: Create an order directly from a cart
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The store ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - user
+ *               - cartId
+ *             properties:
+ *               user:
+ *                 type: string
+ *                 description: User ID
+ *               cartId:
+ *                 type: string
+ *                 description: Cart ID to create order from
+ *               shippingAddress:
+ *                 type: object
+ *                 description: Shipping address
+ *               billingAddress:
+ *                 type: object
+ *                 description: Billing address
+ *               paymentInfo:
+ *                 type: object
+ *                 description: Payment information
+ *               shippingInfo:
+ *                 type: object
+ *                 description: Shipping information
+ *               notes:
+ *                 type: object
+ *                 description: Order notes
+ *               isGift:
+ *                 type: boolean
+ *                 description: Whether this is a gift order
+ *               giftMessage:
+ *                 type: string
+ *                 description: Gift message
+ *               coupon:
+ *                 type: object
+ *                 description: Coupon information
+ *               affiliate:
+ *                 type: string
+ *                 description: Affiliate ID
+ *               deliveryArea:
+ *                 type: string
+ *                 description: Delivery area ID
+ *               currency:
+ *                 type: string
+ *                 description: Currency code
+ *     responses:
+ *       201:
+ *         description: Order created successfully from cart
+ *       400:
+ *         description: storeId is required or validation error
+ *       401:
+ *         description: Access denied. No token provided.
+ *       403:
+ *         description: Access denied. Invalid token or insufficient permissions.
+ */
+router.post('/store/:storeId/from-cart', OrderController.createOrderFromCart);
+
+/**
+ * @swagger
  * /api/orders/{orderId}/status:
  *   put:
  *     summary: Update order status
