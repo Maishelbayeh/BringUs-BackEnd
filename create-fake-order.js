@@ -14,7 +14,7 @@ async function main() {
   const DeliveryMethod = require('./Models/DeliveryMethod');
 
   // IDs supplied by the user
-  const storeId = '687505893fbf3098648bfe16';
+  const storeId = '68803f60a83b761668fda72f';
   const userId = '6878f38d4fd8d9aaa4502943';
   const productId = '68760d175c0a31a7ac0965dc';
   const affiliateId = '687609e7513b2b331fa81d62';

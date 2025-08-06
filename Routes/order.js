@@ -223,6 +223,210 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/orders/my-orders:
+ *   get:
+ *     summary: Get all orders for the authenticated user
+ *     description: Retrieve all orders for the currently authenticated user
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Orders retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       orderNumber:
+ *                         type: string
+ *                       storeName:
+ *                         type: string
+ *                       storeId:
+ *                         type: string
+ *                       currency:
+ *                         type: string
+ *                       price:
+ *                         type: number
+ *                       date:
+ *                         type: string
+ *                         format: date-time
+ *                       paid:
+ *                         type: boolean
+ *                       status:
+ *                         type: string
+ *                       itemsCount:
+ *                         type: number
+ *                       items:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             image:
+ *                               type: string
+ *                             name:
+ *                               type: string
+ *                             quantity:
+ *                               type: number
+ *                             pricePerUnit:
+ *                               type: number
+ *                             total:
+ *                               type: number
+ *                 count:
+ *                   type: number
+ *       401:
+ *         description: Access denied. No token provided.
+ *       500:
+ *         description: Server error
+ */
+router.get('/my-orders', authenticateToken, async (req, res) => {
+  try {
+    await OrderController.getMyOrders(req, res);
+  } catch (error) {
+    console.error('Get my orders route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching user orders',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/orders/my-orders/{orderId}:
+ *   get:
+ *     summary: Get a specific order for the authenticated user
+ *     description: Retrieve details of a specific order for the currently authenticated user
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Order ID or order number
+ *     responses:
+ *       200:
+ *         description: Order details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     orderNumber:
+ *                       type: string
+ *                     storeName:
+ *                       type: string
+ *                     storeId:
+ *                       type: string
+ *                     currency:
+ *                       type: string
+ *                     price:
+ *                       type: number
+ *                     date:
+ *                       type: string
+ *                       format: date-time
+ *                     paid:
+ *                       type: boolean
+ *                     status:
+ *                       type: string
+ *                     itemsCount:
+ *                       type: number
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           productId:
+ *                             type: string
+ *                           image:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           sku:
+ *                             type: string
+ *                           quantity:
+ *                             type: number
+ *                           pricePerUnit:
+ *                             type: number
+ *                           total:
+ *                             type: number
+ *                           selectedSpecifications:
+ *                             type: array
+ *                           selectedColors:
+ *                             type: array
+ *                     pricing:
+ *                       type: object
+ *                       properties:
+ *                         subtotal:
+ *                           type: number
+ *                         tax:
+ *                           type: number
+ *                         shipping:
+ *                           type: number
+ *                         discount:
+ *                           type: number
+ *                         total:
+ *                           type: number
+ *                     shippingAddress:
+ *                       type: object
+ *                     billingAddress:
+ *                       type: object
+ *                     paymentInfo:
+ *                       type: object
+ *                     shippingInfo:
+ *                       type: object
+ *                     estimatedDeliveryDate:
+ *                       type: string
+ *                       format: date-time
+ *                     actualDeliveryDate:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Invalid request data
+ *       401:
+ *         description: Access denied. No token provided.
+ *       404:
+ *         description: Order not found or access denied
+ *       500:
+ *         description: Server error
+ */
+router.get('/my-orders/:orderId', authenticateToken, async (req, res) => {
+  try {
+    await OrderController.getMyOrderById(req, res);
+  } catch (error) {
+    console.error('Get my order by ID route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching order details',
+      error: error.message
+    });
+  }
+});
+
 // @desc    Get single order
 // @route   GET /api/orders/:id
 // @access  Private
