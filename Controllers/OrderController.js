@@ -36,6 +36,7 @@ exports.getOrdersByStore = async (req, res) => {
         email: order.user.email,
         phone: order.user.phone
       } : null,
+      
       affiliate:
         order.affiliate &&
         order.affiliate.firstName &&
