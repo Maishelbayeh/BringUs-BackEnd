@@ -15,7 +15,7 @@ exports.getOrdersByStore = async (req, res) => {
       return res.status(400).json({ success: false, message: 'storeId is required' });
     }
     const orders = await Order.find({ 'store.id': new mongoose.Types.ObjectId(storeId) })
-      .populate('store', 'nameAr nameEn phone slug')
+      .populate('store', 'nameAr nameEn whatsappNumber slug')
       .populate('user', 'firstName lastName email phone')
       .populate('affiliate', 'firstName lastName email')
       .populate('deliveryArea', 'locationAr locationEn');
@@ -25,7 +25,7 @@ exports.getOrdersByStore = async (req, res) => {
       id: order.orderNumber,
       storeName: order.store?.nameEn,
       storeId: order.store?._id,
-      storePhone: order.store?.phone,
+      storePhone: order.store?.whatsappNumber,
       storeUrl: order.store ? `/store/${order.store.slug}` : '',
       customer: order.user ? `${order.user.firstName} ${order.user.lastName}` : '',
       customerPhone: order.user?.phone,
@@ -111,7 +111,7 @@ exports.createOrder = async (req, res) => {
       id: storeDoc._id,
       nameAr: storeDoc.nameAr,
       nameEn: storeDoc.nameEn,
-      phone: storeDoc.contact?.phone,
+      phone: storeDoc.whatsappNumber,
       slug: storeDoc.slug
     };
 
@@ -791,7 +791,7 @@ exports.getOrderDetails = async (req, res) => {
         id: order.store.id || order.store._id,
         nameAr: order.store.nameAr,
         nameEn: order.store.nameEn,
-        phone: order.store.phone,
+        phone: order.store.whatsappNumber,
         slug: order.store.slug
       };
     }
