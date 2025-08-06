@@ -43,6 +43,25 @@ const processSpecificationValues = (specificationValues) => {
   return [];
 };
 
+// Helper function to parse colors from JSON string to array
+const parseProductColors = (product) => {
+  const productObj = product.toObject ? product.toObject() : product;
+  
+  // تحويل الألوان من JSON string إلى array
+  if (productObj.colors) {
+    try {
+      productObj.colors = JSON.parse(productObj.colors);
+    } catch (error) {
+      console.error('Error parsing colors for product:', productObj._id, error);
+      productObj.colors = [];
+    }
+  } else {
+    productObj.colors = [];
+  }
+  
+  return productObj;
+};
+
 // دالة لحساب السعر الإجمالي للمنتج مع الصفات والألوان
 exports.calculateProductPrice = async (req, res) => {
   try {
@@ -267,8 +286,11 @@ exports.getAll = async (req, res) => {
       .populate('specifications')
       .populate('variants');
     
+    // تحويل الألوان من JSON string إلى array لكل منتج
+    const processedProducts = products.map(product => parseProductColors(product));
+    
     // Log barcodes for debugging
-    products.forEach((product, index) => {
+    processedProducts.forEach((product, index) => {
       //CONSOLE.log(`🔍 Product ${index + 1} barcodes:`, product.barcodes);
       //CONSOLE.log(`🔍 Product ${index + 1} barcodes type:`, typeof product.barcodes);
       //CONSOLE.log(`🔍 Product ${index + 1} barcodes is array:`, Array.isArray(product.barcodes));
@@ -276,8 +298,8 @@ exports.getAll = async (req, res) => {
       
     res.json({
       success: true,
-      data: products,
-      count: products.length
+      data: processedProducts,
+      count: processedProducts.length
     });
   } catch (err) {
     res.status(500).json({ 
@@ -313,14 +335,17 @@ exports.getById = async (req, res) => {
       });
     }
     
+    // تحويل الألوان من JSON string إلى array
+    const productObj = parseProductColors(product);
+    
     // Log barcodes for debugging
-    //CONSOLE.log('🔍 getById - product barcodes:', product.barcodes);
-    //CONSOLE.log('🔍 getById - product barcodes type:', typeof product.barcodes);
-    //CONSOLE.log('🔍 getById - product barcodes is array:', Array.isArray(product.barcodes));
+    //CONSOLE.log('🔍 getById - product barcodes:', productObj.barcodes);
+    //CONSOLE.log('🔍 getById - product barcodes type:', typeof productObj.barcodes);
+    //CONSOLE.log('🔍 getById - product barcodes is array:', Array.isArray(productObj.barcodes));
     
     res.json({
       success: true,
-      data: product
+      data: productObj
     });
   } catch (err) {
     res.status(500).json({ 
@@ -506,10 +531,13 @@ exports.create = async (req, res) => {
       .populate('unit', 'nameAr nameEn symbol')
       .populate('store', 'name domain');
 
+    // تحويل الألوان من JSON string إلى array
+    const processedProduct = parseProductColors(populatedProduct);
+
     res.status(201).json({
       success: true,
       message: 'Product created successfully',
-      data: populatedProduct
+      data: processedProduct
     });
 
   } catch (error) {
@@ -610,10 +638,14 @@ exports.update = async (req, res) => {
      .populate('specifications', 'descriptionAr descriptionEn')
      .populate('unit', 'nameAr nameEn symbol')
      .populate('store', 'name domain');
+    
+    // تحويل الألوان من JSON string إلى array
+    const processedProduct = parseProductColors(updatedProduct);
+    
     res.status(200).json({
       success: true,
       message: 'Product updated successfully',
-      data: updatedProduct
+      data: processedProduct
     });
   } catch (error) {
     //CONSOLE.error('Update product error:', error);
@@ -730,10 +762,13 @@ exports.createVariant = async (req, res) => {
       .populate('unit')
       .populate('store', 'name domain');
 
+    // تحويل الألوان من JSON string إلى array
+    const processedVariant = parseProductColors(populatedVariant);
+
     res.status(201).json({
       success: true,
       message: 'Variant created successfully',
-      data: populatedVariant
+      data: processedVariant
     });
   } catch (err) {
     //CONSOLE.error('Create variant error:', err);
@@ -776,10 +811,13 @@ exports.getVariants = async (req, res) => {
       .populate('unit')
       .populate('store', 'name domain');
 
+    // تحويل الألوان من JSON string إلى array لكل variant
+    const processedVariants = variants.map(variant => parseProductColors(variant));
+
     res.json({
       success: true,
-      data: variants,
-      count: variants.length
+      data: processedVariants,
+      count: processedVariants.length
     });
   } catch (err) {
     res.status(500).json({ 
@@ -801,11 +839,14 @@ exports.getByCategory = async (req, res) => {
       .populate('productLabel')
       .populate('unit')
       .populate('variants');
+    
+    // تحويل الألوان من JSON string إلى array لكل منتج
+    const processedProducts = products.map(product => parseProductColors(product));
       
     res.json({
       success: true,
-      data: products,
-      count: products.length
+      data: processedProducts,
+      count: processedProducts.length
     });
   } catch (err) {
     res.status(500).json({ 
@@ -862,12 +903,15 @@ exports.getWithFilters = async (req, res) => {
       .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
       .skip(skip)
       .limit(parseInt(limit));
+    
+    // تحويل الألوان من JSON string إلى array لكل منتج
+    const processedProducts = products.map(product => parseProductColors(product));
       
     const total = await Product.countDocuments(query);
     
     res.json({
       success: true,
-      data: products,
+      data: processedProducts,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -895,11 +939,14 @@ exports.getWithVariants = async (req, res) => {
       .populate('unit')
       .populate('store', 'name domain')
       .populate('variants');
+    
+    // تحويل الألوان من JSON string إلى array لكل منتج
+    const processedProducts = products.map(product => parseProductColors(product));
       
     res.json({
       success: true,
-      data: products,
-      count: products.length
+      data: processedProducts,
+      count: processedProducts.length
     });
   } catch (err) {
     res.status(500).json({ 
@@ -920,11 +967,14 @@ exports.getVariantsOnly = async (req, res) => {
       .populate('productLabels')
       .populate('unit')
       .populate('store', 'name domain');
+    
+    // تحويل الألوان من JSON string إلى array لكل variant
+    const processedVariants = variants.map(variant => parseProductColors(variant));
       
     res.json({
       success: true,
-      data: variants,
-      count: variants.length
+      data: processedVariants,
+      count: processedVariants.length
     });
   } catch (err) {
     res.status(500).json({ 
@@ -1132,10 +1182,13 @@ exports.addVariant = async (req, res) => {
       .populate('unit')
       .populate('store', 'name domain');
 
+    // تحويل الألوان من JSON string إلى array
+    const processedVariant = parseProductColors(populatedVariant);
+
     res.status(201).json({
       success: true,
       message: 'Variant added successfully',
-      data: populatedVariant
+      data: processedVariant
     });
   } catch (err) {
     console.error('Add variant error:', err);
@@ -1482,24 +1535,27 @@ exports.updateVariant = async (req, res) => {
      .populate('unit')
      .populate('store', 'name domain');
 
+    // تحويل الألوان من JSON string إلى array
+    const processedVariant = parseProductColors(updatedVariant);
+
     console.log('🔍 updateVariant - Updated variant data:', {
-      _id: updatedVariant._id,
-      nameAr: updatedVariant.nameAr,
-      nameEn: updatedVariant.nameEn,
-      price: updatedVariant.price,
-      barcodes: updatedVariant.barcodes,
-      colors: updatedVariant.colors,
-      unit: updatedVariant.unit,
-      category: updatedVariant.category,
-      categories: updatedVariant.categories,
-      productLabels: updatedVariant.productLabels,
-      specificationValues: updatedVariant.specificationValues
+      _id: processedVariant._id,
+      nameAr: processedVariant.nameAr,
+      nameEn: processedVariant.nameEn,
+      price: processedVariant.price,
+      barcodes: processedVariant.barcodes,
+      colors: processedVariant.colors,
+      unit: processedVariant.unit,
+      category: processedVariant.category,
+      categories: processedVariant.categories,
+      productLabels: processedVariant.productLabels,
+      specificationValues: processedVariant.specificationValues
     });
 
     res.json({
       success: true,
       message: 'Variant updated successfully',
-      data: updatedVariant
+      data: processedVariant
     });
   } catch (err) {
     console.error('Update variant error:', err);
@@ -1526,11 +1582,21 @@ exports.getByStoreId = async (req, res) => {
       .populate('productLabels', 'nameAr nameEn color')
       .populate('specifications', 'descriptionAr descriptionEn')
       .populate('unit', 'nameAr nameEn symbol')
-      .populate('store', 'name domain');
+      .populate('store', 'nameAr nameEn slug');
+    
+    // تحويل الألوان من JSON string إلى array لكل منتج
+    const processedProducts = products.map(product => parseProductColors(product));
+    
+    console.log('Processed products with colors:', processedProducts.map(p => ({ 
+      id: p._id, 
+      nameEn: p.nameEn, 
+      colors: p.colors 
+    })));
+    
     res.status(200).json({
       success: true,
-      data: products,
-      count: products.length
+      data: processedProducts,
+      count: processedProducts.length
     });
   } catch (err) {
     res.status(500).json({
@@ -1588,14 +1654,222 @@ exports.getVariantById = async (req, res) => {
       });
     }
 
+    // تحويل الألوان من JSON string إلى array
+    const processedVariant = parseProductColors(variant);
+
     res.json({
       success: true,
-      data: variant
+      data: processedVariant
     });
   } catch (err) {
     res.status(500).json({
       success: false,
       error: err.message
+    });
+  }
+}; 
+
+// Add colors to product
+exports.addColors = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { storeId, colors } = req.body;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required'
+      });
+    }
+
+    if (!colors || !Array.isArray(colors)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Colors array is required'
+      });
+    }
+
+    // Check if product exists and belongs to store
+    const product = await Product.findOne({ _id: productId, store: storeId });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Get current colors
+    let currentColors = [];
+    if (product.colors) {
+      try {
+        currentColors = JSON.parse(product.colors);
+      } catch (error) {
+        console.error('Error parsing current colors:', error);
+        currentColors = [];
+      }
+    }
+
+    // Add new colors to existing colors
+    const updatedColors = [...currentColors, ...colors];
+
+    // Update product with new colors
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      { colors: JSON.stringify(updatedColors) },
+      { new: true, runValidators: true }
+    ).populate('category', 'nameAr nameEn')
+     .populate('categories', 'nameAr nameEn')
+     .populate('productLabels', 'nameAr nameEn color')
+     .populate('specifications', 'descriptionAr descriptionEn')
+     .populate('unit', 'nameAr nameEn symbol')
+     .populate('store', 'name domain');
+
+    // تحويل الألوان من JSON string إلى array
+    const processedProduct = parseProductColors(updatedProduct);
+
+    res.json({
+      success: true,
+      message: 'Colors added successfully',
+      data: processedProduct
+    });
+  } catch (error) {
+    console.error('Add colors error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding colors',
+      error: error.message
+    });
+  }
+};
+
+// Remove colors from product
+exports.removeColors = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { storeId, colorIndexes } = req.body; // Array of indexes to remove
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required'
+      });
+    }
+
+    if (!colorIndexes || !Array.isArray(colorIndexes)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Color indexes array is required'
+      });
+    }
+
+    // Check if product exists and belongs to store
+    const product = await Product.findOne({ _id: productId, store: storeId });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Get current colors
+    let currentColors = [];
+    if (product.colors) {
+      try {
+        currentColors = JSON.parse(product.colors);
+      } catch (error) {
+        console.error('Error parsing current colors:', error);
+        currentColors = [];
+      }
+    }
+
+    // Remove colors at specified indexes
+    const updatedColors = currentColors.filter((_, index) => !colorIndexes.includes(index));
+
+    // Update product with new colors
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      { colors: JSON.stringify(updatedColors) },
+      { new: true, runValidators: true }
+    ).populate('category', 'nameAr nameEn')
+     .populate('categories', 'nameAr nameEn')
+     .populate('productLabels', 'nameAr nameEn color')
+     .populate('specifications', 'descriptionAr descriptionEn')
+     .populate('unit', 'nameAr nameEn symbol')
+     .populate('store', 'name domain');
+
+    // تحويل الألوان من JSON string إلى array
+    const processedProduct = parseProductColors(updatedProduct);
+
+    res.json({
+      success: true,
+      message: 'Colors removed successfully',
+      data: processedProduct
+    });
+  } catch (error) {
+    console.error('Remove colors error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error removing colors',
+      error: error.message
+    });
+  }
+};
+
+// Replace all colors for product
+exports.replaceColors = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { storeId, colors } = req.body;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required'
+      });
+    }
+
+    if (!colors || !Array.isArray(colors)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Colors array is required'
+      });
+    }
+
+    // Check if product exists and belongs to store
+    const product = await Product.findOne({ _id: productId, store: storeId });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Update product with new colors (replace all)
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      { colors: JSON.stringify(colors) },
+      { new: true, runValidators: true }
+    ).populate('category', 'nameAr nameEn')
+     .populate('categories', 'nameAr nameEn')
+     .populate('productLabels', 'nameAr nameEn color')
+     .populate('specifications', 'descriptionAr descriptionEn')
+     .populate('unit', 'nameAr nameEn symbol')
+     .populate('store', 'name domain');
+
+    // تحويل الألوان من JSON string إلى array
+    const processedProduct = parseProductColors(updatedProduct);
+
+    res.json({
+      success: true,
+      message: 'Colors replaced successfully',
+      data: processedProduct
+    });
+  } catch (error) {
+    console.error('Replace colors error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error replacing colors',
+      error: error.message
     });
   }
 }; 

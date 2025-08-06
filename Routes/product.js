@@ -762,7 +762,7 @@ router.get('/variants-only', ProductController.getVariantsOnly);
  *         required: true
  *         schema:
  *           type: string
- *           example: '507f1f77bcf86cd799439012'
+ *           example: '687c9bb0a7b3f2a0831c4675'
  *         description: Store ID (MongoDB ObjectId)
  *     responses:
  *       200:
@@ -796,55 +796,6 @@ router.get('/variants-only', ProductController.getVariantsOnly);
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/by-store/:storeId', ProductController.getByStoreId);
-
-/**
- * @swagger
- * /api/products/{productId}/variants/{variantId}:
- *   get:
- *     summary: Get single variant by ID
- *     description: Retrieve a specific variant of a parent product by its ID
- *     tags: [Products]
- *     parameters:
- *       - in: path
- *         name: productId
- *         required: true
- *         schema:
- *           type: string
- *           pattern: '^[a-fA-F0-9]{24}$'
- *         description: Parent product ID
- *       - in: path
- *         name: variantId
- *         required: true
- *         schema:
- *           type: string
- *           pattern: '^[a-fA-F0-9]{24}$'
- *         description: Variant product ID
- *       - in: query
- *         name: storeId
- *         required: true
- *         schema:
- *           type: string
- *           pattern: '^[a-fA-F0-9]{24}$'
- *         description: Store ID
- *     responses:
- *       200:
- *         description: Variant retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/Product'
- *       400:
- *         description: Bad request
- *       404:
- *         description: Product or variant not found
- */
-router.get('/:productId/variants/:variantId', ProductController.getVariantById);
 
 /**
  * @swagger
@@ -1920,5 +1871,186 @@ router.post('/upload-single-image', uploadProductImage.single('image'), async (r
     });
   }
 });
+
+/**
+ * @swagger
+ * /api/products/{productId}/colors:
+ *   post:
+ *     summary: Add colors to product
+ *     description: Add new colors to an existing product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Product ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - storeId
+ *               - colors
+ *             properties:
+ *               storeId:
+ *                 type: string
+ *                 pattern: '^[a-fA-F0-9]{24}$'
+ *                 example: '687c9bb0a7b3f2a0831c4675'
+ *                 description: Store ID
+ *               colors:
+ *                 type: array
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 example: [['#FF0000', '#00FF00'], ['#0000FF']]
+ *                 description: Array of color arrays to add
+ *     responses:
+ *       200:
+ *         description: Colors added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Colors added successfully'
+ *                 data:
+ *                   $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Product not found
+ */
+router.post('/:productId/colors', ProductController.addColors);
+
+/**
+ * @swagger
+ * /api/products/{productId}/colors:
+ *   delete:
+ *     summary: Remove colors from product
+ *     description: Remove specific colors from a product by their indexes
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Product ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - storeId
+ *               - colorIndexes
+ *             properties:
+ *               storeId:
+ *                 type: string
+ *                 pattern: '^[a-fA-F0-9]{24}$'
+ *                 example: '687c9bb0a7b3f2a0831c4675'
+ *                 description: Store ID
+ *               colorIndexes:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [0, 2]
+ *                 description: Array of color indexes to remove
+ *     responses:
+ *       200:
+ *         description: Colors removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Colors removed successfully'
+ *                 data:
+ *                   $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Product not found
+ */
+router.delete('/:productId/colors', ProductController.removeColors);
+
+/**
+ * @swagger
+ * /api/products/{productId}/colors:
+ *   put:
+ *     summary: Replace all colors for product
+ *     description: Replace all existing colors with new colors
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Product ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - storeId
+ *               - colors
+ *             properties:
+ *               storeId:
+ *                 type: string
+ *                 pattern: '^[a-fA-F0-9]{24}$'
+ *                 example: '687c9bb0a7b3f2a0831c4675'
+ *                 description: Store ID
+ *               colors:
+ *                 type: array
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                   type: string
+ *                 example: [['#FF0000', '#00FF00'], ['#0000FF']]
+ *                 description: New colors array to replace existing colors
+ *     responses:
+ *       200:
+ *         description: Colors replaced successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Colors replaced successfully'
+ *                 data:
+ *                   $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Product not found
+ */
+router.put('/:productId/colors', ProductController.replaceColors);
 
 module.exports = router; 
