@@ -41,6 +41,7 @@ const orderSchema = new mongoose.Schema({
       required: true,
       min: [0, 'Price cannot be negative']
     },
+    
     totalPrice: {
       type: Number,
       required: true,
