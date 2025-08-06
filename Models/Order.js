@@ -49,7 +49,63 @@ const orderSchema = new mongoose.Schema({
     variant: {
       name: String,
       option: String
-    }
+    },
+    // إضافة الصفات المختارة للمنتج من السلة
+    selectedSpecifications: [{
+      specificationId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ProductSpecification',
+        required: true
+      },
+      valueId: {
+        type: String,
+        required: true
+      },
+      valueAr: {
+        type: String,
+        required: false
+      },
+      valueEn: {
+        type: String,
+        required: false
+      },
+      titleAr: {
+        type: String,
+        required: false
+      },
+      titleEn: {
+        type: String,
+        required: false
+      }
+    }],
+    // إضافة الألوان المختارة للمنتج من السلة
+    selectedColors: [{
+      type: mongoose.Schema.Types.Mixed,
+      validate: {
+        validator: function(colorOption) {
+          // دالة للتحقق من صحة لون hex
+          const isValidHexColor = (color) => {
+            const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+            return hexRegex.test(color);
+          };
+          
+          // إذا كان لون واحد (string) - مثل "red" أو "#ff0000"
+          if (typeof colorOption === 'string') {
+            // يقبل أسماء الألوان أو ألوان hex
+            return true;
+          }
+          
+          // إذا كان مصفوفة من ألوان hex
+          if (Array.isArray(colorOption)) {
+            return colorOption.every(color => typeof color === 'string' && isValidHexColor(color));
+          }
+          
+          // إذا كان أي نوع آخر، رفض
+          return false;
+        },
+        message: 'Invalid color format. Each color option must be either a string (color name or hex) or an array of hex colors. Examples: "red", "#ff0000", or ["#ff0000", "#ffffff"]'
+      }
+    }]
   }],
 
   status: {
