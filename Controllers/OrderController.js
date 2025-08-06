@@ -1144,3 +1144,97 @@ exports.getMyOrderById = async (req, res) => {
     });
   }
 };
+
+/**
+ * Delete an order (Admin only or order owner)
+ * @route DELETE /api/orders/:orderId
+ */
+exports.deleteOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    if (!orderId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Order ID is required' 
+      });
+    }
+
+    // Check if orderId is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(orderId)) {
+      // If it's a valid ObjectId, search by _id
+      order = await Order.findById(orderId);
+    } else {
+      // If it's not a valid ObjectId, search by orderNumber
+      order = await Order.findOne({ orderNumber: orderId });
+    }
+
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Order not found' 
+      });
+    }
+
+    // Check permissions - only admin or order owner can delete
+    const isOwner = order.user?.id === userId || order.user?._id?.toString() === userId;
+    const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+    const isStoreOwner = userRole === 'store_owner' && 
+                        order.store?.id === req.store?._id?.toString();
+
+    if (!isOwner && !isAdmin && !isStoreOwner) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only delete your own orders or must be admin.' 
+      });
+    }
+
+    // Additional checks for order deletion
+    if (order.status === 'delivered' || order.status === 'shipped') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot delete orders that are already shipped or delivered' 
+      });
+    }
+
+    // Restore product stock if order is being deleted
+    if (order.items && order.items.length > 0) {
+      for (const item of order.items) {
+        try {
+          const product = await Product.findById(item.productId);
+          if (product) {
+            product.stock += item.quantity;
+            product.soldCount = Math.max(0, product.soldCount - item.quantity);
+            await product.save();
+          }
+        } catch (error) {
+          console.log('Error restoring product stock:', error.message);
+        }
+      }
+    }
+
+    // Delete the order
+    await Order.findByIdAndDelete(order._id);
+
+    res.json({
+      success: true,
+      message: 'Order deleted successfully',
+      data: {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        deletedAt: new Date()
+      }
+    });
+
+  } catch (error) {
+    console.error('Delete order error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting order',
+      error: error.message 
+    });
+  }
+};
