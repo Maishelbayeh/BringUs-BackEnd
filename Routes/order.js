@@ -767,4 +767,132 @@ router.put('/:orderId/payment-status', [
   }
 });
 
+/**
+ * @swagger
+ * /api/orders/details/{identifier}:
+ *   get:
+ *     summary: Get detailed order information by ID or order number
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: identifier
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Order ID or order number
+ *       - in: query
+ *         name: includeItems
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Include order items in response
+ *       - in: query
+ *         name: includeUser
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Include user information in response
+ *       - in: query
+ *         name: includeStore
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Include store information in response
+ *     responses:
+ *       200:
+ *         description: Order details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     orderNumber:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                     paymentStatus:
+ *                       type: string
+ *                     pricing:
+ *                       type: object
+ *                       properties:
+ *                         subtotal:
+ *                           type: number
+ *                         tax:
+ *                           type: number
+ *                         shipping:
+ *                           type: number
+ *                         discount:
+ *                           type: number
+ *                         total:
+ *                           type: number
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           productId:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           quantity:
+ *                             type: number
+ *                           price:
+ *                             type: number
+ *                           totalPrice:
+ *                             type: number
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         firstName:
+ *                           type: string
+ *                         lastName:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         phone:
+ *                           type: string
+ *                     store:
+ *                       type: object
+ *                       properties:
+ *                         nameEn:
+ *                           type: string
+ *                         nameAr:
+ *                           type: string
+ *                         phone:
+ *                           type: string
+ *       400:
+ *         description: Invalid request data
+ *       401:
+ *         description: Access denied. No token provided.
+ *       403:
+ *         description: Access denied. Insufficient permissions.
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/details/:identifier', authenticateToken, async (req, res) => {
+  try {
+    await OrderController.getOrderDetails(req, res);
+  } catch (error) {
+    console.error('Get order details route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching order details',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router; 
