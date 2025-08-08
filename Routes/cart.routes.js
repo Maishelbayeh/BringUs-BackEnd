@@ -3,7 +3,7 @@ const express = require('express');
 const { protect, optionalAuth } = require('../middleware/auth');
 const guestCart = require('../middleware/guestCart');
 const { verifyStoreAccess } = require('../middleware/storeAuth');
-const CartController = require('../controllers/cart.controller');
+    const CartController = require('../Controllers/CartController');
 
 const router = express.Router();
 

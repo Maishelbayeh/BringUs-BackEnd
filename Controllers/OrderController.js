@@ -61,7 +61,7 @@ exports.getOrdersByStore = async (req, res) => {
       notes: order.notes?.customer || order.notes?.admin || '',
       items: order.items.map(item => ({
         image: item.productSnapshot?.images?.[0],
-        name: item.productSnapshot?.nameEn || item.name,
+        name: item.productSnapshot?.nameEn || item.productSnapshot?.nameAr,
         quantity: item.quantity,
         unit: item.productSnapshot?.unit?.nameEn,
         pricePerUnit: item.price,
@@ -185,7 +185,11 @@ exports.createOrder = async (req, res) => {
         cartItem.quantity === item.quantity
       ) : null;
       
-      const itemTotal = product.price * item.quantity;
+      // Calculate the current price (considering any discounts)
+      const currentPrice = product.isOnSale && product.salePercentage > 0 ? 
+        product.price - (product.price * product.salePercentage / 100) : product.price;
+      
+      const itemTotal = currentPrice * item.quantity;
       subtotal += itemTotal;
       processedItems.push({
         productId: product._id.toString(),
@@ -201,7 +205,7 @@ exports.createOrder = async (req, res) => {
         name: product.nameEn,
         sku: product.sku || '',
         quantity: item.quantity,
-        price: product.price,
+        price: currentPrice,
         totalPrice: itemTotal,
         variant: item.variant || {},
         // Copy specifications and colors from cart item
