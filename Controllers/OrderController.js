@@ -1111,6 +1111,186 @@ exports.getMyOrderById = async (req, res) => {
 };
 
 /**
+ * Get orders by customer ID
+ * @route GET /api/orders/customer/:customerId
+ */
+exports.getOrdersByCustomerId = async (req, res) => {
+  try {
+    const { customerId } = req.params;
+    const { page = 1, limit = 10, status, storeId } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    console.log('🔍 getOrdersByCustomerId - customerId:', customerId);
+    console.log('🔍 getOrdersByCustomerId - storeId from query:', storeId);
+    console.log('🔍 getOrdersByCustomerId - User making request:', req.user.email, 'Role:', req.user.role);
+
+    if (!customerId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Customer ID is required' 
+      });
+    }
+
+    // Validate customerId format
+    if (!mongoose.Types.ObjectId.isValid(customerId)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid customer ID format' 
+      });
+    }
+
+    // Build query
+    let query = { 'user.id': new mongoose.Types.ObjectId(customerId) };
+
+    // Add store filter if provided
+    if (storeId) {
+      query['store.id'] = new mongoose.Types.ObjectId(storeId);
+      console.log('🔍 getOrdersByCustomerId - Added store filter:', storeId);
+    }
+
+    // Add status filter if provided
+    if (status) {
+      query.status = status;
+      console.log('🔍 getOrdersByCustomerId - Added status filter:', status);
+    }
+
+    console.log('🔍 getOrdersByCustomerId - Final query:', JSON.stringify(query, null, 2));
+
+    // Get orders with pagination
+    const orders = await Order.find(query)
+      .populate('store', 'nameAr nameEn whatsappNumber slug')
+      .populate('deliveryArea', 'locationAr locationEn price estimatedDays')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get total count
+    const total = await Order.countDocuments(query);
+    const totalPages = Math.ceil(total / parseInt(limit));
+
+    // Calculate spending statistics - use the same query as the main query to ensure consistency
+    const spendingQuery = { 'user.id': new mongoose.Types.ObjectId(customerId) };
+    if (storeId) {
+      spendingQuery['store.id'] = new mongoose.Types.ObjectId(storeId);
+    }
+    
+    const allCustomerOrders = await Order.find(spendingQuery);
+    const totalSpending = allCustomerOrders.reduce((sum, order) => {
+      const orderTotal = order.pricing?.total || 0;
+      console.log('🔍 Order total for spending calculation:', orderTotal, 'Order ID:', order._id);
+      return sum + orderTotal;
+    }, 0);
+    const averageSpending = allCustomerOrders.length > 0 ? totalSpending / allCustomerOrders.length : 0;
+    const lastOrderDate = allCustomerOrders.length > 0 
+      ? new Date(Math.max(...allCustomerOrders.map(order => new Date(order.createdAt))))
+      : null;
+
+    console.log('🔍 getOrdersByCustomerId - Found orders count:', orders.length);
+    console.log('🔍 getOrdersByCustomerId - Total orders:', total);
+    console.log('🔍 getOrdersByCustomerId - All customer orders for spending calculation:', allCustomerOrders.length);
+    console.log('🔍 getOrdersByCustomerId - Total spending:', totalSpending);
+    console.log('🔍 getOrdersByCustomerId - Average spending:', averageSpending);
+    console.log('🔍 getOrdersByCustomerId - Last order date:', lastOrderDate);
+    
+    // Debug: Check first order pricing structure
+    if (allCustomerOrders.length > 0) {
+      const firstOrder = allCustomerOrders[0];
+      console.log('🔍 First order pricing structure:', {
+        orderId: firstOrder._id,
+        pricing: firstOrder.pricing,
+        total: firstOrder.pricing?.total,
+        hasPricing: !!firstOrder.pricing
+      });
+    }
+
+    // Shape the response for the frontend
+    const shapedOrders = orders.map(order => ({
+      id: order.orderNumber,
+      orderNumber: order.orderNumber,
+      storeName: order.store?.nameEn,
+      storeId: order.store?._id,
+      storePhone: order.store?.whatsappNumber,
+      storeUrl: order.store ? `/store/${order.store.slug}` : '',
+      currency: order.currency,
+      price: order.pricing?.total,
+      date: order.createdAt,
+      paid: order.paymentStatus === 'paid',
+      status: order.status,
+      itemsCount: order.items.length,
+      notes: order.notes?.customer || order.notes?.admin || '',
+      deliveryArea: order.deliveryArea ? {
+        locationAr: order.deliveryArea.locationAr || '',
+        locationEn: order.deliveryArea.locationEn || '',
+        price: order.deliveryArea.price || 0,
+        estimatedDays: order.deliveryArea.estimatedDays || 0
+      } : null,
+      items: order.items.map(item => ({
+        image: item.productSnapshot?.images?.[0],
+        name: item.productSnapshot?.nameEn || item.name,
+        quantity: item.quantity,
+        unit: item.productSnapshot?.unit?.nameEn,
+        pricePerUnit: item.price,
+        total: item.totalPrice,
+        color: item.productSnapshot?.color,
+        selectedSpecifications: item.selectedSpecifications || [],
+        selectedColors: item.selectedColors || []
+      })),
+      // Add detailed information
+      pricing: order.pricing ? {
+        subtotal: order.pricing.subtotal,
+        tax: order.pricing.tax,
+        shipping: order.pricing.shipping,
+        discount: order.pricing.discount,
+        total: order.pricing.total
+      } : null,
+      shippingAddress: order.shippingAddress,
+      billingAddress: order.billingAddress,
+      paymentInfo: order.paymentInfo,
+      shippingInfo: order.shippingInfo,
+      isGift: order.isGift,
+      giftMessage: order.giftMessage,
+      estimatedDeliveryDate: order.estimatedDeliveryDate,
+      actualDeliveryDate: order.actualDeliveryDate,
+      cancelledAt: order.cancelledAt,
+      cancelledBy: order.cancelledBy,
+      cancellationReason: order.cancellationReason,
+      affiliate: order.affiliate,
+      coupon: order.coupon,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
+    }));
+
+    res.json({ 
+      success: true, 
+      data: shapedOrders, 
+      count: shapedOrders.length,
+      total,
+      customerStats: {
+        totalSpending: parseFloat(totalSpending.toFixed(2)),
+        averageSpending: parseFloat(averageSpending.toFixed(2)),
+        lastOrderDate: lastOrderDate,
+        totalOrders: allCustomerOrders.length
+      },
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: total,
+        itemsPerPage: parseInt(limit),
+        hasNextPage: parseInt(page) < totalPages,
+        hasPrevPage: parseInt(page) > 1
+      }
+    });
+  } catch (error) {
+    console.error('Get orders by customer ID error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching orders by customer ID',
+      error: error.message 
+    });
+  }
+};
+
+/**
  * Delete an order (Admin only or order owner)
  * @route DELETE /api/orders/:orderId
  */

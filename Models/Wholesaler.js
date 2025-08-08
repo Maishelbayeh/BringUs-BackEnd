@@ -199,7 +199,27 @@ wholesalerSchema.virtual('discountRate').get(function() {
   return `${this.discount}%`;
 });
 
+// Pre-save middleware to hash password
+wholesalerSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) {
+    return next();
+  }
+  
+  try {
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
+// Instance method to compare password
+wholesalerSchema.methods.comparePassword = async function(enteredPassword) {
+  const bcrypt = require('bcryptjs');
+  return await bcrypt.compare(enteredPassword, this.password);
+};
 
 // Static method to get wholesaler statistics for a store
 wholesalerSchema.statics.getWholesalerStats = function(storeId) {

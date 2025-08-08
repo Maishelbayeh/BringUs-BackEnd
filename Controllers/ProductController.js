@@ -555,6 +555,13 @@ exports.update = async (req, res) => {
     const { id } = req.params;
     const { storeId, categories, colors, specificationValues } = req.body;
     
+    console.log('🔍 Backend update - Received categories:', categories);
+    console.log('🔍 Backend update - categories type:', typeof categories);
+    console.log('🔍 Backend update - categories is array:', Array.isArray(categories));
+    console.log('🔍 Backend update - req.body.categories:', req.body.categories);
+    console.log('🔍 Backend update - req.body.categories type:', typeof req.body.categories);
+    console.log('🔍 Backend update - req.body.categories is array:', Array.isArray(req.body.categories));
+    
     // Build update filter
     const filter = { _id: id };
     if (storeId) {
@@ -577,11 +584,21 @@ exports.update = async (req, res) => {
 
     // Handle categories - support both single category and categories array
     if (categories && Array.isArray(categories) && categories.length > 0) {
+      console.log('🔍 Backend update - Using destructured categories:', categories);
       updateData.categories = categories;
       updateData.category = categories[0]; // للتوافق مع الكود القديم
+    } else if (req.body.categories && Array.isArray(req.body.categories) && req.body.categories.length > 0) {
+      console.log('🔍 Backend update - Using req.body.categories:', req.body.categories);
+      updateData.categories = req.body.categories;
+      updateData.category = req.body.categories[0]; // للتوافق مع الكود القديم
     } else if (req.body.category && !categories) {
+      console.log('🔍 Backend update - Using req.body.category:', req.body.category);
       updateData.categories = [req.body.category];
+    } else {
+      console.log('🔍 Backend update - No categories found, keeping existing');
     }
+    
+    console.log('🔍 Backend update - Final updateData.categories:', updateData.categories);
 
     // Handle colors - ensure it's JSON string
     if (colors) {
@@ -1154,11 +1171,22 @@ exports.addVariant = async (req, res) => {
       variantData.productLabels = [];
     }
 
+    // Handle categories for variant - use categories if available, otherwise use category
+    let finalCategories = [];
+    if (variantData.categories && Array.isArray(variantData.categories) && variantData.categories.length > 0) {
+      finalCategories = variantData.categories;
+    } else if (variantData.category) {
+      finalCategories = [variantData.category];
+    } else if (parentProduct.category) {
+      finalCategories = [parentProduct.category];
+    }
+
     // Create variant product
     const variantProduct = new Product({
       ...variantData,
       store: storeId,
-      category: variantData.category || parentProduct.category,
+      category: finalCategories[0] || parentProduct.category, // للتوافق مع الكود القديم
+      categories: finalCategories, // الحقل الجديد
       unit: variantData.unit || parentProduct.unit,
       hasVariants: false, // Variants cannot have their own variants
       variants: [],
@@ -1177,6 +1205,7 @@ exports.addVariant = async (req, res) => {
 
     const populatedVariant = await Product.findById(variantProduct._id)
       .populate('category')
+      .populate('categories')
       .populate('productLabels')
       .populate('specifications')
       .populate('unit')
@@ -1471,14 +1500,22 @@ exports.updateVariant = async (req, res) => {
       }
     }
 
-    // Handle category parsing
-    if (updateData.categoryId) {
+    // Handle categories parsing - support both categories array and categoryId/category
+    if (updateData.categories && Array.isArray(updateData.categories) && updateData.categories.length > 0) {
+      // Use categories array directly
+      updateData.categories = updateData.categories;
+      updateData.category = updateData.categories[0]; // للتوافق مع الكود القديم
+    } else if (updateData.categoryId) {
+      // Convert categoryId to categories array
+      updateData.categories = [updateData.categoryId];
       updateData.category = updateData.categoryId;
       delete updateData.categoryId;
     } else if (updateData.category) {
+      // Convert category to categories array
       if (typeof updateData.category === 'string') {
-        updateData.category = updateData.category;
+        updateData.categories = [updateData.category];
       } else if (updateData.category && typeof updateData.category === 'object' && updateData.category._id) {
+        updateData.categories = [updateData.category._id];
         updateData.category = updateData.category._id;
       }
     }
