@@ -327,7 +327,68 @@ router.post('/login', [
         // Don't fail login if store fetch fails
       }
     } else if (user.role === 'client' && user.store) {
-      storeIdForToken = user.store;
+      try {
+        const Store = require('../Models/Store');
+        const store = await Store.findById(user.store);
+        if (store) {
+          userStore = {
+            id: store._id,
+            nameAr: store.nameAr,
+            nameEn: store.nameEn,
+            slug: store.slug,
+            status: store.status,
+            isOwner: false,
+            permissions: []
+          };
+          userStores = [userStore];
+          storeIdForToken = store._id;
+        }
+      } catch (storeError) {
+        //CONSOLE.error('Error fetching client store:', storeError);
+        // Don't fail login if store fetch fails
+      }
+    } else if (user.role === 'affiliate' || user.role === 'wholesaler') {
+      try {
+        const Store = require('../Models/Store');
+        const store = await Store.findById(user.store);
+        if (store) {
+          userStore = {
+            id: store._id,
+            nameAr: store.nameAr,
+            nameEn: store.nameEn,
+            slug: store.slug,
+            status: store.status,
+            isOwner: false,
+            permissions: []
+          };
+          userStores = [userStore];
+          storeIdForToken = store._id;
+
+          // Get wholesaler specific data if user is wholesaler
+          if (user.role === 'wholesaler') {
+            try {
+              const Wholesaler = require('../Models/Wholesaler');
+              const wholesaler = await Wholesaler.findOne({ userId: user._id });
+              if (wholesaler) {
+                userStore = {
+                  ...userStore,
+                  discount: wholesaler.discount,
+                  businessName: wholesaler.businessName,
+                  isVerified: wholesaler.isVerified,
+                  status: wholesaler.status
+                };
+                userStores = [userStore];
+              }
+            } catch (wholesalerError) {
+              //CONSOLE.error('Error fetching wholesaler data:', wholesalerError);
+              // Don't fail login if wholesaler fetch fails
+            }
+          }
+        }
+      } catch (storeError) {
+        //CONSOLE.error('Error fetching affiliate/wholesaler store:', storeError);
+        // Don't fail login if store fetch fails
+      }
     }
 
     // Generate JWT token with storeId if available
@@ -378,7 +439,7 @@ router.post('/login', [
       isOwner: isOwner // Flag indicating if user is an owner
     });
   } catch (error) {
-    //CONSOLE.error('Login error:', error);
+    console.error('Login error:', error);
     res.status(500).json({
       success: false,
       message: 'Error logging in',
@@ -488,6 +549,64 @@ router.get('/me', async (req, res) => {
         }
       } catch (storeError) {
         //CONSOLE.error('Error fetching admin store:', storeError);
+      }
+    } else if (user.role === 'client' && user.store) {
+      try {
+        const Store = require('../Models/Store');
+        const store = await Store.findById(user.store);
+        if (store) {
+          userStore = {
+            id: store._id,
+            nameAr: store.nameAr,
+            nameEn: store.nameEn,
+            slug: store.slug,
+            status: store.status,
+            isOwner: false,
+            permissions: []
+          };
+          userStores = [userStore];
+        }
+      } catch (storeError) {
+        //CONSOLE.error('Error fetching client store:', storeError);
+      }
+    } else if (user.role === 'affiliate' || user.role === 'wholesaler') {
+      try {
+        const Store = require('../Models/Store');
+        const store = await Store.findById(user.store);
+        if (store) {
+          userStore = {
+            id: store._id,
+            nameAr: store.nameAr,
+            nameEn: store.nameEn,
+            slug: store.slug,
+            status: store.status,
+            isOwner: false,
+            permissions: []
+          };
+          userStores = [userStore];
+
+          // Get wholesaler specific data if user is wholesaler
+          if (user.role === 'wholesaler') {
+            try {
+              const Wholesaler = require('../Models/Wholesaler');
+              const wholesaler = await Wholesaler.findOne({ userId: user._id });
+              if (wholesaler) {
+                userStore = {
+                  ...userStore,
+                  discount: wholesaler.discount,
+                  businessName: wholesaler.businessName,
+                  isVerified: wholesaler.isVerified,
+                  status: wholesaler.status
+                };
+                userStores = [userStore];
+              }
+            } catch (wholesalerError) {
+              //CONSOLE.error('Error fetching wholesaler data:', wholesalerError);
+            }
+          }
+        }
+      } catch (storeError) {
+        //CONSOLE.error('Error fetching affiliate/wholesaler store:', storeError);
       }
     }
 

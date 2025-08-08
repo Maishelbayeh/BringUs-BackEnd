@@ -169,15 +169,19 @@ const updateWholesaler = async (req, res) => {
       }
     }
 
-    // Update wholesaler
-    const updatedWholesaler = await Wholesaler.findByIdAndUpdate(
-      wholesalerId,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('store', 'name domain')
-     .populate('verifiedBy', 'firstName lastName');
+    // Update wholesaler fields
+    Object.keys(updateData).forEach(key => {
+      wholesaler[key] = updateData[key];
+    });
 
-    return success(res, { data: updatedWholesaler, message: 'Wholesaler updated successfully' });
+    // Save the wholesaler (this will trigger pre-save middleware for password hashing)
+    await wholesaler.save();
+
+    // Populate references
+    await wholesaler.populate('store', 'name domain');
+    await wholesaler.populate('verifiedBy', 'firstName lastName');
+
+    return success(res, { data: wholesaler, message: 'Wholesaler updated successfully' });
 
   } catch (err) {
     //CONSOLE.error('Error updating wholesaler:', err);
