@@ -1,13 +1,64 @@
 const Owner = require('../Models/Owner');
 const Store = require('../Models/Store');
 
-// Check if user has access to store (TEMPORARILY SIMPLIFIED FOR TESTING)
+// Check if user has access to store (PRIORITIZING URL PARAMETERS)
 exports.hasStoreAccess = async (req, res, next) => {
   try {
-    const storeId = req.params.storeId || req.params.id;
+    let storeId;
+    
+    // 1. Try to get storeId from URL parameters first (as per user request)
+    if (req.params.storeId) {
+      storeId = req.params.storeId;
+      console.log('🔍 Got storeId from req.params.storeId:', storeId);
+    } else if (req.params.id) {
+      storeId = req.params.id;
+      console.log('🔍 Got storeId from req.params.id:', storeId);
+    }
+    
+    // 2. If not found in params, try to get from token (req.user.storeId)
+    if (!storeId && req.user && req.user.storeId) {
+      storeId = req.user.storeId;
+      console.log('🔍 Got storeId from token (req.user.storeId):', storeId);
+    }
+    
+    // 3. If still not found, try to get from user's store field (req.user.store)
+    if (!storeId && req.user && req.user.store) {
+      storeId = req.user.store;
+      console.log('🔍 Got storeId from user.store field:', storeId);
+    }
+    
+    // 4. If still not found, try to get from user's default store in database (Owner collection)
+    if (!storeId && req.user) {
+      console.log('🔍 Looking for user in Owner collection for default store...');
+      const owner = await Owner.findOne({
+        userId: req.user._id,
+        status: 'active'
+      }).populate('storeId');
+      
+      if (owner && owner.storeId) {
+        storeId = owner.storeId._id;
+        console.log('🔍 Got storeId from Owner collection:', storeId);
+      }
+    }
+    
+    console.log('🔍 Final storeId determined by hasStoreAccess:', storeId);
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required and could not be determined from parameters, token, or user data.'
+      });
+    }
     
     // TEMPORARY: Superadmin has access to all stores
     if (req.user.role === 'superadmin') {
+      if (!storeId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Store ID not found in token or user data'
+        });
+      }
+      
       const store = await Store.findById(storeId);
       if (!store) {
         return res.status(404).json({
@@ -31,6 +82,13 @@ exports.hasStoreAccess = async (req, res, next) => {
     }
 
     // For other users, check owner relationship
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID not found in token or user data'
+      });
+    }
+    
     const owner = await Owner.findOne({
       userId: req.user._id,
       storeId,

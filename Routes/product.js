@@ -1005,9 +1005,7 @@ router.get('/:id', [
  *               colors:
  *                 type: array
  *                 items:
- *                   type: array
- *                   items:
- *                     type: string
+ *                   type: string
  *                 example: [['#000000'], ['#FFFFFF', '#FF0000']]
  *                 description: Array of color arrays
  *               images:
@@ -1258,9 +1256,7 @@ router.post(
  *               colors:
  *                 type: array
  *                 items:
- *                   type: array
- *                   items:
- *                     type: string
+ *                   type: string
  *                 example: [['#000000'], ['#FFFFFF', '#FF0000']]
  *                 description: Array of color arrays
  *               images:
@@ -1905,9 +1901,7 @@ router.post('/upload-single-image', uploadProductImage.single('image'), async (r
  *               colors:
  *                 type: array
  *                 items:
- *                   type: array
- *                   items:
- *                     type: string
+ *                   type: string
  *                 example: [['#FF0000', '#00FF00'], ['#0000FF']]
  *                 description: Array of color arrays to add
  *     responses:
@@ -2025,8 +2019,6 @@ router.delete('/:productId/colors', ProductController.removeColors);
  *               colors:
  *                 type: array
  *                 items:
- *                   type: array
- *                   items:
  *                   type: string
  *                 example: [['#FF0000', '#00FF00'], ['#0000FF']]
  *                 description: New colors array to replace existing colors

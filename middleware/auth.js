@@ -36,6 +36,11 @@ exports.protect = async (req, res, next) => {
         });
       }
 
+      // Add storeId from token to user object
+      if (decoded.storeId) {
+        user.storeId = decoded.storeId;
+      }
+
       req.user = user;
       next();
     } catch (error) {
@@ -80,6 +85,11 @@ exports.optionalAuth = async (req, res, next) => {
       if (!user.isActive) {
         // Deactivated account, continue as guest user
         return next();
+      }
+
+      // Add storeId from token to user object
+      if (decoded.storeId) {
+        user.storeId = decoded.storeId;
       }
 
       req.user = user;

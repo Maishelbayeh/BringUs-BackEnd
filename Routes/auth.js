@@ -297,6 +297,7 @@ router.post('/login', [
     let userStore = null;
     let userStores = [];
     let storeIdForToken = null;
+    let isOwner = false;
     if (user.role === 'admin') {
       try {
         const Owner = require('../Models/Owner');
@@ -306,6 +307,7 @@ router.post('/login', [
           status: 'active' 
         }).populate('storeId');
         if (owners && owners.length > 0) {
+          isOwner = true;
           userStores = owners.map(owner => ({
             id: owner.storeId._id,
             nameAr: owner.storeId.nameAr,
@@ -369,9 +371,11 @@ router.post('/login', [
         role: user.role,
         avatar: user.avatar,
         store: userStore, // Default store for admin
-        stores: userStores // All stores for admin
+        stores: userStores, // All stores for admin
+        isOwner: isOwner // Flag indicating if user is an owner
       },
-      storeId: storeIdForToken // أضف هذا الحقل لسهولة الوصول من الفرونت
+      storeId: storeIdForToken, // أضف هذا الحقل لسهولة الوصول من الفرونت
+      isOwner: isOwner // Flag indicating if user is an owner
     });
   } catch (error) {
     //CONSOLE.error('Login error:', error);
@@ -455,6 +459,7 @@ router.get('/me', async (req, res) => {
     // Get store information for admin users
     let userStore = null;
     let userStores = [];
+    let isOwner = false;
     if (user.role === 'admin') {
       try {
         const Owner = require('../Models/Owner');
@@ -466,6 +471,7 @@ router.get('/me', async (req, res) => {
         }).populate('storeId');
         
         if (owners && owners.length > 0) {
+          isOwner = true;
           userStores = owners.map(owner => ({
             id: owner.storeId._id,
             nameAr: owner.storeId.nameAr,
@@ -499,8 +505,10 @@ router.get('/me', async (req, res) => {
         isEmailVerified: user.isEmailVerified,
         lastLogin: user.lastLogin,
         store: userStore, // Default store for admin
-        stores: userStores // All stores for admin
-      }
+        stores: userStores, // All stores for admin
+        isOwner: isOwner // Flag indicating if user is an owner
+      },
+      isOwner: isOwner // Flag indicating if user is an owner
     });
   } catch (error) {
     //CONSOLE.error('Get user error:', error);

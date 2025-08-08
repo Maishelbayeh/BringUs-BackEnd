@@ -192,6 +192,21 @@ const createUser = async (req, res) => {
     // Generate JWT token
     const token = user.getJwtToken();
 
+    // Check if user is an owner
+    let isOwner = false;
+    if (user.role === 'admin') {
+      try {
+        const Owner = require('../Models/Owner');
+        const owners = await Owner.find({ 
+          userId: user._id, 
+          status: 'active' 
+        });
+        isOwner = owners.length > 0;
+      } catch (error) {
+        // Don't fail if owner check fails
+      }
+    }
+
     // Remove password from response
     const userResponse = {
       id: user._id,
@@ -205,7 +220,8 @@ const createUser = async (req, res) => {
       isActive: user.isActive,
       addresses: user.addresses,
       store: user.store,
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
+      isOwner: isOwner
     };
 
     res.status(201).json({
@@ -312,12 +328,32 @@ const getAllUsers = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
+    // Add owner flag for admin users
+    const usersWithOwnerFlag = await Promise.all(users.map(async (user) => {
+      const userObj = user.toObject();
+      if (user.role === 'admin') {
+        try {
+          const Owner = require('../Models/Owner');
+          const owners = await Owner.find({ 
+            userId: user._id, 
+            status: 'active' 
+          });
+          userObj.isOwner = owners.length > 0;
+        } catch (error) {
+          userObj.isOwner = false;
+        }
+      } else {
+        userObj.isOwner = false;
+      }
+      return userObj;
+    }));
+
     const total = await User.countDocuments(filter);
     const totalPages = Math.ceil(total / parseInt(limit));
 
     res.status(200).json({
       success: true,
-      data: users,
+      data: usersWithOwnerFlag,
       pagination: {
         currentPage: parseInt(page),
         totalPages,
@@ -385,9 +421,26 @@ const getUserById = async (req, res) => {
       });
     }
 
+    // Add owner flag for admin users
+    const userObj = user.toObject();
+    if (user.role === 'admin') {
+      try {
+        const Owner = require('../Models/Owner');
+        const owners = await Owner.find({ 
+          userId: user._id, 
+          status: 'active' 
+        });
+        userObj.isOwner = owners.length > 0;
+      } catch (error) {
+        userObj.isOwner = false;
+      }
+    } else {
+      userObj.isOwner = false;
+    }
+
     res.status(200).json({
       success: true,
-      data: user
+      data: userObj
     });
   } catch (error) {
     //CONSOLE.error('Get user by ID error:', error);
@@ -418,12 +471,32 @@ const getCustomers = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
+    // Add owner flag for admin users
+    const customersWithOwnerFlag = await Promise.all(customers.map(async (user) => {
+      const userObj = user.toObject();
+      if (user.role === 'admin') {
+        try {
+          const Owner = require('../Models/Owner');
+          const owners = await Owner.find({ 
+            userId: user._id, 
+            status: 'active' 
+          });
+          userObj.isOwner = owners.length > 0;
+        } catch (error) {
+          userObj.isOwner = false;
+        }
+      } else {
+        userObj.isOwner = false;
+      }
+      return userObj;
+    }));
+
     const total = await User.countDocuments(filter);
     const totalPages = Math.ceil(total / parseInt(limit));
 
     res.status(200).json({
       success: true,
-      data: customers,
+      data: customersWithOwnerFlag,
       pagination: {
         currentPage: parseInt(page),
         totalPages,
@@ -460,12 +533,32 @@ const getStoreStaff = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
+    // Add owner flag for admin users
+    const staffWithOwnerFlag = await Promise.all(staff.map(async (user) => {
+      const userObj = user.toObject();
+      if (user.role === 'admin') {
+        try {
+          const Owner = require('../Models/Owner');
+          const owners = await Owner.find({ 
+            userId: user._id, 
+            status: 'active' 
+          });
+          userObj.isOwner = owners.length > 0;
+        } catch (error) {
+          userObj.isOwner = false;
+        }
+      } else {
+        userObj.isOwner = false;
+      }
+      return userObj;
+    }));
+
     const total = await User.countDocuments(filter);
     const totalPages = Math.ceil(total / parseInt(limit));
 
     res.status(200).json({
       success: true,
-      data: staff,
+      data: staffWithOwnerFlag,
       pagination: {
         currentPage: parseInt(page),
         totalPages,
@@ -651,10 +744,27 @@ const updateUser = async (req, res) => {
       { new: true, runValidators: true }
     ).select('-password').populate('store', 'name domain');
 
+    // Add owner flag for admin users
+    const userObj = updatedUser.toObject();
+    if (updatedUser.role === 'admin') {
+      try {
+        const Owner = require('../Models/Owner');
+        const owners = await Owner.find({ 
+          userId: updatedUser._id, 
+          status: 'active' 
+        });
+        userObj.isOwner = owners.length > 0;
+      } catch (error) {
+        userObj.isOwner = false;
+      }
+    } else {
+      userObj.isOwner = false;
+    }
+
     res.status(200).json({
       success: true,
       message: 'User updated successfully',
-      data: updatedUser
+      data: userObj
     });
   } catch (error) {
     console.error('Update user error:', error);
@@ -889,10 +999,27 @@ const updateCurrentUserProfile = async (req, res) => {
       { new: true, runValidators: true }
     ).select('-password').populate('store', 'name domain');
 
+    // Add owner flag for admin users
+    const userObj = updatedUser.toObject();
+    if (updatedUser.role === 'admin') {
+      try {
+        const Owner = require('../Models/Owner');
+        const owners = await Owner.find({ 
+          userId: updatedUser._id, 
+          status: 'active' 
+        });
+        userObj.isOwner = owners.length > 0;
+      } catch (error) {
+        userObj.isOwner = false;
+      }
+    } else {
+      userObj.isOwner = false;
+    }
+
     res.status(200).json({
       success: true,
       message: 'Profile updated successfully',
-      data: updatedUser
+      data: userObj
     });
   } catch (error) {
     console.error('Update current user profile error:', error);

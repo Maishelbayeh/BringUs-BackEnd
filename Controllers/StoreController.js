@@ -352,6 +352,10 @@ class StoreController {
   static async getCustomerById(req, res) {
     try {
       const { storeId, customerId } = req.params;
+      
+      console.log('🔍 getCustomerById - storeId from params:', storeId);
+      console.log('🔍 getCustomerById - customerId from params:', customerId);
+      console.log('🔍 getCustomerById - User making request:', req.user.email, 'Role:', req.user.role);
 
       const customer = await User.findOne({
         _id: customerId,
@@ -361,12 +365,23 @@ class StoreController {
       .select('-password')
       .populate('store', 'nameAr nameEn slug');
 
+      console.log('🔍 getCustomerById - Query result:', customer ? 'Customer found' : 'Customer not found');
+      if (customer) {
+        console.log('🔍 getCustomerById - Customer details:', {
+          _id: customer._id,
+          email: customer.email,
+          store: customer.store,
+          role: customer.role
+        });
+      }
+
       if (!customer) {
         return error(res, { message: 'Customer not found', statusCode: 404 });
       }
 
       return success(res, { data: customer });
     } catch (err) {
+      console.error('🔍 getCustomerById - Error:', err);
       return error(res, { message: 'Get customer error', error: err });
     }
   }

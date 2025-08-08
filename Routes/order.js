@@ -16,7 +16,7 @@ const router = express.Router();
  *       type: http
  *       scheme: bearer
  *       bearerFormat: JWT
- *       description: Enter your JWT token in the format: Bearer <token>
+ *       description: "Enter your JWT token in the format: Bearer <token>"
  */
 
 // Middleware to verify JWT token
@@ -1104,6 +1104,133 @@ router.put('/:orderId/payment-status', [
     res.status(500).json({
       success: false,
       message: 'Error updating payment status',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/orders/customer/{customerId}:
+ *   get:
+ *     summary: Get all orders for a specific customer
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: customerId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Customer ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of orders per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Filter orders by status (pending, shipped, delivered, cancelled)
+ *       - in: query
+ *         name: storeId
+ *         schema:
+ *           type: string
+ *         description: Filter orders by store ID
+ *     responses:
+ *       200:
+ *         description: Orders retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       orderNumber:
+ *                         type: string
+ *                       storeName:
+ *                         type: string
+ *                       storeId:
+ *                         type: string
+ *                       currency:
+ *                         type: string
+ *                       price:
+ *                         type: number
+ *                       date:
+ *                         type: string
+ *                         format: date-time
+ *                       paid:
+ *                         type: boolean
+ *                       status:
+ *                         type: string
+ *                       itemsCount:
+ *                         type: number
+ *                       items:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             image:
+ *                               type: string
+ *                             name:
+ *                               type: string
+ *                             quantity:
+ *                               type: number
+ *                             pricePerUnit:
+ *                               type: number
+ *                             total:
+ *                               type: number
+ *                 count:
+ *                   type: number
+ *                 total:
+ *                   type: number
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     currentPage:
+ *                       type: number
+ *                     totalPages:
+ *                       type: number
+ *                     totalItems:
+ *                       type: number
+ *                     itemsPerPage:
+ *                       type: number
+ *                     hasNextPage:
+ *                       type: boolean
+ *                     hasPrevPage:
+ *                       type: boolean
+ *       400:
+ *         description: Invalid customer ID or request data
+ *       401:
+ *         description: Access denied. No token provided.
+ *       500:
+ *         description: Server error
+ */
+router.get('/customer/:customerId', authenticateToken, async (req, res) => {
+  try {
+    await OrderController.getOrdersByCustomerId(req, res);
+  } catch (error) {
+    console.error('Get orders by customer ID route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching orders by customer ID',
       error: error.message
     });
   }
