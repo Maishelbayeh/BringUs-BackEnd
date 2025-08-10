@@ -22,6 +22,184 @@ const router = express.Router();
 const imageStorage = multer.memoryStorage();
 const uploadSliderImage = multer({ storage: imageStorage });
 
+/**
+ * @swagger
+ * /api/store-sliders/{storeId}:
+ *   get:
+ *     summary: Get store sliders by store ID (Public)
+ *     description: Retrieve all active store sliders for a specific store without authentication
+ *     tags: [Store Sliders]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         example: "507f1f77bcf86cd799439012"
+ *         description: "Store ID"
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [slider, video]
+ *         description: "Filter by slider type (optional)"
+ *     responses:
+ *       200:
+ *         description: Store sliders retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                         enum: [slider, video]
+ *                       imageUrl:
+ *                         type: string
+ *                       videoUrl:
+ *                         type: string
+ *                       order:
+ *                         type: integer
+ *                       isActive:
+ *                         type: boolean
+ *                       views:
+ *                         type: integer
+ *                       clicks:
+ *                         type: integer
+ *       404:
+ *         description: Store not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+/**
+ * @swagger
+ * /api/store-sliders/{storeId}:
+ *   get:
+ *     summary: Get store sliders by store ID (Public)
+ *     description: Retrieve all active store sliders for a specific store without authentication
+ *     tags: [Store Sliders]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         example: "507f1f77bcf86cd799439012"
+ *         description: "Store ID"
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [slider, video]
+ *         description: "Filter by slider type (optional)"
+ *     responses:
+ *       200:
+ *         description: Store sliders retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                         enum: [slider, video]
+ *                       imageUrl:
+ *                         type: string
+ *                       videoUrl:
+ *                         type: string
+ *                       order:
+ *                         type: integer
+ *                       isActive:
+ *                         type: boolean
+ *                       views:
+ *                         type: integer
+ *                       clicks:
+ *                         type: integer
+ *       404:
+ *         description: Store not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/:storeId', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { type } = req.query;
+
+    // التحقق من وجود المتجر
+    const Store = require('../Models/Store');
+    const store = await Store.findById(storeId);
+    if (!store || store.status !== 'active') {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found or inactive'
+      });
+    }
+
+    // بناء الفلتر
+    const filter = { 
+      store: storeId, 
+      isActive: true 
+    };
+
+    // إضافة فلتر النوع إذا تم تحديده
+    if (type && ['slider', 'video'].includes(type)) {
+      filter.type = type;
+    }
+
+    // جلب الـ sliders النشطة
+    const StoreSlider = require('../Models/StoreSlider');
+    const sliders = await StoreSlider.find(filter)
+      .sort({ order: 1, createdAt: -1 })
+      .select('-__v');
+
+    return res.status(200).json({
+      success: true,
+      data: sliders
+    });
+
+  } catch (error) {
+    console.error('Get store sliders by store ID error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 // Validation middleware for store slider creation/update
 const validateStoreSlider = [
   body('title')
@@ -120,30 +298,7 @@ router.get('/', protect, authorize('admin', 'superadmin','client'), verifyStoreA
  */
 router.get('/active/:type', protect, authorize('admin', 'superadmin'), verifyStoreAccess, getActiveByType);
 
-/**
- * @swagger
- * /api/store-sliders/{id}:
- *   get:
- *     summary: Get store slider by ID
- *     description: Retrieve a specific store slider
- *     tags: [Store Sliders]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Success
- *       404:
- *         description: Not found
- *       403:
- *         description: Access denied
- */
-router.get('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess, getStoreSliderById);
+// Protected routes below
 
 /**
  * @swagger
@@ -194,6 +349,31 @@ router.get('/:id', protect, authorize('admin', 'superadmin'), verifyStoreAccess,
  *         description: Access denied
  */
 router.post('/', protect, authorize('admin', 'superadmin'), verifyStoreAccess, validateStoreSlider, validateSliderType, createStoreSlider);
+
+/**
+ * @swagger
+ * /api/store-sliders/{id}:
+ *   get:
+ *     summary: Get store slider by ID
+ *     description: Retrieve a specific store slider
+ *     tags: [Store Sliders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Not found
+ *       403:
+ *         description: Access denied
+ */
+router.get('/:id', protect, authorize('admin', 'superadmin', 'client'), verifyStoreAccess, getStoreSliderById);
 
 /**
  * @swagger

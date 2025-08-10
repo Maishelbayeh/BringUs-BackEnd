@@ -1,6 +1,6 @@
 const Affiliation = require('../Models/Affiliation');
 const AffiliatePayment = require('../Models/AffiliatePayment');
-const bcrypt = require('bcryptjs');
+const User = require('../Models/User');
 const { validationResult } = require('express-validator');
 const { addStoreFilter } = require('../middleware/storeIsolation');
 
@@ -563,32 +563,46 @@ const createAffiliate = async (req, res) => {
       });
     }
 
-    // Check if email already exists
+    // Check if email already exists in both Affiliation and User models
     const existingAffiliate = await Affiliation.findOne({
       email: req.body.email,
       store: req.store._id
     });
 
-    if (existingAffiliate) {
+    const existingUser = await User.findOne({
+      email: req.body.email
+    });
+
+    if (existingAffiliate || existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'Email already exists for this store'
+        message: 'Email already exists'
       });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+    // Create user record first (password will be hashed by User model's pre-save hook)
+    const userData = {
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      email: req.body.email,
+      password: req.body.password, // Plain password - will be hashed by User model
+      phone: req.body.mobile,
+      role: 'affiliate',
+      status: 'active',
+      isActive: true
+    };
+
+    const user = await User.create(userData);
 
     // Generate unique affiliate code
     const affiliateCode = await Affiliation.generateUniqueAffiliateCode();
 
-    // Add store to the request body
+    // Add store and userId to the request body
     const affiliateData = {
       ...req.body,
-      password: hashedPassword,
       affiliateCode,
-      store: req.store._id
+      store: req.store._id,
+      userId: user._id
     };
 
     const affiliate = await Affiliation.create(affiliateData);
@@ -679,15 +693,44 @@ const updateAffiliate = async (req, res) => {
       });
     }
 
-    // Hash password if provided
-    if (req.body.password) {
-      const salt = await bcrypt.genSalt(10);
-      req.body.password = await bcrypt.hash(req.body.password, salt);
+    // Check if email is being updated and if it already exists
+    if (req.body.email && req.body.email !== affiliate.email) {
+      const existingAffiliate = await Affiliation.findOne({
+        email: req.body.email,
+        store: req.store._id,
+        _id: { $ne: req.params.id }
+      });
+
+      const existingUser = await User.findOne({
+        email: req.body.email,
+        _id: { $ne: affiliate.userId }
+      });
+
+      if (existingAffiliate || existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email already exists'
+        });
+      }
     }
 
     // Update affiliate
     Object.assign(affiliate, req.body);
     await affiliate.save();
+
+    // Update corresponding user record
+    if (Object.keys(req.body).some(key => ['firstName', 'lastName', 'email', 'password', 'mobile'].includes(key))) {
+      const user = await User.findById(affiliate.userId);
+      if (user) {
+        if (req.body.firstName) user.firstName = req.body.firstName;
+        if (req.body.lastName) user.lastName = req.body.lastName;
+        if (req.body.email) user.email = req.body.email;
+        if (req.body.password) user.password = req.body.password; // Plain password - will be hashed by User model's pre-save hook
+        if (req.body.mobile) user.phone = req.body.mobile;
+        
+        await user.save(); // This will trigger the pre-save middleware for password hashing
+      }
+    }
 
     // Remove password from response
     const affiliateResponse = affiliate.toObject();
@@ -1073,7 +1116,15 @@ const deleteAffiliate = async (req, res) => {
         message: 'Affiliate not found'
       });
     }
+    
+    // Delete the affiliate record
     await Affiliation.deleteOne({ _id: affiliate._id });
+    
+    // Delete the corresponding user record
+    if (affiliate.userId) {
+      await User.findByIdAndDelete(affiliate.userId);
+    }
+    
     res.status(200).json({
       success: true,
       message: 'Affiliate deleted successfully'

@@ -28,9 +28,7 @@ const upload = multer({
   },
 });
 
-// All routes require authentication
-router.use(protect);
-router.use(isActive);
+// All routes require authentication (applied after public routes)
 
 /**
  * @swagger
@@ -62,7 +60,7 @@ router.use(isActive);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:id', StoreController.getStore);
+// Protected below
 
 /**
  * @swagger
@@ -93,6 +91,11 @@ router.get('/:id', StoreController.getStore);
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/slug/:slug', StoreController.getStoreBySlug);
+
+router.use(protect);
+router.use(isActive);
+
+router.get('/:id', StoreController.getStore);
 
 /**
  * @swagger

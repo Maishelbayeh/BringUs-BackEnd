@@ -264,7 +264,7 @@ router.post('/login', [
     const { email, password } = req.body;
 
     // Check if user exists
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email }).select('+password').populate('store');
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -322,10 +322,22 @@ router.post('/login', [
           userStore = userStores[0];
           storeIdForToken = userStores[0].id;
         }
+        else{
+          userStore = {
+            id: user.store,
+            nameAr: user.store.nameAr,
+            nameEn: user.store.nameEn,
+            slug: user.store.slug,
+            status: user.store.status,
+            isOwner: false,
+            permissions: []
+          };
+        }
       } catch (storeError) {
         //CONSOLE.error('Error fetching admin store:', storeError);
         // Don't fail login if store fetch fails
       }
+
     } else if (user.role === 'client' && user.store) {
       try {
         const Store = require('../Models/Store');
@@ -347,7 +359,7 @@ router.post('/login', [
         //CONSOLE.error('Error fetching client store:', storeError);
         // Don't fail login if store fetch fails
       }
-    } else if (user.role === 'affiliate' || user.role === 'wholesaler') {
+    } else if (user.role === 'affiliate' || user.role === 'wholesaler'||user.role === 'admin') {
       try {
         const Store = require('../Models/Store');
         const store = await Store.findById(user.store);
@@ -489,7 +501,7 @@ router.get('/me', async (req, res) => {
 
             const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
         const decoded = jwt.verify(token, jwtSecret);
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id).populate('store');
 
     if (!user) {
       return res.status(401).json({

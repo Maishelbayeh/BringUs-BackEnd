@@ -8,6 +8,13 @@ const affiliationSchema = new mongoose.Schema({
     required: [true, 'Store is required']
   },
   
+  // User reference for authentication
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'User ID is required']
+  },
+  
   // Affiliate personal information
   firstName: {
     type: String,
@@ -30,12 +37,6 @@ const affiliationSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
-  },
-  
-  password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters']
   },
   
   mobile: {
@@ -224,6 +225,7 @@ affiliationSchema.index({ store: 1, status: 1 });
 affiliationSchema.index({ store: 1, 'bankInfo.iban': 1 });
 affiliationSchema.index({ store: 1, lastActivity: -1 });
 affiliationSchema.index({ store: 1, totalSales: -1 });
+affiliationSchema.index({ store: 1, userId: 1 }, { unique: true });
 
 // Virtual for full name
 affiliationSchema.virtual('fullName').get(function() {
