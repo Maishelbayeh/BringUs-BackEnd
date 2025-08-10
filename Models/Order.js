@@ -14,6 +14,10 @@ const orderSchema = new mongoose.Schema({
     type: Object, // نسخة من بيانات المستخدم وقت الطلب
     required: true
   },
+  guestId: {
+    type: String, // للضيوف غير المسجلين
+    required: false
+  },
   items: [{
     productId: {
       type: String, // فقط id نصي للمنتج (اختياري)
@@ -214,6 +218,7 @@ orderSchema.pre('save', function(next) {
 // Create indexes for store isolation
 orderSchema.index({ store: 1 });
 orderSchema.index({ store: 1, user: 1 });
+orderSchema.index({ store: 1, guestId: 1 });
 orderSchema.index({ store: 1, status: 1 });
 orderSchema.index({ store: 1, orderNumber: 1 }, { unique: true });
 

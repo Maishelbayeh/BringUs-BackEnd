@@ -917,6 +917,90 @@ router.post('/store/:storeId/from-cart', OrderController.createOrderFromCart);
 
 /**
  * @swagger
+ * /api/orders/store/{storeId}/guest:
+ *   post:
+ *     summary: Create a guest order (for non-authenticated users)
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The store ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - guestId
+ *               - items
+ *               - shippingAddress
+ *             properties:
+ *               guestId:
+ *                 type: string
+ *                 description: Guest ID (required for guest orders)
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     product:
+ *                       type: string
+ *                     quantity:
+ *                       type: number
+ *               cartItems:
+ *                 type: array
+ *                 description: Cart items with specifications and colors
+ *               shippingAddress:
+ *                 type: object
+ *                 required: true
+ *                 properties:
+ *                   firstName:
+ *                     type: string
+ *                     required: true
+ *                   lastName:
+ *                     type: string
+ *                     required: true
+ *                   email:
+ *                     type: string
+ *                     required: true
+ *                   phone:
+ *                     type: string
+ *               billingAddress:
+ *                 type: object
+ *               paymentInfo:
+ *                 type: object
+ *               shippingInfo:
+ *                 type: object
+ *               notes:
+ *                 type: string
+ *               isGift:
+ *                 type: boolean
+ *               giftMessage:
+ *                 type: string
+ *               coupon:
+ *                 type: object
+ *               affiliate:
+ *                 type: string
+ *               deliveryArea:
+ *                 type: string
+ *               currency:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Guest order created successfully
+ *       400:
+ *         description: storeId is required or validation error
+ *       500:
+ *         description: Server error
+ */
+router.post('/store/:storeId/guest', OrderController.createGuestOrder);
+
+/**
+ * @swagger
  * /api/orders/{orderId}/status:
  *   put:
  *     summary: Update order status

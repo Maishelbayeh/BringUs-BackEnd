@@ -8,6 +8,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const app = express();
@@ -37,8 +38,8 @@ const corsOptions = {
   origin: true, // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Referer', 'User-Agent'],
-  exposedHeaders: ['Content-Length', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Referer', 'User-Agent', 'x-guest-id'],
+  exposedHeaders: ['Content-Length', 'X-Requested-With', 'X-Guest-ID'],
   preflightContinue: false,
   optionsSuccessStatus: 204
 };
@@ -48,10 +49,11 @@ app.use(compression());
 // Additional headers middleware - Allow all origins
 app.use((req, res, next) => {
   // Set permissive CORS headers
+  res.header('X-Guest-ID', req.cookies?.guestId || '');
   res.header('Referrer-Policy', 'no-referrer-when-downgrade');
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, User-Agent');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, User-Agent, x-guest-id');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Cross-Origin-Resource-Policy', 'cross-origin');
   res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
@@ -93,6 +95,9 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Cookie parsing middleware
+app.use(cookieParser());
+
 // MongoDB Connection
 const MONGODB_URI =  'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4mdpc.mongodb.net/bringus?retryWrites=true&w=majority&appName=Cluster0';
 
@@ -101,10 +106,10 @@ mongoose.connect(MONGODB_URI, {
   // Removed deprecated options: useNewUrlParser and useUnifiedTopology
 })
 .then(() => {
-  //CONSOLE.log('✅ Connected to MongoDB');
+  console.log('✅ Connected to MongoDB');
 })
 .catch((err) => {
-  //CONSOLE.error('❌ MongoDB connection error:', err);
+  console.error('❌ MongoDB connection error:', err);
   process.exit(1);
 });
 
@@ -635,7 +640,7 @@ app.use('*', (req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  //CONSOLE.error(err.stack);
+  console.error(err.stack);
   res.status(500).json({
     success: false,
     message: 'Something went wrong!',
@@ -645,8 +650,8 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  //CONSOLE.log(`🚀 Server running on port ${PORT}`);
-  //CONSOLE.log(`📱 API available at http://localhost:${PORT}/api`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📱 API available at http://localhost:${PORT}/api`);
 });
 
 module.exports = app; 

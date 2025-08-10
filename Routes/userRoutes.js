@@ -83,8 +83,8 @@ const validateUserCreation = [
     .withMessage('Please enter a valid phone number'),
   body('role')
     .optional()
-    .isIn(['superadmin', 'admin', 'client'])
-    .withMessage('Role must be superadmin, admin, or client'),
+    .isIn(['superadmin', 'admin', 'client','wholesaler','affiliate'])
+    .withMessage('Role must be superadmin, admin, client, wholesaler, or affiliate'),
   body('store')
     .optional()
     .custom((value, { req }) => {
@@ -127,7 +127,7 @@ const validateUserUpdate = [
     .withMessage('Please enter a valid phone number'),
   body('role')
     .optional()
-    .isIn(['superadmin', 'admin', 'client'])
+    .isIn(['superadmin', 'admin', 'client','wholesaler','affiliate'])
     .withMessage('Role must be superadmin, admin, or client'),
   body('status')
     .optional()
@@ -589,7 +589,7 @@ router.put('/profile', protect, validateProfileUpdate, updateCurrentUserProfile)
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:id', protect, authorize('admin', 'superadmin','client'), getUserById);
+router.get('/:id', protect, authorize('admin', 'superadmin','client','wholesaler','affiliate'), getUserById);
 
 /**
  * @swagger
