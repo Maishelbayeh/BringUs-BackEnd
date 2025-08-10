@@ -325,6 +325,7 @@ router.post('/login', [
         else{
           try {
             const store = await Store.findById(user.store);
+
             if (store) {
               userStore = {
                 id: store._id,
@@ -458,7 +459,8 @@ router.post('/login', [
         isOwner: isOwner // Flag indicating if user is an owner
       },
       storeId: storeIdForToken, // أضف هذا الحقل لسهولة الوصول من الفرونت
-      isOwner: isOwner // Flag indicating if user is an owner
+      isOwner: isOwner, // Flag indicating if user is an owner
+      userStatus: user.status
     });
   } catch (error) {
     console.error('Login error:', error);
