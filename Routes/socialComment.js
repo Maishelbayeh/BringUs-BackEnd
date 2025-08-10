@@ -476,7 +476,6 @@ router.post(
  */
 router.get(
   '/by-store/:storeId',
-  protect,
   SocialCommentController.getSocialCommentsByStoreId
 );
 

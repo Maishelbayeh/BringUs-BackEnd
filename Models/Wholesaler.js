@@ -8,6 +8,13 @@ const wholesalerSchema = new mongoose.Schema({
     required: [true, 'Store is required']
   },
   
+  // User reference for authentication
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'User ID is required']
+  },
+  
   // Personal information
   firstName: {
     type: String,
@@ -188,6 +195,7 @@ wholesalerSchema.index({ store: 1, status: 1 });
 wholesalerSchema.index({ store: 1, 'bankInfo.iban': 1 });
 wholesalerSchema.index({ store: 1, lastActivity: -1 });
 wholesalerSchema.index({ store: 1, discount: -1 });
+wholesalerSchema.index({ store: 1, userId: 1 }, { unique: true });
 
 // Virtual for full name
 wholesalerSchema.virtual('fullName').get(function() {
@@ -199,26 +207,15 @@ wholesalerSchema.virtual('discountRate').get(function() {
   return `${this.discount}%`;
 });
 
-// Pre-save middleware to hash password
-wholesalerSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
-  
-  try {
-    const bcrypt = require('bcryptjs');
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Instance method to compare password
+// Instance method to compare password (for backward compatibility)
+// This method now delegates to the User model since password is stored there
 wholesalerSchema.methods.comparePassword = async function(enteredPassword) {
-  const bcrypt = require('bcryptjs');
-  return await bcrypt.compare(enteredPassword, this.password);
+  const User = require('./User');
+  const user = await User.findById(this.userId);
+  if (!user) {
+    return false;
+  }
+  return await user.comparePassword(enteredPassword);
 };
 
 // Static method to get wholesaler statistics for a store

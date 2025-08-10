@@ -6,6 +6,8 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 const ProductController = require('../Controllers/ProductController');
+const { protect } = require('../middleware/auth');
+const { addStoreFilter } = require('../middleware/storeIsolation');
 
 const router = express.Router();
 
@@ -36,8 +38,8 @@ const router = express.Router();
  *         name: category
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Filter by category ID
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Filter by category ID (MongoDB ObjectId)
  *       - in: query
  *         name: minPrice
  *         schema:
@@ -63,11 +65,25 @@ const router = express.Router();
  *           type: string
  *         description: Search term for product names and descriptions
  *       - in: query
+ *         name: colors
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *         description: Filter by colors (array of color hex codes)
+ *       - in: query
+ *         name: productLabels
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *         description: Filter by product label IDs (array of label IDs)
+ *       - in: query
  *         name: storeId
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Filter by store ID
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Filter by store ID (MongoDB ObjectId)
  *     responses:
  *       200:
  *         description: Products retrieved successfully
@@ -123,8 +139,10 @@ router.get('/', [
   query('category').optional().isMongoId().withMessage('Invalid category ID'),
   query('minPrice').optional().isFloat({ min: 0 }).withMessage('Min price must be a positive number'),
   query('maxPrice').optional().isFloat({ min: 0 }).withMessage('Max price must be a positive number'),
-  query('sort').optional().isIn(['price_asc', 'price_desc', 'name_asc', 'name_desc', 'rating_desc', 'newest']).withMessage('Invalid sort option'),
+  query('sort').optional().isIn(['price_asc', 'price_desc', 'name_asc', 'name_desc', 'rating_desc', 'newest', 'oldest']).withMessage('Invalid sort option'),
   query('search').optional().isString().withMessage('Search must be a string'),
+  query('colors').optional().isArray().withMessage('Colors must be an array'),
+  query('productLabels').optional().isArray().withMessage('Product labels must be an array'),
   query('storeId').optional().isMongoId().withMessage('Invalid store ID')
 ], async (req, res) => {
   try {
@@ -144,6 +162,8 @@ router.get('/', [
       maxPrice,
       sort = 'newest',
       search,
+      colors,
+      productLabels,
       storeId
     } = req.query;
 
@@ -193,18 +213,50 @@ router.get('/', [
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Execute query
-    const products = await Product.find(filter)
+    let products = await Product.find(filter)
       .populate('category', 'nameAr nameEn')
       .populate('productLabels', 'nameAr nameEn color')
       .populate('specifications', 'descriptionAr descriptionEn')
       .populate('unit', 'nameAr nameEn symbol')
       .populate('store', 'name domain')
-      .sort(sortObj)
-      .skip(skip)
-      .limit(parseInt(limit));
+      .sort(sortObj);
 
-    // Get total count
-    const total = await Product.countDocuments(filter);
+    // Apply additional filters
+    if (colors && Array.isArray(colors) && colors.length > 0) {
+      products = products.filter(product => {
+        // Parse product colors
+        let productColors = [];
+        try {
+          productColors = typeof product.colors === 'string' ? JSON.parse(product.colors) : product.colors;
+        } catch (error) {
+          productColors = [];
+        }
+        
+        // Flatten the colors array (handle nested arrays)
+        const flattenedColors = productColors.flat();
+        
+        // Check if any of the requested colors exist in the product
+        return colors.some(requestedColor => 
+          flattenedColors.includes(requestedColor)
+        );
+      });
+    }
+
+    if (productLabels && Array.isArray(productLabels) && productLabels.length > 0) {
+      products = products.filter(product => {
+        // Check if any of the requested labels exist in the product
+        return productLabels.some(requestedLabelId => 
+          product.productLabels && 
+          product.productLabels.some(label => 
+            label._id && label._id.toString() === requestedLabelId
+          )
+        );
+      });
+    }
+
+    // Apply pagination after filtering
+    const total = products.length;
+    products = products.slice(skip, skip + parseInt(limit));
 
     // Calculate pagination info
     const totalPages = Math.ceil(total / parseInt(limit));
@@ -511,8 +563,8 @@ router.post('/:productId/add-variant', upload.fields([
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Variant product ID to delete
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Variant product ID to delete (MongoDB ObjectId)
  *       - in: query
  *         name: storeId
  *         required: true
@@ -564,8 +616,8 @@ router.delete('/:productId/variants/:variantId', [
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Variant product ID to update
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Variant product ID to update (MongoDB ObjectId)
  *     requestBody:
  *       required: true
  *       content:
@@ -680,18 +732,19 @@ router.put('/:productId/variants/:variantId', upload.fields([
 // Get products with variants
 /**
  * @swagger
- * /api/products/with-variants:
+ * /api/products/{storeId}/with-variants:
  *   get:
  *     summary: Get products with variants
- *     description: Retrieve all products that have variants
+ *     description: Retrieve all products that have variants for a specific store
  *     tags: [Products]
  *     parameters:
- *       - in: query
+ *       - in: path
  *         name: storeId
+ *         required: true
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Filter by store ID
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID (MongoDB ObjectId)
  *     responses:
  *       200:
  *         description: Products with variants retrieved successfully
@@ -710,24 +763,29 @@ router.put('/:productId/variants/:variantId', upload.fields([
  *                 count:
  *                   type: integer
  *                   example: 5
+ *       400:
+ *         description: Bad request - storeId missing or invalid
+ *       500:
+ *         description: Internal server error
  */
-router.get('/with-variants', ProductController.getWithVariants);
+router.get('/:storeId/with-variants', ProductController.getWithVariants);
 
 // Get variant products only
 /**
  * @swagger
- * /api/products/variants-only:
+ * /api/products/{storeId}/variants-only:
  *   get:
  *     summary: Get variant products only
- *     description: Retrieve all products that are variants (have a parent product)
+ *     description: Retrieve all products that are variants (have a parent product) for a specific store
  *     tags: [Products]
  *     parameters:
- *       - in: query
+ *       - in: path
  *         name: storeId
+ *         required: true
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Filter by store ID
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID (MongoDB ObjectId)
  *     responses:
  *       200:
  *         description: Variant products retrieved successfully
@@ -746,8 +804,256 @@ router.get('/with-variants', ProductController.getWithVariants);
  *                 count:
  *                   type: integer
  *                   example: 10
+ *       400:
+ *         description: Bad request - storeId missing or invalid
+ *       500:
+ *         description: Internal server error
  */
-router.get('/variants-only', ProductController.getVariantsOnly);
+router.get('/:storeId/variants-only', ProductController.getVariantsOnly);
+
+// Get all products without variants (for product display page)
+/**
+ * @swagger
+ * /api/products/{storeId}/without-variants:
+ *   get:
+ *     summary: Get all products without variants
+ *     description: Retrieve all products for a specific store, excluding variant products (products that are variants of other products)
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID (MongoDB ObjectId)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Filter by category ID (MongoDB ObjectId)
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         description: Minimum price filter
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         description: Maximum price filter
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [price_asc, price_desc, name_asc, name_desc, rating_desc, newest]
+ *           default: newest
+ *         description: Sort order
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for product names and descriptions
+ *       - in: query
+ *         name: colors
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *         description: Filter by colors (array of color hex codes)
+ *       - in: query
+ *         name: productLabels
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *         description: Filter by product label IDs (array of label IDs)
+ *     responses:
+ *       200:
+ *         description: Products retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 5
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 50
+ *                     itemsPerPage:
+ *                       type: integer
+ *                       example: 10
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *       400:
+ *         description: Bad request - storeId missing or invalid
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:storeId/without-variants', [
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+  query('category').optional().isMongoId().withMessage('Invalid category ID'),
+  query('minPrice').optional().isFloat({ min: 0 }).withMessage('Min price must be a positive number'),
+  query('maxPrice').optional().isFloat({ min: 0 }).withMessage('Max price must be a positive number'),
+  query('sort').optional().isIn(['price_asc', 'price_desc', 'name_asc', 'name_desc', 'rating_desc', 'newest', 'oldest']).withMessage('Invalid sort option'),
+  query('search').optional().isString().withMessage('Search must be a string'),
+  query('colors').optional().isArray().withMessage('Colors must be an array'),
+  query('productLabels').optional().isArray().withMessage('Product labels must be an array')
+], ProductController.getWithoutVariants);
+
+// Get product details with variants
+/**
+ * @swagger
+ * /api/products/{storeId}/{productId}/with-variants:
+ *   get:
+ *     summary: Get product details with variants
+ *     description: Retrieve detailed information about a specific product including all its variants for a specific store
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID (MongoDB ObjectId)
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Product ID (MongoDB ObjectId)
+ *     responses:
+ *       200:
+ *         description: Product details with variants retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     product:
+ *                       $ref: '#/components/schemas/Product'
+ *                     variants:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Product'
+ *                       description: Array of variant products
+ *                     variantsCount:
+ *                       type: integer
+ *                       example: 3
+ *                       description: Number of variants
+ *       400:
+ *         description: Bad request - storeId missing or invalid
+ *       404:
+ *         description: Product not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:storeId/:productId/with-variants', ProductController.getProductWithVariants);
+
+// Get specific variant details
+/**
+ * @swagger
+ * /api/products/{storeId}/{productId}/variants/{variantId}:
+ *   get:
+ *     summary: Get specific variant details
+ *     description: Retrieve detailed information about a specific variant of a product for a specific store
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID (MongoDB ObjectId)
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Parent product ID (MongoDB ObjectId)
+ *       - in: path
+ *         name: variantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Variant product ID (MongoDB ObjectId)
+ *     responses:
+ *       200:
+ *         description: Variant details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     parentProduct:
+ *                       $ref: '#/components/schemas/Product'
+ *                       description: Parent product information
+ *                     variant:
+ *                       $ref: '#/components/schemas/Product'
+ *                       description: Variant product details
+ *       400:
+ *         description: Bad request - storeId missing or invalid
+ *       404:
+ *         description: Product or variant not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:storeId/:productId/variants/:variantId', ProductController.getVariantDetails);
 
 /**
  * @swagger
@@ -810,14 +1116,14 @@ router.get('/by-store/:storeId', ProductController.getByStoreId);
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Product ID
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Product ID (MongoDB ObjectId)
  *       - in: query
  *         name: storeId
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Store ID for filtering
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID for filtering (MongoDB ObjectId)
  *     responses:
  *       200:
  *         description: Product retrieved successfully
@@ -992,16 +1298,16 @@ router.get('/:id', [
  *                 type: array
  *                 items:
  *                   type: string
- *                   format: uuid
+ *                   pattern: '^[a-fA-F0-9]{24}$'
  *                 example: ['507f1f77bcf86cd799439015']
- *                 description: Array of product label IDs
+ *                 description: Array of product label IDs (MongoDB ObjectId)
  *               specifications:
  *                 type: array
  *                 items:
  *                   type: string
- *                   format: uuid
+ *                   pattern: '^[a-fA-F0-9]{24}$'
  *                 example: ['507f1f77bcf86cd799439017']
- *                 description: Array of product specification IDs
+ *                 description: Array of product specification IDs (MongoDB ObjectId)
  *               colors:
  *                 type: array
  *                 items:
@@ -1162,8 +1468,8 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Product ID
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Product ID (MongoDB ObjectId)
  *     requestBody:
  *       required: true
  *       content:
@@ -1243,16 +1549,16 @@ router.post(
  *                 type: array
  *                 items:
  *                   type: string
- *                   format: uuid
+ *                   pattern: '^[a-fA-F0-9]{24}$'
  *                 example: ['507f1f77bcf86cd799439015']
- *                 description: Array of product label IDs
+ *                 description: Array of product label IDs (MongoDB ObjectId)
  *               specifications:
  *                 type: array
  *                 items:
  *                   type: string
- *                   format: uuid
+ *                   pattern: '^[a-fA-F0-9]{24}$'
  *                 example: ['507f1f77bcf86cd799439017']
- *                 description: Array of product specification IDs
+ *                 description: Array of product specification IDs (MongoDB ObjectId)
  *               colors:
  *                 type: array
  *                 items:
@@ -1413,14 +1719,14 @@ router.put(
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Product ID
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Product ID (MongoDB ObjectId)
  *       - in: query
  *         name: storeId
  *         schema:
  *           type: string
- *           format: uuid
- *         description: Store ID for filtering
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID for filtering (MongoDB ObjectId)
  *     responses:
  *       200:
  *         description: Product deleted successfully

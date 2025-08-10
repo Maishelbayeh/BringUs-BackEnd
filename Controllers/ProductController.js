@@ -1,6 +1,9 @@
 const Product = require('../Models/Product');
 const { addStoreFilter } = require('../middleware/storeIsolation');
 const { uploadToCloudflare } = require('../utils/cloudflareUploader');
+const { validationResult } = require('express-validator');
+
+
 
 // Helper function to process specificationValues and ensure all required fields
 const processSpecificationValues = (specificationValues) => {
@@ -947,7 +950,17 @@ exports.getWithFilters = async (req, res) => {
 // Get products with variants
 exports.getWithVariants = async (req, res) => {
   try {
-    const query = addStoreFilter(req, { hasVariants: true });
+    // Get store ID from route parameters
+    const { storeId } = req.params;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Store ID is required in route parameters'
+      });
+    }
+    
+    const query = { store: storeId, hasVariants: true };
     
     const products = await Product.find(query)
       .populate('category')
@@ -976,7 +989,17 @@ exports.getWithVariants = async (req, res) => {
 // Get variant products
 exports.getVariantsOnly = async (req, res) => {
   try {
-    const query = addStoreFilter(req, { hasVariants: true });
+    // Get store ID from route parameters
+    const { storeId } = req.params;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Store ID is required in route parameters'
+      });
+    }
+    
+    const query = { store: storeId, isParent: false };
     
     const variants = await Product.find(query)
       .populate('category')
@@ -997,6 +1020,348 @@ exports.getVariantsOnly = async (req, res) => {
     res.status(500).json({ 
       success: false,
       error: err.message 
+    });
+  }
+};
+
+// Get all products without variants (for product display page)
+exports.getWithoutVariants = async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    // Get store ID from route parameters
+    const { storeId } = req.params;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Store ID is required in route parameters'
+      });
+    }
+
+    const {
+      page = 1,
+      limit = 10,
+      category,
+      minPrice,
+      maxPrice,
+      sort = 'newest',
+      search,
+      colors,
+      productLabels
+    } = req.query;
+
+    // Build filter object - exclude variant products
+    const filter = { 
+      store: storeId, 
+      isActive: true
+    };
+
+    if (category) filter.category = category;
+    if (minPrice || maxPrice) {
+      filter.finalPrice = {};
+      if (minPrice) filter.finalPrice.$gte = parseFloat(minPrice);
+      if (maxPrice) filter.finalPrice.$lte = parseFloat(maxPrice);
+    }
+    if (search) {
+      filter.$text = { $search: search };
+    }
+
+    // Build sort object
+    let sortObj = {};
+    switch (sort) {
+      case 'price_asc':
+        sortObj = { finalPrice: 1 };
+        break;
+      case 'price_desc':
+        sortObj = { finalPrice: -1 };
+        break;
+      case 'name_asc':
+        sortObj = { nameEn: 1 };
+        break;
+      case 'name_desc':
+        sortObj = { nameEn: -1 };
+        break;
+      case 'rating_desc':
+        sortObj = { rating: -1 };
+        break;
+      case 'oldest':
+        sortObj = { createdAt: 1 };
+        break;
+      case 'newest':
+      default:
+        sortObj = { createdAt: -1 };
+        break;
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Execute query
+    const allProducts = await Product.find(filter)
+      .populate('category', 'nameAr nameEn')
+      .populate('categories', 'nameAr nameEn')
+      .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'descriptionAr descriptionEn')
+      .populate('unit', 'nameAr nameEn symbol')
+      .populate('store', 'name domain')
+      .populate('variants') // Include variants for parent products
+      .sort(sortObj);
+
+    // Filter out variant products (products that are variants of other products)
+    let products = allProducts.filter(product => {
+      // Check if this product is a variant by looking at all other products
+      const isVariant = allProducts.some(otherProduct => 
+        otherProduct.variants && 
+        otherProduct.variants.some(variant => 
+          variant._id && variant._id.toString() === product._id.toString()
+        )
+      );
+      
+      // Return true if it's NOT a variant
+      return !isVariant;
+    });
+
+    // Apply additional filters
+    if (colors && Array.isArray(colors) && colors.length > 0) {
+      products = products.filter(product => {
+        // Parse product colors
+        let productColors = [];
+        try {
+          productColors = typeof product.colors === 'string' ? JSON.parse(product.colors) : product.colors;
+        } catch (error) {
+          productColors = [];
+        }
+        
+        // Flatten the colors array (handle nested arrays)
+        const flattenedColors = productColors.flat();
+        
+        // Check if any of the requested colors exist in the product
+        return colors.some(requestedColor => 
+          flattenedColors.includes(requestedColor)
+        );
+      });
+    }
+
+    if (productLabels && Array.isArray(productLabels) && productLabels.length > 0) {
+      products = products.filter(product => {
+        // Check if any of the requested labels exist in the product
+        return productLabels.some(requestedLabelId => 
+          product.productLabels && 
+          product.productLabels.some(label => 
+            label._id && label._id.toString() === requestedLabelId
+          )
+        );
+      });
+    }
+
+    // Apply pagination after filtering
+    const paginatedProducts = products.slice(skip, skip + parseInt(limit));
+
+    // Get total count after filtering
+    const total = products.length;
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / parseInt(limit));
+    const hasNextPage = parseInt(page) < totalPages;
+    const hasPrevPage = parseInt(page) > 1;
+
+    // تحويل الألوان من JSON string إلى array لكل منتج
+    const processedProducts = paginatedProducts.map(product => parseProductColors(product));
+
+    res.status(200).json({
+      success: true,
+      data: processedProducts,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: total,
+        itemsPerPage: parseInt(limit),
+        hasNextPage,
+        hasPrevPage
+      }
+    });
+  } catch (error) {
+    console.error('Get products without variants error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching products',
+      error: error.message
+    });
+  }
+};
+
+// Get product details with variants
+exports.getProductWithVariants = async (req, res) => {
+  try {
+    const { productId, storeId } = req.params;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Store ID is required in route parameters'
+      });
+    }
+
+    // Find the main product
+    const product = await Product.findOne({ 
+      _id: productId, 
+      store: storeId,
+      isActive: true
+    })
+    .populate('category', 'nameAr nameEn')
+    .populate('categories', 'nameAr nameEn')
+    .populate('productLabels', 'nameAr nameEn color')
+    .populate('specifications', 'descriptionAr descriptionEn')
+    .populate('unit', 'nameAr nameEn symbol')
+    .populate('store', 'name domain');
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        error: 'Product not found'
+      });
+    }
+
+    // Get variants if the product has any
+    let variants = [];
+    let variantsCount = 0;
+
+    if (product.variants && product.variants.length > 0) {
+      variants = await Product.find({ 
+        _id: { $in: product.variants },
+        store: storeId,
+        isActive: true
+      })
+      .populate('category', 'nameAr nameEn')
+      .populate('categories', 'nameAr nameEn')
+      .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'descriptionAr descriptionEn')
+      .populate('unit', 'nameAr nameEn symbol')
+      .populate('store', 'name domain')
+      .sort({ createdAt: 1 }); // Sort variants by creation date
+
+      variantsCount = variants.length;
+    }
+
+    // تحويل الألوان من JSON string إلى array للمنتج الرئيسي
+    const processedProduct = parseProductColors(product);
+    
+    // تحويل الألوان من JSON string إلى array للـ variants
+    const processedVariants = variants.map(variant => parseProductColors(variant));
+
+    // Increment views for the main product
+    product.views += 1;
+    await product.save();
+
+    res.json({
+      success: true,
+      data: {
+        product: processedProduct,
+        variants: processedVariants,
+        variantsCount: variantsCount
+      }
+    });
+  } catch (error) {
+    console.error('Get product with variants error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching product details',
+      error: error.message
+    });
+  }
+};
+
+// Get specific variant details
+exports.getVariantDetails = async (req, res) => {
+  try {
+    const { productId, variantId, storeId } = req.params;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Store ID is required in route parameters'
+      });
+    }
+
+    // Find the parent product
+    const parentProduct = await Product.findOne({ 
+      _id: productId, 
+      store: storeId,
+      isActive: true
+    })
+    .populate('category', 'nameAr nameEn')
+    .populate('categories', 'nameAr nameEn')
+    .populate('productLabels', 'nameAr nameEn color')
+    .populate('specifications', 'descriptionAr descriptionEn')
+    .populate('unit', 'nameAr nameEn symbol')
+    .populate('store', 'name domain');
+
+    if (!parentProduct) {
+      return res.status(404).json({
+        success: false,
+        error: 'Parent product not found'
+      });
+    }
+
+    // Check if the variant belongs to this parent product
+    if (!parentProduct.variants.includes(variantId)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Variant not found for this product'
+      });
+    }
+
+    // Find the specific variant
+    const variant = await Product.findOne({ 
+      _id: variantId, 
+      store: storeId,
+      isActive: true
+    })
+    .populate('category', 'nameAr nameEn')
+    .populate('categories', 'nameAr nameEn')
+    .populate('productLabels', 'nameAr nameEn color')
+    .populate('specifications', 'descriptionAr descriptionEn')
+    .populate('unit', 'nameAr nameEn symbol')
+    .populate('store', 'name domain');
+
+    if (!variant) {
+      return res.status(404).json({
+        success: false,
+        error: 'Variant not found'
+      });
+    }
+
+    // تحويل الألوان من JSON string إلى array للمنتج الأب
+    const processedParentProduct = parseProductColors(parentProduct);
+    
+    // تحويل الألوان من JSON string إلى array للـ variant
+    const processedVariant = parseProductColors(variant);
+
+    // Increment views for the variant
+    variant.views += 1;
+    await variant.save();
+
+    res.json({
+      success: true,
+      data: {
+        parentProduct: processedParentProduct,
+        variant: processedVariant
+      }
+    });
+  } catch (error) {
+    console.error('Get variant details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching variant details',
+      error: error.message
     });
   }
 };

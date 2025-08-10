@@ -1,5 +1,6 @@
 const Wholesaler = require('../Models/Wholesaler');
 const Store = require('../Models/Store');
+const User = require('../Models/User');
 const { success, error } = require('../utils/response');
 
 // Get all wholesalers for a store
@@ -41,9 +42,16 @@ const getAllWholesalers = async (req, res) => {
     // Get statistics
     const stats = await Wholesaler.getWholesalerStats(storeId);
 
+    // Remove password from each wholesaler response
+    const wholesalersResponse = wholesalers.map(wholesaler => {
+      const wholesalerObj = wholesaler.toObject();
+      delete wholesalerObj.password;
+      return wholesalerObj;
+    });
+
     return success(res, {
       data: {
-        wholesalers,
+        wholesalers: wholesalersResponse,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -82,7 +90,11 @@ const getWholesalerById = async (req, res) => {
       return error(res, { message: 'Wholesaler not found', statusCode: 404 });
     }
 
-    return success(res, { data: wholesaler, message: 'Wholesaler retrieved successfully' });
+    // Remove password from response if it exists
+    const wholesalerResponse = wholesaler.toObject();
+    delete wholesalerResponse.password;
+
+    return success(res, { data: wholesalerResponse, message: 'Wholesaler retrieved successfully' });
 
   } catch (err) {
     //CONSOLE.error('Error getting wholesaler:', err);
@@ -102,18 +114,42 @@ const createWholesaler = async (req, res) => {
       return error(res, { message: 'Store not found', statusCode: 404 });
     }
 
-    // Check if email already exists for this store
+    // Check if email already exists in both Wholesaler and User models
     const existingWholesaler = await Wholesaler.findOne({
       email: wholesalerData.email,
       store: storeId
     });
 
-    if (existingWholesaler) {
-      return error(res, { message: 'Email already exists for this store', statusCode: 400 });
+    const existingUser = await User.findOne({
+      email: wholesalerData.email
+    });
+
+    if (existingWholesaler || existingUser) {
+      return error(res, { message: 'Email already exists', statusCode: 400 });
     }
 
-    // Add store ID to wholesaler data
+    // Check if password is provided
+    if (!wholesalerData.password) {
+      return error(res, { message: 'Password is required', statusCode: 400 });
+    }
+
+    // Create user record first (password will be hashed by User model's pre-save hook)
+    const userData = {
+      firstName: wholesalerData.firstName,
+      lastName: wholesalerData.lastName,
+      email: wholesalerData.email,
+      password: wholesalerData.password, // Plain password - will be hashed by User model
+      phone: wholesalerData.mobile,
+      role: 'wholesaler',
+      status: 'active',
+      isActive: true
+    };
+
+    const user = await User.create(userData);
+
+    // Add store ID and user ID to wholesaler data
     wholesalerData.store = storeId;
+    wholesalerData.userId = user._id;
     
     // Set default status to Active if not provided
     if (!wholesalerData.status) {
@@ -126,7 +162,11 @@ const createWholesaler = async (req, res) => {
     // Populate references
     await wholesaler.populate('store', 'name domain');
 
-    return success(res, { data: wholesaler, message: 'Wholesaler created successfully', statusCode: 201 });
+    // Remove password from response if it exists
+    const wholesalerResponse = wholesaler.toObject();
+    delete wholesalerResponse.password;
+
+    return success(res, { data: wholesalerResponse, message: 'Wholesaler created successfully', statusCode: 201 });
 
   } catch (err) {
     //CONSOLE.error('Error creating wholesaler:', err);
@@ -164,8 +204,13 @@ const updateWholesaler = async (req, res) => {
         _id: { $ne: wholesalerId }
       });
 
-      if (existingWholesaler) {
-        return error(res, { message: 'Email already exists for this store', statusCode: 400 });
+      const existingUser = await User.findOne({
+        email: updateData.email,
+        _id: { $ne: wholesaler.userId }
+      });
+
+      if (existingWholesaler || existingUser) {
+        return error(res, { message: 'Email already exists', statusCode: 400 });
       }
     }
 
@@ -177,11 +222,29 @@ const updateWholesaler = async (req, res) => {
     // Save the wholesaler (this will trigger pre-save middleware for password hashing)
     await wholesaler.save();
 
+    // Update corresponding user record
+    if (Object.keys(updateData).some(key => ['firstName', 'lastName', 'email', 'password', 'mobile'].includes(key))) {
+      const user = await User.findById(wholesaler.userId);
+      if (user) {
+        if (updateData.firstName) user.firstName = updateData.firstName;
+        if (updateData.lastName) user.lastName = updateData.lastName;
+        if (updateData.email) user.email = updateData.email;
+        if (updateData.password) user.password = updateData.password; // Plain password - will be hashed by User model's pre-save hook
+        if (updateData.mobile) user.phone = updateData.mobile;
+        
+        await user.save(); // This will trigger the pre-save middleware for password hashing
+      }
+    }
+
     // Populate references
     await wholesaler.populate('store', 'name domain');
     await wholesaler.populate('verifiedBy', 'firstName lastName');
 
-    return success(res, { data: wholesaler, message: 'Wholesaler updated successfully' });
+    // Remove password from response if it exists
+    const wholesalerResponse = wholesaler.toObject();
+    delete wholesalerResponse.password;
+
+    return success(res, { data: wholesalerResponse, message: 'Wholesaler updated successfully' });
 
   } catch (err) {
     //CONSOLE.error('Error updating wholesaler:', err);
@@ -200,13 +263,21 @@ const deleteWholesaler = async (req, res) => {
   try {
     const { storeId, wholesalerId } = req.params;
 
-    const wholesaler = await Wholesaler.findOneAndDelete({ 
+    const wholesaler = await Wholesaler.findOne({ 
       _id: wholesalerId, 
       store: storeId 
     });
 
     if (!wholesaler) {
       return error(res, { message: 'Wholesaler not found', statusCode: 404 });
+    }
+
+    // Delete the wholesaler record
+    await Wholesaler.findByIdAndDelete(wholesalerId);
+
+    // Delete the corresponding user record
+    if (wholesaler.userId) {
+      await User.findByIdAndDelete(wholesaler.userId);
     }
 
     return success(res, { data: null, message: 'Wholesaler deleted successfully' });
@@ -352,10 +423,25 @@ const bulkDelete = async (req, res) => {
       return error(res, { message: 'Wholesaler IDs array is required', statusCode: 400 });
     }
 
+    // Get wholesalers to find their user IDs
+    const wholesalers = await Wholesaler.find({
+      _id: { $in: wholesalerIds },
+      store: storeId
+    });
+
+    // Extract user IDs
+    const userIds = wholesalers.map(wholesaler => wholesaler.userId).filter(id => id);
+
+    // Delete wholesalers
     const result = await Wholesaler.deleteMany({
       _id: { $in: wholesalerIds },
       store: storeId
     });
+
+    // Delete corresponding user records
+    if (userIds.length > 0) {
+      await User.deleteMany({ _id: { $in: userIds } });
+    }
 
     return success(res, {
       deletedCount: result.deletedCount
