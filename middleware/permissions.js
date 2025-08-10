@@ -76,7 +76,13 @@ exports.hasStoreAccess = async (req, res, next) => {
         isPrimaryOwner: true,
         status: 'active'
       };
-      
+      req.admin = {
+        userId: req.user._id,
+        storeId: store._id,
+        permissions: ['manage_store', 'manage_users', 'manage_products', 'manage_categories', 'manage_orders', 'manage_inventory', 'view_analytics', 'manage_settings'],
+        isPrimaryOwner: true,
+        status: 'active'
+      };
       //CONSOLE.log('🔓 Store access bypassed - Superadmin access granted');
       return next();
     }

@@ -323,20 +323,30 @@ router.post('/login', [
           storeIdForToken = userStores[0].id;
         }
         else{
-          userStore = {
-            id: user.store,
-            nameAr: user.store.nameAr,
-            nameEn: user.store.nameEn,
-            slug: user.store.slug,
-            status: user.store.status,
-            isOwner: false,
-            permissions: []
-          };
+          try {
+            const store = await Store.findById(user.store);
+            if (store) {
+              userStore = {
+                id: store._id,
+                nameAr: store.nameAr,
+                nameEn: store.nameEn,
+                slug: store.slug,
+                status: store.status,
+                isOwner: false,
+                permissions: []
+              };
+              userStores = [userStore];
+              storeIdForToken = store._id;
+            }
+          } catch (storeError) {
+            //CONSOLE.error('Error fetching client store:', storeError);
+            // Don't fail login if store fetch fails
+          }
         }
       } catch (storeError) {
         //CONSOLE.error('Error fetching admin store:', storeError);
         // Don't fail login if store fetch fails
-      }
+      } 
 
     } else if (user.role === 'client' && user.store) {
       try {
