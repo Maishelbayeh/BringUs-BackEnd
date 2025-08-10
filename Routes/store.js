@@ -636,7 +636,7 @@ router.get('/:storeId/stats', hasStoreAccess, hasPermission('view_analytics'), S
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:storeId/customers', hasStoreAccess, hasPermission('manage_users'), StoreController.getCustomersByStoreId);
+router.get('/:storeId/customers', StoreController.getCustomersByStoreId);
 
 /**
  * @swagger
