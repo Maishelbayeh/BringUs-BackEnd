@@ -92,9 +92,11 @@ const createTerms = async (req, res) => {
     const { storeId } = req.params;
     const termsData = req.body;
 
-    // Add store ID and user who created it
+    // Add store ID and user who created it (if authenticated)
     termsData.store = storeId;
-    termsData.updatedBy = req.user._id;
+    if (req.user && req.user._id) {
+      termsData.updatedBy = req.user._id;
+    }
 
     // Deactivate other terms for this store
     await TermsConditions.updateMany(
@@ -131,8 +133,10 @@ const updateTerms = async (req, res) => {
     const { storeId, termsId } = req.params;
     const updateData = req.body;
 
-    // Add user who updated it
-    updateData.updatedBy = req.user._id;
+    // Add user who updated it (if authenticated)
+    if (req.user && req.user._id) {
+      updateData.updatedBy = req.user._id;
+    }
     updateData.lastUpdated = new Date();
 
     // Find terms

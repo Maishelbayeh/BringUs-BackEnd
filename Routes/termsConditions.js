@@ -5,14 +5,15 @@ const {
   createTerms,
   updateTerms
 } = require('../Controllers/TermsConditionsController');
-const { protect } = require('../middleware/auth');
-const { verifyStoreAccess } = require('../middleware/storeAuth');
+// Remove authentication middleware imports since we're making endpoints public
+// const { protect } = require('../middleware/auth');
+// const { verifyStoreAccess } = require('../middleware/storeAuth');
 
 const router = express.Router();
 
-// Apply authentication and store access middleware to all routes
-router.use(protect);
-router.use('/stores/:storeId', verifyStoreAccess);
+// Remove authentication middleware - make all routes public
+// router.use(protect);
+// router.use('/stores/:storeId', verifyStoreAccess);
 
 // Validation middleware for terms creation/update
 const validateTerms = [
@@ -42,10 +43,8 @@ const validateTerms = [
  * /api/terms-conditions/stores/{storeId}/terms:
  *   get:
  *     summary: Get terms & conditions for a store
- *     description: Retrieve the active terms & conditions for a specific store
+ *     description: Retrieve the active terms & conditions for a specific store (Public endpoint - no authentication required)
  *     tags: [Terms & Conditions]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: storeId
@@ -56,8 +55,8 @@ const validateTerms = [
  *     responses:
  *       200:
  *         description: Success
- *       403:
- *         description: Access denied
+ *       404:
+ *         description: Terms not found
  */
 router.get('/stores/:storeId/terms', getTermsByStore);
 
@@ -66,10 +65,8 @@ router.get('/stores/:storeId/terms', getTermsByStore);
  * /api/terms-conditions/stores/{storeId}/terms:
  *   post:
  *     summary: Create terms & conditions
- *     description: Create new terms & conditions for a store
+ *     description: Create new terms & conditions for a store (Public endpoint - no authentication required)
  *     tags: [Terms & Conditions]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: storeId
@@ -114,10 +111,8 @@ router.post('/stores/:storeId/terms', validateTerms, createTerms);
  * /api/terms-conditions/stores/{storeId}/terms/{id}:
  *   put:
  *     summary: Update terms & conditions
- *     description: Update existing terms & conditions
+ *     description: Update existing terms & conditions (Public endpoint - no authentication required)
  *     tags: [Terms & Conditions]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: storeId
