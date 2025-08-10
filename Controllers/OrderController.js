@@ -5,6 +5,103 @@ const Store = require('../Models/Store');
 const mongoose = require('mongoose');
 
 /**
+ * Helper function to validate product stock availability for both general stock and specification quantities
+ * @param {Object} product - The product document
+ * @param {Number} quantity - Quantity to check
+ * @param {Array} selectedSpecifications - Array of selected specifications
+ * @returns {Object} - Validation result with success status and message
+ */
+const validateProductStock = (product, quantity, selectedSpecifications = []) => {
+  // Check general stock
+  if (product.stock < quantity) {
+    return {
+      success: false,
+      message: `Insufficient stock for ${product.nameEn}. Available: ${product.stock}, Requested: ${quantity}`
+    };
+  }
+  
+  // Check specification quantities if specifications are selected
+  if (selectedSpecifications && selectedSpecifications.length > 0) {
+    for (const selectedSpec of selectedSpecifications) {
+      const specValue = product.specificationValues.find(spec => 
+        spec.specificationId.toString() === selectedSpec.specificationId &&
+        spec.valueId === selectedSpec.valueId
+      );
+      
+      if (specValue && specValue.quantity < quantity) {
+        return {
+          success: false,
+          message: `Insufficient stock for specification ${specValue.title} (${specValue.value}) of ${product.nameEn}. Available: ${specValue.quantity}, Requested: ${quantity}`
+        };
+      }
+    }
+  }
+  
+  return { success: true };
+};
+
+/**
+ * Helper function to reduce product stock from both general stock and specification quantities
+ * @param {Object} product - The product document
+ * @param {Number} quantity - Quantity to reduce
+ * @param {Array} selectedSpecifications - Array of selected specifications
+ */
+const reduceProductStock = async (product, quantity, selectedSpecifications = []) => {
+  // Reduce from general stock
+  product.stock -= quantity;
+  product.soldCount += quantity;
+  
+  // Reduce from specification quantities if specifications are selected
+  if (selectedSpecifications && selectedSpecifications.length > 0) {
+    for (const selectedSpec of selectedSpecifications) {
+      const specValue = product.specificationValues.find(spec => 
+        spec.specificationId.toString() === selectedSpec.specificationId &&
+        spec.valueId === selectedSpec.valueId
+      );
+      
+      if (specValue && specValue.quantity >= quantity) {
+        specValue.quantity -= quantity;
+      } else if (specValue && specValue.quantity < quantity) {
+        // If specification doesn't have enough quantity, reduce what's available
+        const availableInSpec = specValue.quantity;
+        specValue.quantity = 0;
+        console.warn(`Warning: Specification ${specValue.title} (${specValue.value}) doesn't have enough quantity. Available: ${availableInSpec}, Requested: ${quantity}`);
+      }
+    }
+  }
+  
+  await product.save();
+};
+
+/**
+ * Helper function to restore product stock to both general stock and specification quantities
+ * @param {Object} product - The product document
+ * @param {Number} quantity - Quantity to restore
+ * @param {Array} selectedSpecifications - Array of selected specifications
+ */
+const restoreProductStock = async (product, quantity, selectedSpecifications = []) => {
+  // Restore to general stock
+  product.stock += quantity;
+  product.soldCount = Math.max(0, product.soldCount - quantity);
+  
+  // Restore to specification quantities if specifications are selected
+  if (selectedSpecifications && selectedSpecifications.length > 0) {
+    for (const selectedSpec of selectedSpecifications) {
+      const specValue = product.specificationValues.find(spec => 
+        spec.specificationId.toString() === selectedSpec.specificationId &&
+        spec.valueId === selectedSpec.valueId
+      );
+      
+      if (specValue) {
+        specValue.quantity += quantity;
+      }
+    }
+  }
+  
+  await product.save();
+};
+
+/**
  * Get all orders for a specific store, including customer info
  * @route GET /api/orders/store/:storeId
  */
@@ -81,7 +178,7 @@ exports.getOrdersByStore = async (req, res) => {
 };
 
 /**
- * Create a new order for a store
+ * Create a new order for a store (supports both authenticated users and guests)
  * @route POST /api/orders/store/:storeId
  */
 exports.createOrder = async (req, res) => {
@@ -91,7 +188,8 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'storeId is required' });
     }
     const {
-      user, // user id
+      user, // user id (optional for guests)
+      guestId, // guest id (for guest users)
       items,
       cartItems, // cart items with specifications and colors
       shippingAddress,
@@ -120,18 +218,34 @@ exports.createOrder = async (req, res) => {
       slug: storeDoc.slug
     };
 
-    // جلب بيانات المستخدم
-    const foundUser = await User.findById(user);
-    if (!foundUser) {
-      return res.status(400).json({ success: false, message: 'User not found' });
+    // جلب بيانات المستخدم أو إنشاء بيانات الضيف
+    let userSnapshot;
+    
+    if (user) {
+      // للمستخدمين المسجلين
+      const foundUser = await User.findById(user);
+      if (!foundUser) {
+        return res.status(400).json({ success: false, message: 'User not found' });
+      }
+      userSnapshot = {
+        id: foundUser._id,
+        firstName: foundUser.firstName,
+        lastName: foundUser.lastName,
+        email: foundUser.email,
+        phone: foundUser.phone
+      };
+    } else if (guestId) {
+      // للضيوف
+      userSnapshot = {
+        id: null,
+        firstName: shippingAddress?.firstName || 'Guest',
+        lastName: shippingAddress?.lastName || 'User',
+        email: shippingAddress?.email || billingAddress?.email || 'guest@example.com',
+        phone: shippingAddress?.phone || billingAddress?.phone || ''
+      };
+    } else {
+      return res.status(400).json({ success: false, message: 'Either user ID or guest ID is required' });
     }
-    const userSnapshot = {
-      id: foundUser._id,
-      firstName: foundUser.firstName,
-      lastName: foundUser.lastName,
-      email: foundUser.email,
-      phone: foundUser.phone
-    };
 
     // Prepare affiliate snapshot
     let affiliateData = null;
@@ -175,15 +289,18 @@ exports.createOrder = async (req, res) => {
       if (!product.isActive) {
         return res.status(400).json({ success: false, message: `Product ${product.nameEn} is not available` });
       }
-      if (product.stock < item.quantity) {
-        return res.status(400).json({ success: false, message: `Insufficient stock for ${product.nameEn}. Available: ${product.stock}` });
-      }
       
       // Find corresponding cart item to get specifications and colors
       const cartItem = cartItems ? cartItems.find(cartItem => 
         cartItem.product === item.product && 
         cartItem.quantity === item.quantity
       ) : null;
+      
+      // Validate stock availability for both general stock and specifications
+      const stockValidation = validateProductStock(product, item.quantity, cartItem ? cartItem.selectedSpecifications || [] : []);
+      if (!stockValidation.success) {
+        return res.status(400).json({ success: false, message: stockValidation.message });
+      }
       
       // Calculate the current price (considering any discounts)
       const currentPrice = product.isOnSale && product.salePercentage > 0 ? 
@@ -212,10 +329,8 @@ exports.createOrder = async (req, res) => {
         selectedSpecifications: cartItem ? cartItem.selectedSpecifications || [] : [],
         selectedColors: cartItem ? cartItem.selectedColors || [] : []
       });
-      // Update product stock
-      product.stock -= item.quantity;
-      product.soldCount += item.quantity;
-      await product.save();
+      // Update product stock from both general stock and specification quantities
+      await reduceProductStock(product, item.quantity, cartItem ? cartItem.selectedSpecifications || [] : []);
     }
 
     // حساب التوتال كوست بدقة
@@ -270,7 +385,7 @@ exports.createOrder = async (req, res) => {
 };
 
 /**
- * Create an order directly from a cart
+ * Create an order directly from a cart (supports both authenticated users and guests)
  * @route POST /api/orders/store/:storeId/from-cart
  */
 exports.createOrderFromCart = async (req, res) => {
@@ -281,7 +396,8 @@ exports.createOrderFromCart = async (req, res) => {
     }
     
     const {
-      user, // user id
+      user, // user id (optional for guests)
+      guestId, // guest id (for guest users)
       cartId, // cart id to get items from
       shippingAddress,
       billingAddress,
@@ -309,18 +425,34 @@ exports.createOrderFromCart = async (req, res) => {
       slug: storeDoc.slug
     };
 
-    // جلب بيانات المستخدم
-    const foundUser = await User.findById(user);
-    if (!foundUser) {
-      return res.status(400).json({ success: false, message: 'User not found' });
+    // جلب بيانات المستخدم أو إنشاء بيانات الضيف
+    let userSnapshot;
+    
+    if (user) {
+      // للمستخدمين المسجلين
+      const foundUser = await User.findById(user);
+      if (!foundUser) {
+        return res.status(400).json({ success: false, message: 'User not found' });
+      }
+      userSnapshot = {
+        id: foundUser._id,
+        firstName: foundUser.firstName,
+        lastName: foundUser.lastName,
+        email: foundUser.email,
+        phone: foundUser.phone
+      };
+    } else if (guestId) {
+      // للضيوف
+      userSnapshot = {
+        id: null,
+        firstName: shippingAddress?.firstName || 'Guest',
+        lastName: shippingAddress?.lastName || 'User',
+        email: shippingAddress?.email || billingAddress?.email || 'guest@example.com',
+        phone: shippingAddress?.phone || billingAddress?.phone || ''
+      };
+    } else {
+      return res.status(400).json({ success: false, message: 'Either user ID or guest ID is required' });
     }
-    const userSnapshot = {
-      id: foundUser._id,
-      firstName: foundUser.firstName,
-      lastName: foundUser.lastName,
-      email: foundUser.email,
-      phone: foundUser.phone
-    };
 
     // جلب بيانات السلة
     const Cart = require('../Models/Cart');
@@ -377,8 +509,11 @@ exports.createOrderFromCart = async (req, res) => {
       if (!product.isActive) {
         return res.status(400).json({ success: false, message: `Product ${product.nameEn} is not available` });
       }
-      if (product.stock < cartItem.quantity) {
-        return res.status(400).json({ success: false, message: `Insufficient stock for ${product.nameEn}. Available: ${product.stock}` });
+      
+      // Validate stock availability for both general stock and specifications
+      const stockValidation = validateProductStock(product, cartItem.quantity, cartItem.selectedSpecifications || []);
+      if (!stockValidation.success) {
+        return res.status(400).json({ success: false, message: stockValidation.message });
       }
       
       const itemTotal = cartItem.priceAtAdd * cartItem.quantity;
@@ -406,10 +541,8 @@ exports.createOrderFromCart = async (req, res) => {
         selectedColors: cartItem.selectedColors || []
       });
       
-      // Update product stock
-      product.stock -= cartItem.quantity;
-      product.soldCount += cartItem.quantity;
-      await product.save();
+      // Update product stock from both general stock and specification quantities
+      await reduceProductStock(product, cartItem.quantity, cartItem.selectedSpecifications || []);
     }
 
     // حساب التوتال كوست بدقة
@@ -1291,6 +1424,203 @@ exports.getOrdersByCustomerId = async (req, res) => {
 };
 
 /**
+ * Create a guest order (for non-authenticated users)
+ * @route POST /api/orders/store/:storeId/guest
+ */
+exports.createGuestOrder = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    if (!storeId) {
+      return res.status(400).json({ success: false, message: 'storeId is required' });
+    }
+    
+    const {
+      guestId, // guest id (required for guest orders)
+      items,
+      cartItems, // cart items with specifications and colors
+      shippingAddress,
+      billingAddress,
+      paymentInfo,
+      shippingInfo,
+      notes,
+      isGift,
+      giftMessage,
+      coupon,
+      affiliate: affiliateId,
+      deliveryArea: deliveryAreaId,
+      currency
+    } = req.body;
+
+    if (!guestId) {
+      return res.status(400).json({ success: false, message: 'Guest ID is required for guest orders' });
+    }
+
+    if (!shippingAddress || !shippingAddress.firstName || !shippingAddress.lastName || !shippingAddress.email) {
+      return res.status(400).json({ success: false, message: 'Shipping address with firstName, lastName, and email is required for guest orders' });
+    }
+
+    // جلب بيانات المتجر
+    const storeDoc = await Store.findById(storeId);
+    if (!storeDoc) {
+      return res.status(400).json({ success: false, message: 'Store not found' });
+    }
+    const storeSnapshot = {
+      id: storeDoc._id,
+      nameAr: storeDoc.nameAr,
+      nameEn: storeDoc.nameEn,
+      phone: storeDoc.whatsappNumber,
+      slug: storeDoc.slug
+    };
+
+    // إنشاء بيانات الضيف
+    const userSnapshot = {
+      id: null,
+      firstName: shippingAddress.firstName,
+      lastName: shippingAddress.lastName,
+      email: shippingAddress.email,
+      phone: shippingAddress.phone || billingAddress?.phone || ''
+    };
+
+    // Prepare affiliate snapshot
+    let affiliateData = null;
+    if (affiliateId) {
+      const affiliateDoc = await require('../Models/Affiliation').findById(affiliateId);
+      if (affiliateDoc) {
+        affiliateData = {
+          firstName: affiliateDoc.firstName,
+          lastName: affiliateDoc.lastName,
+          email: affiliateDoc.email,
+          mobile: affiliateDoc.mobile,
+          percent: affiliateDoc.percent,
+          affiliateCode: affiliateDoc.affiliateCode,
+          affiliateLink: affiliateDoc.affiliateLink
+        };
+      }
+    }
+
+    // Prepare deliveryArea snapshot
+    let deliveryAreaData = null;
+    if (deliveryAreaId) {
+      const deliveryAreaDoc = await require('../Models/DeliveryMethod').findById(deliveryAreaId);
+      if (deliveryAreaDoc) {
+        deliveryAreaData = {
+          locationAr: deliveryAreaDoc.locationAr || '',
+          locationEn: deliveryAreaDoc.locationEn || '',
+          price: deliveryAreaDoc.price || 0,
+          estimatedDays: deliveryAreaDoc.estimatedDays || 0
+        };
+      }
+    }
+
+    // Validate and process items
+    let subtotal = 0;
+    const processedItems = [];
+    for (const item of items) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        return res.status(400).json({ success: false, message: `Product with ID ${item.product} not found` });
+      }
+      if (!product.isActive) {
+        return res.status(400).json({ success: false, message: `Product ${product.nameEn} is not available` });
+      }
+      
+      // Find corresponding cart item to get specifications and colors
+      const cartItem = cartItems ? cartItems.find(cartItem => 
+        cartItem.product === item.product && 
+        cartItem.quantity === item.quantity
+      ) : null;
+      
+      // Validate stock availability for both general stock and specifications
+      const stockValidation = validateProductStock(product, item.quantity, cartItem ? cartItem.selectedSpecifications || [] : []);
+      if (!stockValidation.success) {
+        return res.status(400).json({ success: false, message: stockValidation.message });
+      }
+      
+      // Calculate the current price (considering any discounts)
+      const currentPrice = product.isOnSale && product.salePercentage > 0 ? 
+        product.price - (product.price * product.salePercentage / 100) : product.price;
+      
+      const itemTotal = currentPrice * item.quantity;
+      subtotal += itemTotal;
+      processedItems.push({
+        productId: product._id.toString(),
+        productSnapshot: {
+          nameAr: product.nameAr,
+          nameEn: product.nameEn,
+          images: product.images,
+          price: product.price,
+          unit: product.unit,
+          color: product.color,
+          sku: product.sku || '',
+        },
+        name: product.nameEn,
+        sku: product.sku || '',
+        quantity: item.quantity,
+        price: currentPrice,
+        totalPrice: itemTotal,
+        variant: item.variant || {},
+        // Copy specifications and colors from cart item
+        selectedSpecifications: cartItem ? cartItem.selectedSpecifications || [] : [],
+        selectedColors: cartItem ? cartItem.selectedColors || [] : []
+      });
+      // Update product stock from both general stock and specification quantities
+      await reduceProductStock(product, item.quantity, cartItem ? cartItem.selectedSpecifications || [] : []);
+    }
+
+    // حساب التوتال كوست بدقة
+    const tax = subtotal * 0.1; // 10% tax (يمكنك تعديله)
+    const deliveryCost = deliveryAreaData?.price || 0;
+    const discount = coupon ? (subtotal * coupon.discount / 100) : 0;
+    const total = subtotal + tax + deliveryCost - discount;
+
+    const order = await Order.create({
+      store: storeSnapshot,
+      user: userSnapshot,
+      guestId: guestId, // إضافة guestId للطلب
+      items: processedItems,
+      shippingAddress,
+      billingAddress,
+      paymentInfo,
+      shippingInfo,
+      pricing: {
+        subtotal,
+        tax,
+        shipping: deliveryCost,
+        discount,
+        total
+      },
+      notes,
+      isGift,
+      giftMessage,
+      coupon,
+      affiliate: affiliateData,
+      deliveryArea: deliveryAreaData,
+      currency
+    });
+
+    // تحديث عمولة الأفلييت إذا كان الطلب عن طريقه
+    if (affiliateId && affiliateData) {
+      const Affiliation = require('../Models/Affiliation');
+      const affiliateDoc = await Affiliation.findById(affiliateId);
+      if (affiliateDoc) {
+        // استخدم الميثود الجاهز
+        await affiliateDoc.updateSales(total, order._id);
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Guest order created successfully',
+      data: order,
+      totalCost: total
+    });
+  } catch (error) {
+    console.error('Create guest order error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
  * Delete an order (Admin only or order owner)
  * @route DELETE /api/orders/:orderId
  */
@@ -1351,9 +1681,8 @@ exports.deleteOrder = async (req, res) => {
         try {
           const product = await Product.findById(item.productId);
           if (product) {
-            product.stock += item.quantity;
-            product.soldCount = Math.max(0, product.soldCount - item.quantity);
-            await product.save();
+            // Restore stock from both general stock and specification quantities
+            await restoreProductStock(product, item.quantity, item.selectedSpecifications || []);
           }
         } catch (error) {
           console.log('Error restoring product stock:', error.message);

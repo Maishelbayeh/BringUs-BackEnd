@@ -142,8 +142,10 @@ const createWholesaler = async (req, res) => {
       phone: wholesalerData.mobile,
       role: 'wholesaler',
       status: 'active',
-      isActive: true
+      isActive: true,
+      store: storeId
     };
+    
 
     const user = await User.create(userData);
 

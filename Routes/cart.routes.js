@@ -3,7 +3,16 @@ const express = require('express');
 const { protect, optionalAuth } = require('../middleware/auth');
 const guestCart = require('../middleware/guestCart');
 const { verifyStoreAccess } = require('../middleware/storeAuth');
-const CartController = require('../Controllers/cart.controller');
+const { 
+  getCart, 
+  addToCart, 
+  updateCartItem, 
+  removeCartItem, 
+  clearCart, 
+  getCartTotals,
+  mergeGuestCartToUser,
+  getCartByGuestId
+} = require('../Controllers/cart.controller');
 const router = express.Router();
 /**
  * @swagger
@@ -11,8 +20,6 @@ const router = express.Router();
  *   get:
  *     summary: Retrieve current cart (authenticated or guest user)
  *     tags: [Cart]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: storeSlug
@@ -27,10 +34,10 @@ const router = express.Router();
  *     responses:
  *       200:
  *         description: Cart retrieved
- *       401:
- *         description: Unauthorized (if required)
+ *       400:
+ *         description: Store information required
  */
-router.get('/', optionalAuth, guestCart, verifyStoreAccess, CartController.getCart);
+router.get('/', optionalAuth, guestCart, verifyStoreAccess, getCart);
 
 /**
  * @swagger
@@ -38,8 +45,6 @@ router.get('/', optionalAuth, guestCart, verifyStoreAccess, CartController.getCa
  *   post:
  *     summary: Add item to cart with specifications and colors (authenticated or guest user)
  *     tags: [Cart]
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -94,11 +99,9 @@ router.get('/', optionalAuth, guestCart, verifyStoreAccess, CartController.getCa
  *       200:
  *         description: Item added to cart
  *       400:
- *         description: Validation error
- *       401:
- *         description: Unauthorized
+ *         description: Validation error or store information required
  */
-router.post('/', optionalAuth, guestCart, verifyStoreAccess, CartController.addToCart);
+router.post('/', optionalAuth, guestCart, verifyStoreAccess, addToCart);
 
 /**
  * @swagger
@@ -106,8 +109,6 @@ router.post('/', optionalAuth, guestCart, verifyStoreAccess, CartController.addT
  *   put:
  *     summary: Update item in cart with specifications and colors (authenticated or guest user)
  *     tags: [Cart]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -169,13 +170,11 @@ router.post('/', optionalAuth, guestCart, verifyStoreAccess, CartController.addT
  *       200:
  *         description: Item updated
  *       400:
- *         description: Validation error
- *       401:
- *         description: Unauthorized
+ *         description: Validation error or store information required
  *       404:
  *         description: Product not found in cart
  */
-router.put('/:productId', optionalAuth, guestCart, verifyStoreAccess, CartController.updateCartItem);
+router.put('/:productId', optionalAuth, guestCart, verifyStoreAccess, updateCartItem);
 
 /**
  * @swagger
@@ -183,8 +182,6 @@ router.put('/:productId', optionalAuth, guestCart, verifyStoreAccess, CartContro
  *   delete:
  *     summary: Remove item from cart (authenticated or guest user)
  *     tags: [Cart]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -205,12 +202,12 @@ router.put('/:productId', optionalAuth, guestCart, verifyStoreAccess, CartContro
  *     responses:
  *       200:
  *         description: Item removed from cart
- *       401:
- *         description: Unauthorized
+ *       400:
+ *         description: Store information required
  *       404:
  *         description: Product not found in cart
  */
-router.delete('/:productId', optionalAuth, guestCart, verifyStoreAccess, CartController.removeCartItem);
+router.delete('/:productId', optionalAuth, guestCart, verifyStoreAccess, removeCartItem);
 
 /**
  * @swagger
@@ -218,8 +215,6 @@ router.delete('/:productId', optionalAuth, guestCart, verifyStoreAccess, CartCon
  *   delete:
  *     summary: Clear entire cart (authenticated or guest user)
  *     tags: [Cart]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: storeSlug
@@ -234,10 +229,112 @@ router.delete('/:productId', optionalAuth, guestCart, verifyStoreAccess, CartCon
  *     responses:
  *       200:
  *         description: Cart cleared
- *       401:
- *         description: Unauthorized
+ *       400:
+ *         description: Store information required
  */
-router.delete('/', optionalAuth, guestCart, verifyStoreAccess, CartController.clearCart);
+router.delete('/', optionalAuth, guestCart, verifyStoreAccess, clearCart);
+
+/**
+ * @swagger
+ * /api/cart/merge-guest:
+ *   post:
+ *     summary: Merge guest cart to authenticated user (call after login)
+ *     tags: [Cart]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - guestId
+ *               - storeId
+ *             properties:
+ *               guestId:
+ *                 type: string
+ *                 description: Guest ID from previous session
+ *               storeId:
+ *                 type: string
+ *                 description: Store ID
+ *     responses:
+ *       200:
+ *         description: Guest cart merged successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Successfully merged 3 items, updated 2 items, skipped 0 duplicates"
+ *                 mergedCount:
+ *                   type: integer
+ *                   example: 3
+ *                 updatedCount:
+ *                   type: integer
+ *                   example: 2
+ *                 skippedCount:
+ *                   type: integer
+ *                   example: 0
+ *                 totalProcessed:
+ *                   type: integer
+ *                   example: 5
+ *       400:
+ *         description: Guest ID or Store ID missing
+ *       401:
+ *         description: User must be authenticated
+ */
+router.post('/merge-guest', protect, mergeGuestCartToUser);
+
+/**
+ * @swagger
+ * /api/cart/guest/{guestId}/{storeId}:
+ *   get:
+ *     summary: Get cart by guest ID and store ID
+ *     tags: [Cart]
+ *     parameters:
+ *       - in: path
+ *         name: guestId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Guest ID
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     responses:
+ *       200:
+ *         description: Guest cart retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/CartItem'
+ *                 count:
+ *                   type: integer
+ *                   example: 3
+ *       400:
+ *         description: Guest ID or Store ID missing
+ */
+router.get('/guest/:guestId/:storeId', getCartByGuestId);
 
 module.exports = router;
 // monjed update end

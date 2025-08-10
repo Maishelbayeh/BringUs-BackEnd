@@ -58,6 +58,141 @@ function isSameCartItem(item1, item2) {
   return true;
 }
 
+// دالة جديدة لدمج guest cart مع user cart عند تسجيل الدخول
+exports.mergeGuestCartToUser = async (req, res) => {
+  try {
+    const { guestId, storeId } = req.body;
+    
+    if (!guestId || !storeId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Guest ID and Store ID are required' 
+      });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'User must be authenticated to merge cart' 
+      });
+    }
+
+    // البحث عن cart للـ guest
+    const guestCart = await Cart.findOne({ 
+      guestId: guestId, 
+      store: storeId 
+    }).populate('items.product');
+
+    if (!guestCart || guestCart.items.length === 0) {
+      return res.json({ 
+        success: true, 
+        message: 'No guest cart items found to merge',
+        mergedCount: 0
+      });
+    }
+
+    // البحث عن cart للمستخدم
+    let userCart = await Cart.findOne({ 
+      user: req.user._id, 
+      store: storeId 
+    });
+
+    if (!userCart) {
+      userCart = await Cart.create({ 
+        user: req.user._id, 
+        store: storeId, 
+        items: [] 
+      });
+    }
+
+    let mergedCount = 0;
+    let skippedCount = 0;
+    let updatedCount = 0;
+
+    // دمج كل عنصر من guest cart
+    for (const guestItem of guestCart.items) {
+      // البحث عن عنصر مطابق في user cart
+      const existingItemIndex = userCart.items.findIndex(item => 
+        isSameCartItem(item, guestItem)
+      );
+
+      if (existingItemIndex > -1) {
+        // إذا وجد عنصر مطابق، دمج الكميات
+        userCart.items[existingItemIndex].quantity += guestItem.quantity;
+        updatedCount++;
+      } else {
+        // إذا لم يوجد عنصر مطابق، إضافة العنصر
+        userCart.items.push(guestItem);
+        mergedCount++;
+      }
+    }
+
+    // حفظ user cart المحدث
+    await userCart.save();
+    await userCart.populate('items.product');
+
+    // حذف guest cart بعد الدمج الناجح
+    await Cart.findByIdAndDelete(guestCart._id);
+
+    return res.json({
+      success: true,
+      message: `Successfully merged ${mergedCount} items, updated ${updatedCount} items, skipped ${skippedCount} duplicates`,
+      mergedCount,
+      updatedCount,
+      skippedCount,
+      totalProcessed: guestCart.items.length,
+      data: userCart
+    });
+
+  } catch (error) {
+    console.error('Merge guest cart error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Error merging guest cart' 
+    });
+  }
+};
+
+// دالة للحصول على cart بواسطة guestId (لأغراض الهجرة)
+exports.getCartByGuestId = async (req, res) => {
+  try {
+    const { guestId, storeId } = req.params;
+    
+    if (!guestId || !storeId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Guest ID and Store ID are required' 
+      });
+    }
+
+    const cart = await Cart.findOne({ 
+      guestId: guestId, 
+      store: storeId 
+    }).populate('items.product');
+
+    if (!cart) {
+      return res.json({
+        success: true,
+        data: { items: [] },
+        count: 0
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: cart,
+      count: cart.items.length
+    });
+
+  } catch (error) {
+    console.error('Get cart by guestId error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching guest cart' 
+    });
+  }
+};
+
 // Remove out-of-stock products from cart when loading
 exports.getCart = async (req, res) => {
   try {
