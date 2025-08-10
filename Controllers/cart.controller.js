@@ -119,7 +119,8 @@ exports.addToCart = async (req, res) => {
       product,
       quantity,
       variant,
-      priceAtAdd: prod.price,
+      priceAtAdd: prod.isOnSale && prod.salePercentage > 0 ? 
+        prod.price - (prod.price * prod.salePercentage / 100) : prod.price,
       selectedSpecifications,
       selectedColors
     };
@@ -212,6 +213,73 @@ exports.clearCart = async (req, res) => {
     await cart.save();
     await cart.populate('items.product');
     return res.json({ success: true, data: cart });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Calculate cart totals with proper discount handling
+exports.getCartTotals = async (req, res) => {
+  try {
+    const query = getCartQuery(req);
+    let cart = await Cart.findOne(query).populate('items.product');
+    if (!cart) cart = await Cart.create({ ...query, items: [] });
+    
+    // Remove items where product is out of stock
+    const originalLength = cart.items.length;
+    cart.items = cart.items.filter(item => item.product && item.product.stock > 0);
+    if (cart.items.length !== originalLength) {
+      await cart.save();
+      await cart.populate('items.product');
+    }
+    
+    let subtotal = 0;
+    let totalDiscount = 0;
+    const itemsWithPrices = [];
+    
+    for (const item of cart.items) {
+      const product = item.product;
+      if (!product) continue;
+      
+      // Calculate the current price (considering any new discounts)
+      const currentPrice = product.isOnSale && product.salePercentage > 0 ? 
+        product.price - (product.price * product.salePercentage / 100) : product.price;
+      
+      const itemTotal = currentPrice * item.quantity;
+      const originalItemTotal = product.price * item.quantity;
+      const itemDiscount = originalItemTotal - itemTotal;
+      
+      subtotal += itemTotal;
+      totalDiscount += itemDiscount;
+      
+      itemsWithPrices.push({
+        productId: product._id,
+        name: product.nameEn || product.nameAr,
+        quantity: item.quantity,
+        originalPrice: product.price,
+        currentPrice: currentPrice,
+        itemTotal: itemTotal,
+        itemDiscount: itemDiscount,
+        isOnSale: product.isOnSale,
+        salePercentage: product.salePercentage
+      });
+    }
+    
+    // Calculate tax and other fees
+    const tax = subtotal * 0.1; // 10% tax
+    const total = subtotal + tax;
+    
+    return res.json({
+      success: true,
+      data: {
+        items: itemsWithPrices,
+        subtotal: subtotal,
+        totalDiscount: totalDiscount,
+        tax: tax,
+        total: total,
+        itemCount: cart.items.length
+      }
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

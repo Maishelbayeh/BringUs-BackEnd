@@ -122,7 +122,11 @@ router.post('/', [
         });
       }
 
-      const itemTotal = product.price * item.quantity;
+      // Calculate the current price (considering any discounts)
+      const currentPrice = product.isOnSale && product.salePercentage > 0 ? 
+        product.price - (product.price * product.salePercentage / 100) : product.price;
+      
+      const itemTotal = currentPrice * item.quantity;
       subtotal += itemTotal;
 
       processedItems.push({
@@ -130,7 +134,7 @@ router.post('/', [
         name: product.name,
 
         quantity: item.quantity,
-        price: product.price,
+        price: currentPrice,
         totalPrice: itemTotal,
         variant: item.variant || {}
       });
