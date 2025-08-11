@@ -143,6 +143,7 @@ db.once('open', async () => {
       //CONSOLE.log(`Average commission: ${affiliateStats.averageCommission.toFixed(1)}%`);
     }
     
+    
     if (paymentStats.length > 0) {
       const payStats = paymentStats[0];
       //CONSOLE.log('\nPayment Statistics:');
