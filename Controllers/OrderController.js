@@ -12,31 +12,98 @@ const mongoose = require('mongoose');
  * @returns {Object} - Validation result with success status and message
  */
 const validateProductStock = (product, quantity, selectedSpecifications = []) => {
+  // التحقق من أن الكمية موجبة
+  if (quantity <= 0) {
+    return {
+      success: false,
+      message: `Invalid quantity: ${quantity}. Quantity must be greater than 0.`
+    };
+  }
+
   // Check general stock
   if (product.stock < quantity) {
     return {
       success: false,
-      message: `Insufficient stock for ${product.nameEn}. Available: ${product.stock}, Requested: ${quantity}`
+      message: `Insufficient general stock for ${product.nameEn}. Available: ${product.stock}, Requested: ${quantity}`
     };
   }
   
   // Check specification quantities if specifications are selected
   if (selectedSpecifications && selectedSpecifications.length > 0) {
+    console.log(`🔍 Validating ${selectedSpecifications.length} specifications for ${product.nameEn}`);
+    console.log(`📋 Product has ${product.specificationValues?.length || 0} specification values`);
+    
+    // Call debug function for detailed analysis
+    debugSpecificationMatching(product, selectedSpecifications);
+    
+    // Log all available specifications for debugging
+    if (product.specificationValues && product.specificationValues.length > 0) {
+      console.log('📋 Available specifications in product:');
+      product.specificationValues.forEach((spec, index) => {
+        console.log(`  ${index + 1}. ID: ${spec.specificationId}, ValueID: ${spec.valueId}, Title: ${spec.title}, Value: ${spec.value}, Quantity: ${spec.quantity}`);
+      });
+    }
+    
     for (const selectedSpec of selectedSpecifications) {
-      const specValue = product.specificationValues.find(spec => 
-        spec.specificationId.toString() === selectedSpec.specificationId &&
+      console.log(`🔍 Looking for specification: ID=${selectedSpec.specificationId}, ValueID=${selectedSpec.valueId}`);
+      
+      // Try different matching strategies
+      let specValue = null;
+      
+      // Strategy 1: Exact string match
+      specValue = product.specificationValues.find(spec => 
+        spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
         spec.valueId === selectedSpec.valueId
       );
       
-      if (specValue && specValue.quantity < quantity) {
+      // Strategy 2: If not found, try ObjectId comparison
+      if (!specValue) {
+        specValue = product.specificationValues.find(spec => 
+          spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+          spec.valueId.toString() === selectedSpec.valueId.toString()
+        );
+      }
+      
+      // Strategy 3: If still not found, try loose matching
+      if (!specValue) {
+        specValue = product.specificationValues.find(spec => 
+          (spec.specificationId.toString() === selectedSpec.specificationId.toString() ||
+           spec.specificationId.toString() === selectedSpec.specificationId) &&
+          (spec.valueId === selectedSpec.valueId ||
+           spec.valueId.toString() === selectedSpec.valueId.toString())
+        );
+      }
+      
+      if (!specValue) {
+        console.error(`❌ Specification not found!`);
+        console.error(`   Looking for: ID=${selectedSpec.specificationId} (${typeof selectedSpec.specificationId}), ValueID=${selectedSpec.valueId} (${typeof selectedSpec.valueId})`);
+        console.error(`   Available specifications:`);
+        product.specificationValues.forEach((spec, index) => {
+          console.error(`     ${index + 1}. ID: ${spec.specificationId} (${typeof spec.specificationId}), ValueID: ${spec.valueId} (${typeof spec.valueId})`);
+        });
+        
         return {
           success: false,
-          message: `Insufficient stock for specification ${specValue.title} (${specValue.value}) of ${product.nameEn}. Available: ${specValue.quantity}, Requested: ${quantity}`
+          message: `Specification not found for product ${product.nameEn}. Specification ID: ${selectedSpec.specificationId}, Value ID: ${selectedSpec.valueId}. Available specifications: ${product.specificationValues.map(s => `${s.specificationId}:${s.valueId}`).join(', ')}`
         };
       }
+      
+      console.log(`✅ Found specification: "${specValue.title} (${specValue.value})" with quantity: ${specValue.quantity}`);
+      
+      if (specValue.quantity < quantity) {
+        return {
+          success: false,
+          message: `Insufficient stock for specification "${specValue.title} (${specValue.value})" of ${product.nameEn}. Available: ${specValue.quantity}, Requested: ${quantity}`
+        };
+      }
+      
+      console.log(`✅ Specification "${specValue.title} (${specValue.value})" has sufficient stock: ${specValue.quantity} >= ${quantity}`);
     }
+  } else {
+    console.log(`📦 No specifications selected for ${product.nameEn}, only general stock validation`);
   }
   
+  console.log(`✅ Stock validation passed for ${product.nameEn}`);
   return { success: true };
 };
 
@@ -47,30 +114,85 @@ const validateProductStock = (product, quantity, selectedSpecifications = []) =>
  * @param {Array} selectedSpecifications - Array of selected specifications
  */
 const reduceProductStock = async (product, quantity, selectedSpecifications = []) => {
-  // Reduce from general stock
-  product.stock -= quantity;
-  product.soldCount += quantity;
-  
-  // Reduce from specification quantities if specifications are selected
-  if (selectedSpecifications && selectedSpecifications.length > 0) {
-    for (const selectedSpec of selectedSpecifications) {
-      const specValue = product.specificationValues.find(spec => 
-        spec.specificationId.toString() === selectedSpec.specificationId &&
-        spec.valueId === selectedSpec.valueId
-      );
-      
-      if (specValue && specValue.quantity >= quantity) {
-        specValue.quantity -= quantity;
-      } else if (specValue && specValue.quantity < quantity) {
-        // If specification doesn't have enough quantity, reduce what's available
-        const availableInSpec = specValue.quantity;
-        specValue.quantity = 0;
-        console.warn(`Warning: Specification ${specValue.title} (${specValue.value}) doesn't have enough quantity. Available: ${availableInSpec}, Requested: ${quantity}`);
-      }
+  try {
+    // التحقق من أن الكمية موجبة
+    if (quantity <= 0) {
+      console.warn(`Warning: Attempting to reduce stock with invalid quantity: ${quantity}`);
+      return;
     }
+
+    // Reduce from general stock
+    if (product.stock >= quantity) {
+      product.stock -= quantity;
+      product.soldCount += quantity;
+      console.log(`✅ Reduced general stock for ${product.nameEn}: ${quantity} units`);
+    } else {
+      console.error(`❌ Error: Insufficient general stock for ${product.nameEn}. Available: ${product.stock}, Requested: ${quantity}`);
+      throw new Error(`Insufficient general stock for ${product.nameEn}`);
+    }
+    
+    // Reduce from specification quantities if specifications are selected
+    if (selectedSpecifications && selectedSpecifications.length > 0) {
+      console.log(`📦 Processing ${selectedSpecifications.length} specifications for ${product.nameEn}`);
+      
+      for (const selectedSpec of selectedSpecifications) {
+        console.log(`🔍 Looking for specification to reduce: ID=${selectedSpec.specificationId}, ValueID=${selectedSpec.valueId}`);
+        
+        // Try different matching strategies (same as validateProductStock)
+        let specValue = null;
+        
+        // Strategy 1: Exact string match
+        specValue = product.specificationValues.find(spec => 
+          spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+          spec.valueId === selectedSpec.valueId
+        );
+        
+        // Strategy 2: If not found, try ObjectId comparison
+        if (!specValue) {
+          specValue = product.specificationValues.find(spec => 
+            spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+            spec.valueId.toString() === selectedSpec.valueId.toString()
+          );
+        }
+        
+        // Strategy 3: If still not found, try loose matching
+        if (!specValue) {
+          specValue = product.specificationValues.find(spec => 
+            (spec.specificationId.toString() === selectedSpec.specificationId.toString() ||
+             spec.specificationId.toString() === selectedSpec.specificationId) &&
+            (spec.valueId === selectedSpec.valueId ||
+             spec.valueId.toString() === selectedSpec.valueId.toString())
+          );
+        }
+        
+        if (specValue) {
+          if (specValue.quantity >= quantity) {
+            specValue.quantity -= quantity;
+            console.log(`✅ Reduced specification stock: ${specValue.title} (${specValue.value}) - ${quantity} units`);
+          } else {
+            console.error(`❌ Error: Insufficient specification stock for ${specValue.title} (${specValue.value}). Available: ${specValue.quantity}, Requested: ${quantity}`);
+            throw new Error(`Insufficient specification stock for ${specValue.title} (${specValue.value})`);
+          }
+        } else {
+          console.error(`❌ Error: Specification not found for reduction: ID=${selectedSpec.specificationId}, ValueID=${selectedSpec.valueId}`);
+          console.error(`   Available specifications:`);
+          product.specificationValues.forEach((spec, index) => {
+            console.error(`     ${index + 1}. ID: ${spec.specificationId}, ValueID: ${spec.valueId}`);
+          });
+          throw new Error(`Specification not found for reduction: ID=${selectedSpec.specificationId}, ValueID=${selectedSpec.valueId}`);
+        }
+      }
+    } else {
+      console.log(`📦 No specifications selected for ${product.nameEn}, only general stock reduced`);
+    }
+    
+    await product.save();
+    console.log(`💾 Stock updated successfully for ${product.nameEn}`);
+    
+  } catch (error) {
+    console.error(`❌ Error reducing stock for ${product.nameEn}:`, error.message);
+    throw error;
   }
-  
-  await product.save();
 };
 
 /**
@@ -80,25 +202,188 @@ const reduceProductStock = async (product, quantity, selectedSpecifications = []
  * @param {Array} selectedSpecifications - Array of selected specifications
  */
 const restoreProductStock = async (product, quantity, selectedSpecifications = []) => {
-  // Restore to general stock
-  product.stock += quantity;
-  product.soldCount = Math.max(0, product.soldCount - quantity);
-  
-  // Restore to specification quantities if specifications are selected
-  if (selectedSpecifications && selectedSpecifications.length > 0) {
-    for (const selectedSpec of selectedSpecifications) {
-      const specValue = product.specificationValues.find(spec => 
-        spec.specificationId.toString() === selectedSpec.specificationId &&
-        spec.valueId === selectedSpec.valueId
-      );
-      
-      if (specValue) {
-        specValue.quantity += quantity;
-      }
+  try {
+    // التحقق من أن الكمية موجبة
+    if (quantity <= 0) {
+      console.warn(`Warning: Attempting to restore stock with invalid quantity: ${quantity}`);
+      return;
     }
+
+    // Restore to general stock
+    product.stock += quantity;
+    product.soldCount = Math.max(0, product.soldCount - quantity);
+    console.log(`✅ Restored general stock for ${product.nameEn}: +${quantity} units`);
+    
+    // Restore to specification quantities if specifications are selected
+    if (selectedSpecifications && selectedSpecifications.length > 0) {
+      console.log(`📦 Restoring ${selectedSpecifications.length} specifications for ${product.nameEn}`);
+      
+      for (const selectedSpec of selectedSpecifications) {
+        console.log(`🔍 Looking for specification to restore: ID=${selectedSpec.specificationId}, ValueID=${selectedSpec.valueId}`);
+        
+        // Try different matching strategies (same as other functions)
+        let specValue = null;
+        
+        // Strategy 1: Exact string match
+        specValue = product.specificationValues.find(spec => 
+          spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+          spec.valueId === selectedSpec.valueId
+        );
+        
+        // Strategy 2: If not found, try ObjectId comparison
+        if (!specValue) {
+          specValue = product.specificationValues.find(spec => 
+            spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+            spec.valueId.toString() === selectedSpec.valueId.toString()
+          );
+        }
+        
+        // Strategy 3: If still not found, try loose matching
+        if (!specValue) {
+          specValue = product.specificationValues.find(spec => 
+            (spec.specificationId.toString() === selectedSpec.specificationId.toString() ||
+             spec.specificationId.toString() === selectedSpec.specificationId) &&
+            (spec.valueId === selectedSpec.valueId ||
+             spec.valueId.toString() === selectedSpec.valueId.toString())
+          );
+        }
+        
+        if (specValue) {
+          specValue.quantity += quantity;
+          console.log(`✅ Restored specification stock: ${specValue.title} (${specValue.value}) +${quantity} units`);
+        } else {
+          console.warn(`⚠️ Warning: Specification not found for restoration: ID=${selectedSpec.specificationId}, ValueID=${selectedSpec.valueId}`);
+          console.warn(`   Available specifications:`);
+          product.specificationValues.forEach((spec, index) => {
+            console.warn(`     ${index + 1}. ID: ${spec.specificationId}, ValueID: ${spec.valueId}`);
+          });
+        }
+      }
+    } else {
+      console.log(`📦 No specifications to restore for ${product.nameEn}, only general stock restored`);
+    }
+    
+    await product.save();
+    console.log(`💾 Stock restoration completed successfully for ${product.nameEn}`);
+    
+  } catch (error) {
+    console.error(`❌ Error restoring stock for ${product.nameEn}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Helper function to get detailed stock status for a product
+ * @param {Object} product - The product document
+ * @returns {Object} - Detailed stock status
+ */
+const getProductStockStatus = (product) => {
+  const status = {
+    productId: product._id,
+    productName: product.nameEn,
+    generalStock: {
+      available: product.stock,
+      sold: product.soldCount,
+      lowStockThreshold: product.lowStockThreshold,
+      status: product.stock === 0 ? 'out_of_stock' : 
+              product.stock <= product.lowStockThreshold ? 'low_stock' : 'in_stock'
+    },
+    specifications: []
+  };
+
+  // Add specification stock details
+  if (product.specificationValues && product.specificationValues.length > 0) {
+    status.specifications = product.specificationValues.map(spec => ({
+      specificationId: spec.specificationId,
+      title: spec.title,
+      value: spec.value,
+      valueId: spec.valueId,
+      quantity: spec.quantity,
+      price: spec.price,
+      status: spec.quantity === 0 ? 'out_of_stock' : 
+              spec.quantity <= product.lowStockThreshold ? 'low_stock' : 'in_stock'
+    }));
+  }
+
+  return status;
+};
+
+/**
+ * Helper function to debug specification matching
+ * @param {Object} product - The product document
+ * @param {Array} selectedSpecifications - Array of selected specifications
+ */
+const debugSpecificationMatching = (product, selectedSpecifications) => {
+  console.log('\n🔍 DEBUG: Specification Matching Analysis');
+  console.log('='.repeat(50));
+  console.log(`Product: ${product.nameEn} (${product._id})`);
+  console.log(`Product has ${product.specificationValues?.length || 0} specification values`);
+  
+  if (product.specificationValues && product.specificationValues.length > 0) {
+    console.log('\n📋 Available specifications in product:');
+    product.specificationValues.forEach((spec, index) => {
+      console.log(`  ${index + 1}. ID: ${spec.specificationId} (${typeof spec.specificationId}), ValueID: ${spec.valueId} (${typeof spec.valueId}), Title: ${spec.title}, Value: ${spec.value}, Quantity: ${spec.quantity}`);
+    });
   }
   
-  await product.save();
+  if (selectedSpecifications && selectedSpecifications.length > 0) {
+    console.log('\n🎯 Selected specifications from request:');
+    selectedSpecifications.forEach((selectedSpec, index) => {
+      console.log(`  ${index + 1}. ID: ${selectedSpec.specificationId} (${typeof selectedSpec.specificationId}), ValueID: ${selectedSpec.valueId} (${typeof selectedSpec.valueId})`);
+    });
+    
+    console.log('\n🔍 Matching attempts:');
+    selectedSpecifications.forEach((selectedSpec, index) => {
+      console.log(`\n  Attempt ${index + 1}: Looking for ID=${selectedSpec.specificationId}, ValueID=${selectedSpec.valueId}`);
+      
+      // Try all matching strategies
+      let found = false;
+      
+      // Strategy 1: Exact string match
+      const match1 = product.specificationValues.find(spec => 
+        spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+        spec.valueId === selectedSpec.valueId
+      );
+      if (match1) {
+        console.log(`    ✅ Strategy 1 (Exact string): FOUND - ${match1.title} (${match1.value})`);
+        found = true;
+      } else {
+        console.log(`    ❌ Strategy 1 (Exact string): NOT FOUND`);
+      }
+      
+      // Strategy 2: ObjectId comparison
+      const match2 = product.specificationValues.find(spec => 
+        spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+        spec.valueId.toString() === selectedSpec.valueId.toString()
+      );
+      if (match2 && !found) {
+        console.log(`    ✅ Strategy 2 (ObjectId): FOUND - ${match2.title} (${match2.value})`);
+        found = true;
+      } else if (!found) {
+        console.log(`    ❌ Strategy 2 (ObjectId): NOT FOUND`);
+      }
+      
+      // Strategy 3: Loose matching
+      const match3 = product.specificationValues.find(spec => 
+        (spec.specificationId.toString() === selectedSpec.specificationId.toString() ||
+         spec.specificationId.toString() === selectedSpec.specificationId) &&
+        (spec.valueId === selectedSpec.valueId ||
+         spec.valueId.toString() === selectedSpec.valueId.toString())
+      );
+      if (match3 && !found) {
+        console.log(`    ✅ Strategy 3 (Loose): FOUND - ${match3.title} (${match3.value})`);
+        found = true;
+      } else if (!found) {
+        console.log(`    ❌ Strategy 3 (Loose): NOT FOUND`);
+      }
+      
+      if (!found) {
+        console.log(`    💥 NO MATCH FOUND for this specification!`);
+      }
+    });
+  }
+  
+  console.log('='.repeat(50) + '\n');
 };
 
 /**
@@ -334,7 +619,7 @@ exports.createOrder = async (req, res) => {
     }
 
     // حساب التوتال كوست بدقة
-    const tax = subtotal * 0.1; // 10% tax (يمكنك تعديله)
+    const tax = subtotal ; // 10% tax (يمكنك تعديله)
     const deliveryCost = deliveryAreaData?.price || 0;
     const discount = coupon ? (subtotal * coupon.discount / 100) : 0;
     const total = subtotal + tax + deliveryCost - discount;
@@ -546,7 +831,7 @@ exports.createOrderFromCart = async (req, res) => {
     }
 
     // حساب التوتال كوست بدقة
-    const tax = subtotal * 0.1; // 10% tax (يمكنك تعديله)
+    const tax = subtotal  // 10% tax (يمكنك تعديله)
     const deliveryCost = deliveryAreaData?.price || 0;
     const discount = coupon ? (subtotal * coupon.discount / 100) : 0;
     const total = subtotal + tax + deliveryCost - discount;
@@ -966,7 +1251,7 @@ exports.getMyOrders = async (req, res) => {
     // Build query based on user role and store
     let query = {};
     
-    if (req.user.role === 'client') {
+    if (req.user.role === 'client' || req.user.role === 'wholesaler'|| req.user.role === 'affiliate') {
       // For clients, get orders from their store AND for their user ID
       if (storeId) {
         query['store.id'] = storeId;
@@ -1434,6 +1719,9 @@ exports.createGuestOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'storeId is required' });
     }
     
+    // Debug: Log the request body for troubleshooting
+    console.log('🔍 DEBUG: Guest Order Request Body:', JSON.stringify(req.body, null, 2));
+    
     const {
       guestId, // guest id (required for guest orders)
       items,
@@ -1709,6 +1997,54 @@ exports.deleteOrder = async (req, res) => {
       success: false, 
       message: 'Error deleting order',
       error: error.message 
+    });
+  }
+};
+
+/**
+ * Get detailed stock status for a product
+ * @route GET /api/orders/store/:storeId/product/:productId/stock-status
+ */
+exports.getProductStockStatus = async (req, res) => {
+  try {
+    const { storeId, productId } = req.params;
+    
+    if (!storeId || !productId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Store ID and Product ID are required' 
+      });
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Product not found' 
+      });
+    }
+
+    // التحقق من أن المنتج ينتمي للمتجر
+    if (product.store.toString() !== storeId) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Product does not belong to this store' 
+      });
+    }
+
+    const stockStatus = getProductStockStatus(product);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Stock status retrieved successfully',
+      data: stockStatus
+    });
+    
+  } catch (error) {
+    console.error('Get product stock status error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
     });
   }
 };

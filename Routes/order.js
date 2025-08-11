@@ -1452,4 +1452,97 @@ router.get('/details/:identifier', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/orders/store/{storeId}/product/{productId}/stock-status:
+ *   get:
+ *     summary: Get detailed stock status for a product
+ *     description: Retrieve comprehensive stock information including general stock and specification quantities
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID
+ *     responses:
+ *       200:
+ *         description: Stock status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     productId:
+ *                       type: string
+ *                     productName:
+ *                       type: string
+ *                     generalStock:
+ *                       type: object
+ *                       properties:
+ *                         available:
+ *                           type: number
+ *                         sold:
+ *                           type: number
+ *                         lowStockThreshold:
+ *                           type: number
+ *                         status:
+ *                           type: string
+ *                           enum: [in_stock, low_stock, out_of_stock]
+ *                     specifications:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           specificationId:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           value:
+ *                             type: string
+ *                           valueId:
+ *                             type: string
+ *                           quantity:
+ *                             type: number
+ *                           price:
+ *                             type: number
+ *                           status:
+ *                             type: string
+ *                             enum: [in_stock, low_stock, out_of_stock]
+ *       400:
+ *         description: Invalid request data
+ *       403:
+ *         description: Product does not belong to this store
+ *       404:
+ *         description: Product not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/store/:storeId/product/:productId/stock-status', async (req, res) => {
+  try {
+    await OrderController.getProductStockStatus(req, res);
+  } catch (error) {
+    console.error('Get product stock status route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching product stock status',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router; 
