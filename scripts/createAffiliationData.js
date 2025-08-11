@@ -14,7 +14,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mais_helbayeh:ojTOYKE
 
 const db = mongoose.connection;
 
-db.on('error', //CONSOLE.error.bind(//CONSOLE, 'MongoDB connection error:'));
+db.on('error', CONSOLE.error.bind(CONSOLE, 'MongoDB connection error:'));
 db.once('open', async () => {
   //CONSOLE.log('Connected to MongoDB');
   
@@ -143,7 +143,7 @@ db.once('open', async () => {
       //CONSOLE.log(`Average commission: ${affiliateStats.averageCommission.toFixed(1)}%`);
     }
     
-    
+
     if (paymentStats.length > 0) {
       const payStats = paymentStats[0];
       //CONSOLE.log('\nPayment Statistics:');
