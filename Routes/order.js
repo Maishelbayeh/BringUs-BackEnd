@@ -1545,4 +1545,236 @@ router.get('/store/:storeId/product/:productId/stock-status', async (req, res) =
   }
 });
 
+/**
+ * @swagger
+ * /api/orders/store/{storeId}/wholesaler-discount/{userId}:
+ *   get:
+ *     summary: Get wholesaler discount for a user
+ *     description: Retrieve wholesaler discount information for a specific user
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: Wholesaler discount retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     discount:
+ *                       type: number
+ *                     wholesalerId:
+ *                       type: string
+ *                     businessName:
+ *                       type: string
+ *                     isVerified:
+ *                       type: boolean
+ *                     discountRate:
+ *                       type: string
+ *       404:
+ *         description: No active wholesaler found for this user
+ *       500:
+ *         description: Server error
+ */
+router.get('/store/:storeId/wholesaler-discount/:userId', async (req, res) => {
+  try {
+    await OrderController.getWholesalerDiscount(req, res);
+  } catch (error) {
+    console.error('Get wholesaler discount route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching wholesaler discount',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/orders/store/{storeId}/calculate-price:
+ *   post:
+ *     summary: Calculate final price with wholesaler discount
+ *     description: Calculate the final price for items considering wholesaler discounts
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: User ID (optional for guest users)
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     productId:
+ *                       type: string
+ *                       description: Product ID
+ *                     quantity:
+ *                       type: number
+ *                       description: Quantity (default: 1)
+ *     responses:
+ *       200:
+ *         description: Price calculation completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           productId:
+ *                             type: string
+ *                           productName:
+ *                             type: string
+ *                           quantity:
+ *                             type: number
+ *                           unitPrice:
+ *                             type: number
+ *                           totalPrice:
+ *                             type: number
+ *                           priceType:
+ *                             type: string
+ *                             enum: [regular, wholesaler]
+ *                           discountInfo:
+ *                             type: object
+ *                             nullable: true
+ *                     subtotal:
+ *                       type: number
+ *                     wholesalerDiscount:
+ *                       type: object
+ *                       nullable: true
+ *                     summary:
+ *                       type: object
+ *       400:
+ *         description: Invalid request data
+ *       404:
+ *         description: Product not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/store/:storeId/calculate-price', async (req, res) => {
+  try {
+    await OrderController.calculateFinalPrice(req, res);
+  } catch (error) {
+    console.error('Calculate final price route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error calculating final price',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/orders/store/{storeId}/wholesaler-status/{userId}:
+ *   get:
+ *     summary: Check wholesaler status for a user
+ *     description: Check if a user is a verified wholesaler and get their status
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: Wholesaler status checked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     isWholesaler:
+ *                       type: boolean
+ *                     reason:
+ *                       type: string
+ *                     wholesaler:
+ *                       type: object
+ *                       nullable: true
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         discount:
+ *                           type: number
+ *                         businessName:
+ *                           type: string
+ *                         status:
+ *                           type: string
+ *                         isVerified:
+ *                           type: boolean
+ *       400:
+ *         description: Invalid request data
+ *       500:
+ *         description: Server error
+ */
+router.get('/store/:storeId/wholesaler-status/:userId', async (req, res) => {
+  try {
+    await OrderController.checkWholesalerStatus(req, res);
+  } catch (error) {
+    console.error('Check wholesaler status route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error checking wholesaler status',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router; 

@@ -640,6 +640,130 @@ router.get('/:storeId/customers', StoreController.getCustomersByStoreId);
 
 /**
  * @swagger
+ * /api/stores/{storeId}/guests:
+ *   get:
+ *     summary: Get guest customers by store ID
+ *     tags: [Stores]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "507f1f77bcf86cd799439012"
+ *         description: "Store ID"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: "Page number"
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: "Number of guests per page"
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: "Search term for guest name, email, or phone"
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [lastOrderDate, firstOrderDate, totalSpent, orderCount]
+ *           default: "lastOrderDate"
+ *         description: "Sort field"
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: "desc"
+ *         description: "Sort order"
+ *     responses:
+ *       200:
+ *         description: Guest customers retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       phone:
+ *                         type: string
+ *                       orderCount:
+ *                         type: number
+ *                       totalSpent:
+ *                         type: number
+ *                       lastOrderDate:
+ *                         type: string
+ *                         format: date-time
+ *                       firstOrderDate:
+ *                         type: string
+ *                         format: date-time
+ *                       isGuest:
+ *                         type: boolean
+ *                         default: true
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     currentPage:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *                     totalItems:
+ *                       type: integer
+ *                     itemsPerPage:
+ *                       type: integer
+ *                 statistics:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                     totalSpent:
+ *                       type: number
+ *                     averageOrderValue:
+ *                       type: number
+ *                     averageOrdersPerGuest:
+ *                       type: number
+ *                     recentGuests:
+ *                       type: number
+ *                     topSpenders:
+ *                       type: array
+ *       404:
+ *         description: Store not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/:storeId/guests', StoreController.getGuestsByStoreId);
+
+/**
+ * @swagger
  * /api/stores/{storeId}/customers/{customerId}:
  *   get:
  *     summary: Get customer by ID within store

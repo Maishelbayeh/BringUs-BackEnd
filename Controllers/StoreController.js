@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Store = require('../Models/Store');
 const Owner = require('../Models/Owner');
 const User = require('../Models/User');
@@ -282,15 +283,21 @@ class StoreController {
   // Get customers by store ID
   static async getCustomersByStoreId(req, res) {
     try {
-      const { storeId } = req.params;
-      const { page = 1, limit = 10, status, search } = req.query;
-      const skip = (parseInt(page) - 1) * parseInt(limit);
 
-      // Build filter
+      const { storeId } = req.params;
+      const { page = 1, limit = 10, status, search, includeGuests = false, role } = req.query;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const Order = require('../Models/Order');
+      // Build filter for registered customers
       const filter = { 
         store: storeId, 
-        role: 'client' 
+        role: { $in: ['client', 'wholesaler'] }
       };
+
+      // Add role filter if provided
+      if (role && ['client', 'wholesaler'].includes(role)) {
+        filter.role = role;
+      }
 
       // Add status filter if provided
       if (status) {
@@ -307,44 +314,327 @@ class StoreController {
         ];
       }
 
-      // Get customers with pagination
+      console.log('filter',filter);
       const customers = await User.find(filter)
         .select('-password')
         .populate('store', 'nameAr nameEn slug')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit));
+      
+      // Get order counts for each customer
+      const customerIds = customers.map(customer => customer._id);
+      const orderCounts = await Order.aggregate([
+        {
+          $match: {
+            'user.id': { $in: customerIds },
+            'store.id': new mongoose.Types.ObjectId(storeId)
+          }
+        },
+        {
+          $group: {
+            _id: '$user.id',
+            orderCount: { $sum: 1 },
+            totalSpent: { $sum: '$pricing.total' },
+            lastOrderDate: { $max: '$createdAt' }
+          }
+        }
+      ]);
+      
+      // Create a map of customer ID to order count
+      const orderCountMap = {};
+      orderCounts.forEach(item => {
+        orderCountMap[item._id.toString()] = {
+          orderCount: item.orderCount,
+          totalSpent: item.totalSpent || 0,
+          lastOrderDate: item.lastOrderDate
+        };
+      });
+      
+      // Add order information to each customer
+      const customersWithOrders = customers.map(customer => {
+        const customerId = customer._id.toString();
+        const orderInfo = orderCountMap[customerId] || {
+          orderCount: 0,
+          totalSpent: 0,
+          lastOrderDate: null
+        };
+        
+        return {
+          ...customer.toObject(),
+          orderCount: orderInfo.orderCount,
+          totalSpent: orderInfo.totalSpent,
+          lastOrderDate: orderInfo.lastOrderDate
+        };
+      });
+        
+              console.log('customers with orders', customersWithOrders);
+      // Get total count for registered customers
+      const totalCustomers = await User.countDocuments(filter);
+      const totalPages = Math.ceil(totalCustomers / parseInt(limit));
 
-      // Get total count
-      const total = await User.countDocuments(filter);
-      const totalPages = Math.ceil(total / parseInt(limit));
+      // Get statistics for registered customers (including wholesalers)
+      const activeCustomers = await User.countDocuments({ store: storeId, role: { $in: ['client', 'wholesaler'] }, status: 'active' });
+      const inactiveCustomers = await User.countDocuments({ store: storeId, role: { $in: ['client', 'wholesaler'] }, status: 'inactive' });
+      const bannedCustomers = await User.countDocuments({ store: storeId, role: { $in: ['client', 'wholesaler'] }, status: 'banned' });
+      const verifiedCustomers = await User.countDocuments({ store: storeId, role: { $in: ['client', 'wholesaler'] }, isEmailVerified: true });
+      
+      // Get separate statistics for clients and wholesalers
+      const activeClients = await User.countDocuments({ store: storeId, role: 'client', status: 'active' });
+      const activeWholesalers = await User.countDocuments({ store: storeId, role: 'wholesaler', status: 'active' });
+      const totalClients = await User.countDocuments({ store: storeId, role: 'client' });
+      const totalWholesalers = await User.countDocuments({ store: storeId, role: 'wholesaler' });
 
-      // Get statistics
-      const activeCustomers = await User.countDocuments({ store: storeId, role: 'client', status: 'active' });
-      const inactiveCustomers = await User.countDocuments({ store: storeId, role: 'client', status: 'inactive' });
-      const bannedCustomers = await User.countDocuments({ store: storeId, role: 'client', status: 'banned' });
-      const verifiedCustomers = await User.countDocuments({ store: storeId, role: 'client', isEmailVerified: true });
+      let guests = [];
+      let totalGuests = 0;
+      let guestStatistics = {};
+
+      // If includeGuests is true, get guest customers from orders
+      if (includeGuests === 'true' || includeGuests === true) {
+        console.log('includeGuests',includeGuests);
+        const Order = require('../Models/Order');
+        
+                              // Get unique guest customers from orders
+            const guestOrders = await Order.aggregate([
+            {
+             $match: {
+               'store.id': new mongoose.Types.ObjectId(storeId),
+               guestId: { $ne: null, $exists: true }
+             }
+            },
+                          {
+                $group: {
+                  store: { $first: '$store.id' },
+                  _id: '$guestId',
+                  firstName: { $first: '$user.firstName' },
+                  lastName: { $first: '$user.lastName' },
+                  email: { $first: '$user.email' },
+                  phone: { $first: '$user.phone' },
+                  orderCount: { $sum: 1 },
+                  totalSpent: { $sum: '$totalPrice' },
+                  lastOrderDate: { $max: '$createdAt' },
+                  firstOrderDate: { $min: '$createdAt' }
+                }
+              },
+            {
+              $sort: { lastOrderDate: -1 }
+            }
+          ]);
+
+                          console.log('guestOrders count:', guestOrders.length);
+        console.log('guestOrders sample:', guestOrders.slice(0, 2));
+        console.log('storeId being searched:', storeId);
+
+        // Apply search filter to guests if provided
+        let filteredGuests = guestOrders;
+        if (search) {
+          filteredGuests = guestOrders.filter(guest => 
+            guest.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+            guest.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+            guest.email?.toLowerCase().includes(search.toLowerCase()) ||
+            guest.phone?.toLowerCase().includes(search.toLowerCase())
+          );
+        }
+
+        // Apply pagination to guests
+        const guestSkip = (parseInt(page) - 1) * parseInt(limit);
+        guests = filteredGuests.slice(guestSkip, guestSkip + parseInt(limit));
+        totalGuests = filteredGuests.length;
+
+        // Calculate guest statistics
+        guestStatistics = {
+          total: totalGuests,
+          totalSpent: guestOrders.reduce((sum, guest) => sum + (guest.totalSpent || 0), 0),
+          averageOrderValue: guestOrders.length > 0 ? 
+            guestOrders.reduce((sum, guest) => sum + (guest.totalSpent || 0), 0) / guestOrders.length : 0,
+          averageOrdersPerGuest: guestOrders.length > 0 ? 
+            guestOrders.reduce((sum, guest) => sum + guest.orderCount, 0) / guestOrders.length : 0
+        };
+      }
+
+      // Combine customers and guests if includeGuests is true
+      let combinedData = customersWithOrders;
+      let combinedTotal = totalCustomers;
+      let combinedStatistics = {
+        total: totalCustomers,
+        active: activeCustomers,
+        inactive: inactiveCustomers,
+        banned: bannedCustomers,
+        emailVerified: verifiedCustomers,
+        // Separate statistics for clients and wholesalers
+        clients: {
+          total: totalClients,
+          active: activeClients
+        },
+        wholesalers: {
+          total: totalWholesalers,
+          active: activeWholesalers
+        }
+      };
+
+      if (includeGuests === 'true' || includeGuests === true) {
+        // Add guest flag to each guest
+        const guestsWithFlag = guests.map(guest => ({
+          ...guest,
+          isGuest: true,
+          role: 'guest',
+          status: 'active'
+        }));
+
+        // Add customer flag to each customer
+        const customersWithFlag = customersWithOrders.map(customer => ({
+          ...customer,
+          isGuest: false
+        }));
+
+        combinedData = [...customersWithFlag, ...guestsWithFlag];
+        combinedTotal = totalCustomers + totalGuests;
+        console.log('Final combined data count:', combinedData.length);
+        console.log('Customers count:', customersWithFlag.length);
+        console.log('Guests count:', guestsWithFlag.length);
+        console.log('Sample customer with orders:', customersWithOrders[0]);
+        combinedStatistics = {
+          ...combinedStatistics,
+          guests: guestStatistics,
+          totalWithGuests: combinedTotal
+        };
+      }
 
       return success(res, {
-        data: customers,
+        data: combinedData,
         pagination: {
           currentPage: parseInt(page),
-          totalPages,
-          totalItems: total,
+          totalPages: Math.ceil(combinedTotal / parseInt(limit)),
+          totalItems: combinedTotal,
           itemsPerPage: parseInt(limit),
-          hasNextPage: parseInt(page) < totalPages,
+          hasNextPage: parseInt(page) < Math.ceil(combinedTotal / parseInt(limit)),
           hasPrevPage: parseInt(page) > 1
         },
-        statistics: {
-          total: total,
-          active: activeCustomers,
-          inactive: inactiveCustomers,
-          banned: bannedCustomers,
-          emailVerified: verifiedCustomers
+        statistics: combinedStatistics,
+        filters: {
+          includeGuests: includeGuests === 'true' || includeGuests === true,
+          search: search || null,
+          status: status || null,
+          role: role || null
         }
       });
     } catch (err) {
       return error(res, { message: 'Get customers by store error', error: err });
+    }
+  }
+
+  /**
+   * Get guest customers by store ID
+   * @route GET /api/stores/:storeId/guests
+   */
+  static async getGuestsByStoreId(req, res) {
+    try {
+      const { storeId } = req.params;
+      const { page = 1, limit = 10, search, sortBy = 'lastOrderDate', sortOrder = 'desc' } = req.query;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
+      const Order = require('../Models/Order');
+      
+      // Build match conditions
+      const matchConditions = {
+        'store.id': new mongoose.Types.ObjectId(storeId),
+        'user.id': null, // Guest orders have null user.id
+        'user.email': { $ne: 'guest@example.com' } // Exclude default guest email
+      };
+
+      // Add search filter if provided
+      if (search) {
+        matchConditions.$or = [
+          { 'user.firstName': { $regex: search, $options: 'i' } },
+          { 'user.lastName': { $regex: search, $options: 'i' } },
+          { 'user.email': { $regex: search, $options: 'i' } },
+          { 'user.phone': { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      // Get unique guest customers from orders
+      const guestOrders = await Order.aggregate([
+        {
+          $match: matchConditions
+        },
+        {
+          $group: {
+            _id: '$user.email',
+            firstName: { $first: '$user.firstName' },
+            lastName: { $first: '$user.lastName' },
+            email: { $first: '$user.email' },
+            phone: { $first: '$user.phone' },
+            orderCount: { $sum: 1 },
+            totalSpent: { $sum: '$totalPrice' },
+            lastOrderDate: { $max: '$createdAt' },
+            firstOrderDate: { $min: '$createdAt' },
+            averageOrderValue: { $avg: '$totalPrice' }
+          }
+        },
+        {
+          $sort: { [sortBy]: sortOrder === 'desc' ? -1 : 1 }
+        }
+      ]);
+
+      // Apply pagination
+      const totalGuests = guestOrders.length;
+      const paginatedGuests = guestOrders.slice(skip, skip + parseInt(limit));
+
+      // Calculate statistics
+      const totalSpent = guestOrders.reduce((sum, guest) => sum + (guest.totalSpent || 0), 0);
+      const averageOrderValue = guestOrders.length > 0 ? totalSpent / guestOrders.length : 0;
+      const averageOrdersPerGuest = guestOrders.length > 0 ? 
+        guestOrders.reduce((sum, guest) => sum + guest.orderCount, 0) / guestOrders.length : 0;
+
+      // Get recent guests (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const recentGuests = guestOrders.filter(guest => 
+        new Date(guest.lastOrderDate) >= thirtyDaysAgo
+      ).length;
+
+      // Get top spending guests
+      const topSpenders = guestOrders
+        .sort((a, b) => (b.totalSpent || 0) - (a.totalSpent || 0))
+        .slice(0, 5)
+        .map(guest => ({
+          email: guest.email,
+          name: `${guest.firstName} ${guest.lastName}`,
+          totalSpent: guest.totalSpent,
+          orderCount: guest.orderCount
+        }));
+
+      return success(res, {
+        data: paginatedGuests.map(guest => ({
+          ...guest,
+          isGuest: true,
+          role: 'guest',
+          status: 'active'
+        })),
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(totalGuests / parseInt(limit)),
+          totalItems: totalGuests,
+          itemsPerPage: parseInt(limit),
+          hasNextPage: parseInt(page) < Math.ceil(totalGuests / parseInt(limit)),
+          hasPrevPage: parseInt(page) > 1
+        },
+        statistics: {
+          total: totalGuests,
+          totalSpent,
+          averageOrderValue,
+          averageOrdersPerGuest,
+          recentGuests,
+          topSpenders
+        },
+        filters: {
+          search: search || null,
+          sortBy,
+          sortOrder
+        }
+      });
+    } catch (err) {
+      return error(res, { message: 'Get guests by store error', error: err });
     }
   }
 

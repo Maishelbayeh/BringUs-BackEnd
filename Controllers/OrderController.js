@@ -563,7 +563,7 @@ exports.createOrder = async (req, res) => {
       }
     }
 
-    // Validate and process items
+    let discount = 0;
     let subtotal = 0;
     const processedItems = [];
     for (const item of items) {
@@ -587,9 +587,28 @@ exports.createOrder = async (req, res) => {
         return res.status(400).json({ success: false, message: stockValidation.message });
       }
       
-      // Calculate the current price (considering any discounts)
-      const currentPrice = product.isOnSale && product.salePercentage > 0 ? 
-        product.price - (product.price * product.salePercentage / 100) : product.price;
+      // Get wholesaler discount if user is wholesaler
+      let wholesalerDiscount = null;
+      if (user) {
+        wholesalerDiscount = await getWholesalerDiscount(user, storeId);
+        console.log('wholesalerDiscount',wholesalerDiscount);
+      }
+      
+      // Calculate the current price based on user role
+      let currentPrice = 0;
+      if (wholesalerDiscount ) {
+        console.log('wholesalerDiscount',wholesalerDiscount);
+        discount = wholesalerDiscount.discount;
+        console.log('discount',discount);
+        currentPrice = product.compareAtPrice || product.price;
+        console.log(`💰 Applied wholesaler pricing: ${currentPrice} (compareAtPrice) for ${product.nameEn}`);
+      } else {
+        // Calculate the current price (considering any discounts)
+        discount = product.salePercentage > 0 ? product.salePercentage : 0;
+        currentPrice = product.isOnSale && product.salePercentage > 0 ? 
+          product.price - (product.price * product.salePercentage / 100) : product.price;
+        console.log(`💰 Applied regular pricing: ${currentPrice} for ${product.nameEn}`);
+      }
       
       const itemTotal = currentPrice * item.quantity;
       subtotal += itemTotal;
@@ -599,7 +618,7 @@ exports.createOrder = async (req, res) => {
           nameAr: product.nameAr,
           nameEn: product.nameEn,
           images: product.images,
-          price: product.price,
+          price: currentPrice,
           unit: product.unit,
           color: product.color,
           sku: product.sku || '',
@@ -617,14 +636,18 @@ exports.createOrder = async (req, res) => {
       // Update product stock from both general stock and specification quantities
       await reduceProductStock(product, item.quantity, cartItem ? cartItem.selectedSpecifications || [] : []);
     }
-
+    console.log('discount',discount);
     // حساب التوتال كوست بدقة
-    const tax = subtotal ; // 10% tax (يمكنك تعديله)
+
     const deliveryCost = deliveryAreaData?.price || 0;
-    const discount = coupon ? (subtotal * coupon.discount / 100) : 0;
-    const total = subtotal + tax + deliveryCost - discount;
+    const Finaldiscount = discount > 0 ? (subtotal * discount / 100) : 0;
+    console.log('Finaldiscount',Finaldiscount);
+    console.log('subtotal',subtotal);
+    const total = subtotal + deliveryCost - Finaldiscount;
+    console.log('total',total);
 
     const order = await Order.create({
+      totalPrice:total,
       store: storeSnapshot,
       user: userSnapshot,
       items: processedItems,
@@ -634,7 +657,7 @@ exports.createOrder = async (req, res) => {
       shippingInfo,
       pricing: {
         subtotal,
-        tax,
+        tax:0,
         shipping: deliveryCost,
         discount,
         total
@@ -647,7 +670,7 @@ exports.createOrder = async (req, res) => {
       deliveryArea: deliveryAreaData,
       currency
     });
-
+    console.log('order',order.pricing);
     // تحديث عمولة الأفلييت إذا كان الطلب عن طريقه
     if (affiliateId && affiliateData) {
       const Affiliation = require('../Models/Affiliation');
@@ -801,7 +824,26 @@ exports.createOrderFromCart = async (req, res) => {
         return res.status(400).json({ success: false, message: stockValidation.message });
       }
       
-      const itemTotal = cartItem.priceAtAdd * cartItem.quantity;
+      // Get wholesaler discount if user is wholesaler
+      let wholesalerDiscount = null;
+      if (user) {
+        wholesalerDiscount = await getWholesalerDiscount(user, storeId);
+      }
+      let pushPrice = 0;
+      // Calculate the current price based on user role
+      let currentPrice = cartItem.priceAtAdd; // Default to cart price
+      if (wholesalerDiscount && wholesalerDiscount.isVerified) {
+        pushPrice = product.compareAtPrice || product.price;
+        // Use compareAtPrice for verified wholesalers
+        currentPrice = product.compareAtPrice || product.price;
+        console.log(`💰 Applied wholesaler pricing: ${currentPrice} (compareAtPrice) for ${product.nameEn}`);
+      } else {
+        // Use cart price or calculate regular price
+        currentPrice = cartItem.priceAtAdd;
+        console.log(`💰 Applied cart pricing: ${currentPrice} for ${product.nameEn}`);
+      }
+      
+      const itemTotal = currentPrice * cartItem.quantity;
       subtotal += itemTotal;
       
       processedItems.push({
@@ -810,7 +852,7 @@ exports.createOrderFromCart = async (req, res) => {
           nameAr: product.nameAr,
           nameEn: product.nameEn,
           images: product.images,
-          price: product.price,
+          price: pushPrice,
           unit: product.unit,
           color: product.color,
           sku: product.sku || '',
@@ -1800,7 +1842,7 @@ exports.createGuestOrder = async (req, res) => {
       }
     }
 
-    // Validate and process items
+    let discount = 0;
     let subtotal = 0;
     const processedItems = [];
     for (const item of items) {
@@ -1824,9 +1866,25 @@ exports.createGuestOrder = async (req, res) => {
         return res.status(400).json({ success: false, message: stockValidation.message });
       }
       
-      // Calculate the current price (considering any discounts)
-      const currentPrice = product.isOnSale && product.salePercentage > 0 ? 
-        product.price - (product.price * product.salePercentage / 100) : product.price;
+      // Get wholesaler discount if user is wholesaler
+      let wholesalerDiscount = null;
+      if (user) {
+        wholesalerDiscount = await getWholesalerDiscount(user, storeId);
+      }
+      // Calculate the current price based on user role
+      let currentPrice = 0;
+      if (wholesalerDiscount && wholesalerDiscount.isVerified) {
+        discount = wholesalerDiscount.discount;
+        console.log('wholesalerDiscount',discount);
+        currentPrice = product.compareAtPrice || product.price;
+        console.log(`💰 Applied wholesaler pricing: ${currentPrice} (compareAtPrice) for ${product.nameEn}`);
+      } else {
+        discount = product.salePercentage > 0 ? product.salePercentage : 0;
+        // Calculate the current price (considering any discounts)
+        currentPrice = product.isOnSale && product.salePercentage > 0 ? 
+          product.price - (product.price * product.salePercentage / 100) : product.price;
+        console.log(`💰 Applied regular pricing: ${currentPrice} for ${product.nameEn}`);
+      }
       
       const itemTotal = currentPrice * item.quantity;
       subtotal += itemTotal;
@@ -1836,7 +1894,7 @@ exports.createGuestOrder = async (req, res) => {
           nameAr: product.nameAr,
           nameEn: product.nameEn,
           images: product.images,
-          price: product.price,
+          price: currentPrice,
           unit: product.unit,
           color: product.color,
           sku: product.sku || '',
@@ -1854,12 +1912,14 @@ exports.createGuestOrder = async (req, res) => {
       // Update product stock from both general stock and specification quantities
       await reduceProductStock(product, item.quantity, cartItem ? cartItem.selectedSpecifications || [] : []);
     }
+    console.log('discount',discount);
 
     // حساب التوتال كوست بدقة
-    const tax = subtotal * 0.1; // 10% tax (يمكنك تعديله)
     const deliveryCost = deliveryAreaData?.price || 0;
-    const discount = coupon ? (subtotal * coupon.discount / 100) : 0;
-    const total = subtotal + tax + deliveryCost - discount;
+    const Finaldiscount = discount > 0 ? (subtotal * discount / 100) : 0;
+    console.log('Finaldiscount',Finaldiscount);
+    console.log('subtotal',subtotal);
+    const total = subtotal   + deliveryCost - Finaldiscount;
 
     const order = await Order.create({
       store: storeSnapshot,
@@ -2046,5 +2106,362 @@ exports.getProductStockStatus = async (req, res) => {
       success: false, 
       message: error.message 
     });
+  }
+};
+
+/**
+ * Helper function to get wholesaler discount for a user
+ * @param {String} userId - User ID
+ * @param {String} storeId - Store ID
+ * @returns {Object} - Wholesaler discount info or null
+ */
+const getWholesalerDiscount = async (userId, storeId) => {
+  try {
+    const Wholesaler = require('../Models/Wholesaler');
+    
+    // البحث عن التاجر باستخدام userId
+    const wholesaler = await Wholesaler.findOne({
+      userId: userId,
+      store: storeId,
+    });
+    
+    console.log('Searching for wholesaler with userId:', userId);
+    console.log('Found wholesaler:', wholesaler);
+    
+    if (wholesaler) {
+      return {
+        discount: wholesaler.discount,
+        wholesalerId: wholesaler._id,
+        businessName: wholesaler.businessName,
+        isVerified: wholesaler.isVerified
+      };
+    }
+    
+         // إذا لم يجد باستخدام userId، جرب البحث باستخدام email
+     const User = require('../Models/User');
+     const user = await User.findById(userId).select('email');
+     if (user && user.email) {
+       console.log('Trying to find wholesaler by email:', user.email);
+       const wholesalerByEmail = await Wholesaler.findOne({
+         email: user.email,
+         store: storeId,
+         status: 'Active',
+         isVerified: true
+       });
+       
+       console.log('Found wholesaler by email:', wholesalerByEmail);
+       
+       if (wholesalerByEmail) {
+         return {
+           discount: wholesalerByEmail.discount,
+           wholesalerId: wholesalerByEmail._id,
+           businessName: wholesalerByEmail.businessName,
+           isVerified: wholesalerByEmail.isVerified
+         };
+       }
+     }
+    if (wholesaler) {
+      return {
+        discount: wholesaler.discount,
+        wholesalerId: wholesaler._id,
+        businessName: wholesaler.businessName,
+        isVerified: wholesaler.isVerified
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error getting wholesaler discount:', error);
+    return null;
+  }
+};
+
+/**
+ * Get wholesaler discount for a user
+ * @route GET /api/orders/store/:storeId/wholesaler-discount/:userId
+ */
+exports.getWholesalerDiscount = async (req, res) => {
+  try {
+    const { storeId, userId } = req.params;
+    
+    if (!storeId || !userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Store ID and User ID are required' 
+      });
+    }
+
+    const discountInfo = await getWholesalerDiscount(userId, storeId);
+    
+    if (discountInfo) {
+      res.status(200).json({
+        success: true,
+        message: 'Wholesaler discount retrieved successfully',
+        data: {
+          discount: discountInfo.discount,
+          wholesalerId: discountInfo.wholesalerId,
+          businessName: discountInfo.businessName,
+          isVerified: discountInfo.isVerified,
+          discountRate: `${discountInfo.discount}%`
+        }
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'No active wholesaler found for this user'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Get wholesaler discount error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+};
+
+/**
+ * Helper function to calculate final price with wholesaler discount
+ * @param {Object} product - Product document
+ * @param {String} userId - User ID
+ * @param {String} storeId - Store ID
+ * @param {Number} quantity - Quantity
+ * @returns {Object} - Price calculation result
+ */
+const calculateFinalPrice = async (product, userId, storeId, quantity = 1) => {
+  try {
+    // Get wholesaler discount if user is wholesaler
+    let wholesalerDiscount = null;
+    if (userId) {
+      wholesalerDiscount = await getWholesalerDiscount(userId, storeId);
+    }
+    
+    let currentPrice = 0;
+    let priceType = 'regular';
+    let discountInfo = null;
+    
+    if (wholesalerDiscount && wholesalerDiscount.isVerified) {
+      // Use compareAtPrice for verified wholesalers
+      currentPrice = product.compareAtPrice || product.price;
+      priceType = 'wholesaler';
+      discountInfo = {
+        discount: wholesalerDiscount.discount,
+        businessName: wholesalerDiscount.businessName,
+        wholesalerId: wholesalerDiscount.wholesalerId
+      };
+      console.log(`💰 Applied wholesaler pricing: ${currentPrice} (compareAtPrice) for ${product.nameEn}`);
+    } else {
+      // Calculate the current price (considering any discounts)
+      currentPrice = product.isOnSale && product.salePercentage > 0 ? 
+        product.price - (product.price * product.salePercentage / 100) : product.price;
+      priceType = 'regular';
+      console.log(`💰 Applied regular pricing: ${currentPrice} for ${product.nameEn}`);
+    }
+    
+    const itemTotal = currentPrice * quantity;
+    
+    return {
+      unitPrice: currentPrice,
+      totalPrice: itemTotal,
+      priceType: priceType,
+      discountInfo: discountInfo,
+      quantity: quantity,
+      originalPrice: product.price,
+      compareAtPrice: product.compareAtPrice,
+      isOnSale: product.isOnSale,
+      salePercentage: product.salePercentage
+    };
+    
+  } catch (error) {
+    console.error('Error calculating final price:', error);
+    // Fallback to regular price
+    const currentPrice = product.price;
+    const itemTotal = currentPrice * quantity;
+    
+    return {
+      unitPrice: currentPrice,
+      totalPrice: itemTotal,
+      priceType: 'regular',
+      discountInfo: null,
+      quantity: quantity,
+      originalPrice: product.price,
+      compareAtPrice: product.compareAtPrice,
+      isOnSale: product.isOnSale,
+      salePercentage: product.salePercentage
+    };
+  }
+};
+
+/**
+ * Calculate final price with wholesaler discount
+ * @route POST /api/orders/store/:storeId/calculate-price
+ */
+exports.calculateFinalPrice = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { userId, items } = req.body;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Store ID is required' 
+      });
+    }
+    
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Items array is required' 
+      });
+    }
+
+    const results = [];
+    let totalSubtotal = 0;
+    let wholesalerDiscount = null;
+    
+    // Get wholesaler discount once if user is provided
+    if (userId) {
+      wholesalerDiscount = await getWholesalerDiscount(userId, storeId);
+    }
+    
+    for (const item of items) {
+      const { productId, quantity = 1 } = item;
+      
+      if (!productId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Product ID is required for each item' 
+        });
+      }
+      
+      const product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({ 
+          success: false, 
+          message: `Product with ID ${productId} not found` 
+        });
+      }
+      
+      if (!product.isActive) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Product ${product.nameEn} is not available` 
+        });
+      }
+      
+      const priceCalculation = await calculateFinalPrice(product, userId, storeId, quantity);
+      totalSubtotal += priceCalculation.totalPrice;
+      
+      results.push({
+        productId: product._id,
+        productName: product.nameEn,
+        quantity: quantity,
+        ...priceCalculation
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Price calculation completed successfully',
+      data: {
+        items: results,
+        subtotal: totalSubtotal,
+        wholesalerDiscount: wholesalerDiscount ? {
+          discount: wholesalerDiscount.discount,
+          businessName: wholesalerDiscount.businessName,
+          wholesalerId: wholesalerDiscount.wholesalerId,
+          isVerified: wholesalerDiscount.isVerified
+        } : null,
+        summary: {
+          totalItems: items.length,
+          totalQuantity: items.reduce((sum, item) => sum + (item.quantity || 1), 0),
+          priceType: wholesalerDiscount && wholesalerDiscount.isVerified ? 'wholesaler' : 'regular'
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Calculate final price error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+};
+
+/**
+ * Helper function to check wholesaler status
+ * @param {String} userId - User ID
+ * @param {String} storeId - Store ID
+ * @returns {Object} - Wholesaler status info
+ */
+const checkWholesalerStatus = async (userId, storeId) => {
+  try {
+    const Wholesaler = require('../Models/Wholesaler');
+    const User = require('../Models/User');
+    
+    console.log('🔍 Checking wholesaler status for userId:', userId, 'storeId:', storeId);
+    
+    // Get user info
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log('❌ User not found');
+      return { isWholesaler: false, reason: 'User not found' };
+    }
+    
+    console.log('👤 User found:', { id: user._id, email: user.email, role: user.role });
+    
+    // Check if user role is wholesaler
+    if (user.role !== 'wholesaler') {
+      console.log('❌ User role is not wholesaler:', user.role);
+      return { isWholesaler: false, reason: 'User role is not wholesaler' };
+    }
+    
+    // Search for wholesaler record
+    const wholesaler = await Wholesaler.findOne({
+      userId: userId,
+      store: storeId
+    });
+    
+    console.log('🏪 Wholesaler record found:', wholesaler ? {
+      id: wholesaler._id,
+      status: wholesaler.status,
+      isVerified: wholesaler.isVerified,
+      discount: wholesaler.discount
+    } : 'Not found');
+    
+    if (!wholesaler) {
+      return { isWholesaler: false, reason: 'No wholesaler record found' };
+    }
+    
+    if (wholesaler.status !== 'Active') {
+      return { 
+        isWholesaler: false, 
+        reason: `Wholesaler status is ${wholesaler.status}` 
+      };
+    }
+    
+    if (!wholesaler.isVerified) {
+      return { 
+        isWholesaler: false, 
+        reason: 'Wholesaler is not verified' 
+      };
+    }
+    
+    return {
+      isWholesaler: true,
+      wholesaler: {
+        id: wholesaler._id,
+        discount: wholesaler.discount,
+        businessName: wholesaler.businessName,
+        status: wholesaler.status,
+        isVerified: wholesaler.isVerified
+      }
+    };
+    
+  } catch (error) {
+    console.error('Error checking wholesaler status:', error);
+    return { isWholesaler: false, reason: 'Error checking status' };
   }
 };

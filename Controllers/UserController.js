@@ -318,7 +318,7 @@ const getAllUsers = async (req, res) => {
     
     // Filter customers only if requested
     if (customerOnly === 'true') {
-      filter.role = 'client';
+      filter.role = { $in: ['client', 'wholesaler'] };
     }
 
     const users = await User.find(filter)
@@ -460,7 +460,7 @@ const getCustomers = async (req, res) => {
 
     // Add store filter for isolation
     const filter = addStoreFilter(req);
-    filter.role = 'client'; // Only customers
+    filter.role = { $in: ['client', 'wholesaler'] }; // Only customers
     
     if (status) filter.status = status;
 

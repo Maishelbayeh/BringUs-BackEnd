@@ -83,6 +83,28 @@ const orderSchema = new mongoose.Schema({
         required: false
       }
     }],
+    pricing: {
+      subtotal: {
+        type: Number,
+        required: false
+      },
+      tax: {
+        type: Number,
+        required: false
+      },
+      shipping: {
+        type: Number,
+        required: false
+      },
+      discount: {
+        type: Number,
+        required: false
+      },
+      total: {
+        type: Number,
+        required: false
+      }
+    },
     // إضافة الألوان المختارة للمنتج من السلة
     selectedColors: [{
       type: mongoose.Schema.Types.Mixed,
@@ -184,6 +206,28 @@ const orderSchema = new mongoose.Schema({
     descriptionAr: { type: String },
     descriptionEn: { type: String },
     priority: { type: Number },
+  },
+  pricing: {
+    subtotal: {
+      type: Number,
+      required: false
+    },
+    tax: {
+      type: Number,
+      required: false
+    },
+    shipping: {
+      type: Number,
+      required: false
+    },
+    discount: {
+      type: Number,
+      required: false
+    },
+    total: {
+      type: Number,
+      required: false
+    }
   },
   currency: {
     type: String,
