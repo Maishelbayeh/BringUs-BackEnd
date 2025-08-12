@@ -2578,6 +2578,7 @@ exports.getAffiliateOrderStats = async (req, res) => {
   }
 };
 
+
 /**
  * Get orders by guest ID
  * @param {Object} req - Express request object
