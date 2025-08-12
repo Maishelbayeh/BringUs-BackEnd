@@ -280,6 +280,7 @@ class StoreController {
     }
   }
 
+  
   // Get customers by store ID
   static async getCustomersByStoreId(req, res) {
     try {
