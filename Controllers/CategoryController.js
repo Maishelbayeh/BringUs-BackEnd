@@ -475,3 +475,208 @@ exports.getCategoryTree = async (req, res) => {
     });
   }
 };
+
+// Get hierarchical category list (flat structure with levels)
+exports.getCategoryList = async (req, res) => {
+  try {
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in query parameters'
+      });
+    }
+
+    // Get all categories for the store
+    const allCategories = await Category.find({ store: storeId })
+      .populate('parent', 'nameAr nameEn slug')
+      .sort({ sortOrder: 1, nameEn: 1 });
+
+    // Build hierarchical list
+    const buildHierarchicalList = (categories, parentId = null, level = 0) => {
+      const result = [];
+      
+      categories.forEach(category => {
+        if ((parentId === null && !category.parent) || 
+            (category.parent && category.parent._id.toString() === parentId)) {
+          
+          const categoryWithLevel = {
+            ...category.toObject(),
+            level,
+            indent: '  '.repeat(level), // For display purposes
+            hasChildren: categories.some(c => c.parent && c.parent._id.toString() === category._id.toString())
+          };
+          
+          result.push(categoryWithLevel);
+          
+          // Add children recursively
+          const children = buildHierarchicalList(categories, category._id.toString(), level + 1);
+          result.push(...children);
+        }
+      });
+      
+      return result;
+    };
+
+    const hierarchicalList = buildHierarchicalList(allCategories);
+
+    res.json({
+      success: true,
+      data: hierarchicalList,
+      count: hierarchicalList.length
+    });
+
+  } catch (err) {
+    //CONSOLE.error('Get category list error:', err);
+    
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};
+
+// Get categories by parent (including nested subcategories)
+exports.getCategoriesByParent = async (req, res) => {
+  try {
+    const { storeId, parentId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId in query parameters'
+      });
+    }
+
+    if (!parentId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Parent ID is required',
+        message: 'Please provide parentId in query parameters'
+      });
+    }
+
+    // Verify parent category exists
+    const parentCategory = await Category.findOne({ _id: parentId, store: storeId });
+    if (!parentCategory) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Parent category not found'
+      });
+    }
+
+    // Get all categories for the store
+    const allCategories = await Category.find({ store: storeId })
+      .populate('parent', 'nameAr nameEn slug');
+
+    // Function to get all descendants of a category
+    const getAllDescendants = (categoryId) => {
+      const descendants = [];
+      const queue = [categoryId];
+      
+      while (queue.length > 0) {
+        const currentId = queue.shift();
+        const children = allCategories.filter(cat => 
+          cat.parent && cat.parent._id.toString() === currentId.toString()
+        );
+        
+        descendants.push(...children);
+        queue.push(...children.map(child => child._id));
+      }
+      
+      return descendants;
+    };
+
+    // Get direct children and all nested subcategories
+    const directChildren = allCategories.filter(cat => 
+      cat.parent && cat.parent._id.toString() === parentId
+    );
+    
+    const nestedSubcategories = getAllDescendants(parentId);
+    
+    // Remove duplicates and organize by level
+    const uniqueSubcategories = [];
+    const seen = new Set();
+    
+    [...directChildren, ...nestedSubcategories].forEach(category => {
+      if (!seen.has(category._id.toString())) {
+        seen.add(category._id.toString());
+        
+        // Calculate level
+        let level = 0;
+        let currentCategory = category;
+        while (currentCategory.parent) {
+          level++;
+          currentCategory = allCategories.find(cat => 
+            cat._id.toString() === currentCategory.parent._id.toString()
+          );
+          if (!currentCategory) break;
+        }
+        
+        uniqueSubcategories.push({
+          ...category.toObject(),
+          level,
+          isDirectChild: directChildren.some(child => 
+            child._id.toString() === category._id.toString()
+          )
+        });
+      }
+    });
+
+    // Sort by level, then by sortOrder, then by name
+    uniqueSubcategories.sort((a, b) => {
+      if (a.level !== b.level) return a.level - b.level;
+      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+      return a.nameEn.localeCompare(b.nameEn);
+    });
+
+    res.json({
+      success: true,
+      data: {
+        parent: parentCategory,
+        directChildren: directChildren.length,
+        totalSubcategories: uniqueSubcategories.length,
+        categories: uniqueSubcategories
+      }
+    });
+
+  } catch (err) {
+    //CONSOLE.error('Get categories by parent error:', err);
+    
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+};

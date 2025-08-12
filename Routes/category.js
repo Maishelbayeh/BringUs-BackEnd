@@ -74,6 +74,68 @@ router.get('/tree', async (req, res) => {
   }
 });
 
+// @desc    Get hierarchical category list (flat structure with levels)
+// @route   GET /api/categories/list
+// @access  Public
+router.get('/list', async (req, res) => {
+  try {
+    await CategoryController.getCategoryList(req, res);
+  } catch (error) {
+    //CONSOLE.error('Get category list error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching category list',
+      error: error.message
+    });
+  }
+});
+
+// @desc    Get categories by parent (including nested subcategories)
+// @route   GET /api/categories/by-parent
+// @access  Public
+router.get('/by-parent', async (req, res) => {
+  try {
+    await CategoryController.getCategoriesByParent(req, res);
+  } catch (error) {
+    //CONSOLE.error('Get categories by parent error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching categories by parent',
+      error: error.message
+    });
+  }
+});
+
 // @desc    Get category by slug
 // @route   GET /api/categories/slug/:slug
 // @access  Public

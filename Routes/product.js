@@ -136,7 +136,14 @@ const router = express.Router();
 router.get('/', [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-  query('category').optional().isMongoId().withMessage('Invalid category ID'),
+  query('category').optional().custom((value) => {
+    // دعم فئة واحدة أو عدة فئات مفصولة بـ ||
+    if (typeof value === 'string') {
+      const categories = value.split('||');
+      return categories.every(cat => /^[a-fA-F0-9]{24}$/.test(cat.trim()));
+    }
+    return true;
+  }).withMessage('Invalid category ID(s). Use format: categoryId1||categoryId2||categoryId3'),
   query('minPrice').optional().isFloat({ min: 0 }).withMessage('Min price must be a positive number'),
   query('maxPrice').optional().isFloat({ min: 0 }).withMessage('Max price must be a positive number'),
   query('sort').optional().isIn(['price_asc', 'price_desc', 'name_asc', 'name_desc', 'rating_desc', 'newest', 'oldest']).withMessage('Invalid sort option'),
@@ -167,23 +174,64 @@ router.get('/', [
       storeId
     } = req.query;
 
-    // Build filter object
+    // Build comprehensive filter object
     const filter = { isActive: true };
+
+    // تطبيق جميع الفلاتر معاً
+    console.log('🔍 Building comprehensive filter with multiple criteria...');
 
     // Add store filter if provided
     if (storeId) {
       filter.store = storeId;
+      console.log('🏪 Applied store filter:', storeId);
     }
 
-    if (category) filter.category = category;
+    // 1. فلترة الفئات (دعم متعدد)
+    if (category) {
+      if (category.includes('||')) {
+        const categoryIds = category.split('||').map(cat => cat.trim());
+        filter.category = { $in: categoryIds };
+        console.log('📂 Applied multi-category filter:', categoryIds);
+      } else {
+        filter.category = category;
+        console.log('📂 Applied single category filter:', category);
+      }
+    }
+
+    // 2. فلترة السعر
     if (minPrice || maxPrice) {
       filter.price = {};
-      if (minPrice) filter.price.$gte = parseFloat(minPrice);
-      if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+      if (minPrice) {
+        filter.price.$gte = parseFloat(minPrice);
+        console.log('💰 Applied min price filter:', minPrice);
+      }
+      if (maxPrice) {
+        filter.price.$lte = parseFloat(maxPrice);
+        console.log('💰 Applied max price filter:', maxPrice);
+      }
     }
+
+    // 3. فلترة البحث
     if (search) {
       filter.$text = { $search: search };
+      console.log('🔍 Applied search filter:', search);
     }
+
+    // 4. فلترة الألوان (في قاعدة البيانات)
+    if (colors && Array.isArray(colors) && colors.length > 0) {
+      // إنشاء regex patterns للألوان
+      const colorPatterns = colors.map(color => new RegExp(color, 'i'));
+      filter.colors = { $regex: { $in: colorPatterns } };
+      console.log('🎨 Applied colors filter:', colors);
+    }
+
+    // 5. فلترة العلامات (في قاعدة البيانات)
+    if (productLabels && Array.isArray(productLabels) && productLabels.length > 0) {
+      filter.productLabels = { $in: productLabels };
+      console.log('🏷️ Applied product labels filter:', productLabels);
+    }
+
+    console.log('✅ Final filter object:', JSON.stringify(filter, null, 2));
 
     // Build sort object
     let sortObj = {};
@@ -221,38 +269,8 @@ router.get('/', [
       .populate('store', 'name domain')
       .sort(sortObj);
 
-    // Apply additional filters
-    if (colors && Array.isArray(colors) && colors.length > 0) {
-      products = products.filter(product => {
-        // Parse product colors
-        let productColors = [];
-        try {
-          productColors = typeof product.colors === 'string' ? JSON.parse(product.colors) : product.colors;
-        } catch (error) {
-          productColors = [];
-        }
-        
-        // Flatten the colors array (handle nested arrays)
-        const flattenedColors = productColors.flat();
-        
-        // Check if any of the requested colors exist in the product
-        return colors.some(requestedColor => 
-          flattenedColors.includes(requestedColor)
-        );
-      });
-    }
-
-    if (productLabels && Array.isArray(productLabels) && productLabels.length > 0) {
-      products = products.filter(product => {
-        // Check if any of the requested labels exist in the product
-        return productLabels.some(requestedLabelId => 
-          product.productLabels && 
-          product.productLabels.some(label => 
-            label._id && label._id.toString() === requestedLabelId
-          )
-        );
-      });
-    }
+    // تم دمج الفلاتر الإضافية في الفلتر الأساسي لتحسين الأداء
+    console.log('✅ All filters applied at database level for better performance');
 
     // Apply pagination after filtering
     const total = products.length;
@@ -930,7 +948,14 @@ router.get('/:storeId/variants-only', ProductController.getVariantsOnly);
 router.get('/:storeId/without-variants', [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-  query('category').optional().isMongoId().withMessage('Invalid category ID'),
+  query('category').optional().custom((value) => {
+    // دعم فئة واحدة أو عدة فئات مفصولة بـ ||
+    if (typeof value === 'string') {
+      const categories = value.split('||');
+      return categories.every(cat => /^[a-fA-F0-9]{24}$/.test(cat.trim()));
+    }
+    return true;
+  }).withMessage('Invalid category ID(s). Use format: categoryId1||categoryId2||categoryId3'),
   query('minPrice').optional().isFloat({ min: 0 }).withMessage('Min price must be a positive number'),
   query('maxPrice').optional().isFloat({ min: 0 }).withMessage('Max price must be a positive number'),
   query('sort').optional().isIn(['price_asc', 'price_desc', 'name_asc', 'name_desc', 'rating_desc', 'newest', 'oldest']).withMessage('Invalid sort option'),

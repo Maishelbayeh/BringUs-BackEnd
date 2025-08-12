@@ -520,7 +520,6 @@ exports.createOrder = async (req, res) => {
         phone: foundUser.phone
       };
     } else if (guestId) {
-      // للضيوف
       userSnapshot = {
         id: null,
         firstName: shippingAddress?.firstName || 'Guest',
@@ -647,6 +646,7 @@ exports.createOrder = async (req, res) => {
     console.log('total',total);
 
     const order = await Order.create({
+      guestId: guestId,
       totalPrice:total,
       store: storeSnapshot,
       user: userSnapshot,
@@ -676,8 +676,26 @@ exports.createOrder = async (req, res) => {
       const Affiliation = require('../Models/Affiliation');
       const affiliateDoc = await Affiliation.findById(affiliateId);
       if (affiliateDoc) {
-        // استخدم الميثود الجاهز
-        await affiliateDoc.updateSales(total, order._id);
+        // استخدم الميثود الجاهز - العمولة من مجموع أسعار المنتجات فقط (بدون التوصيل)
+        await affiliateDoc.updateSales(subtotal, order._id);
+        
+        // تحديث معلومات التتبع في الطلب
+        const commissionEarned = (subtotal * affiliateDoc.percent / 100);
+        order.affiliateTracking = {
+          isAffiliateOrder: true,
+          affiliateId: affiliateDoc._id,
+          referralSource: req.body.referralSource || 'direct_link',
+          utmSource: req.body.utmSource,
+          utmMedium: req.body.utmMedium,
+          utmCampaign: req.body.utmCampaign,
+          clickTimestamp: req.body.clickTimestamp ? new Date(req.body.clickTimestamp) : null,
+          orderTimestamp: new Date(),
+          conversionTime: req.body.clickTimestamp ? 
+            Math.round((new Date() - new Date(req.body.clickTimestamp)) / (1000 * 60)) : null, // بالدقائق
+          commissionEarned: commissionEarned,
+          commissionPercentage: affiliateDoc.percent
+        };
+        await order.save();
       }
     }
 
@@ -907,8 +925,8 @@ exports.createOrderFromCart = async (req, res) => {
       const Affiliation = require('../Models/Affiliation');
       const affiliateDoc = await Affiliation.findById(affiliateId);
       if (affiliateDoc) {
-        // استخدم الميثود الجاهز
-        await affiliateDoc.updateSales(total, order._id);
+        // استخدم الميثود الجاهز - العمولة من مجموع أسعار المنتجات فقط (بدون التوصيل)
+        await affiliateDoc.updateSales(subtotal, order._id);
       }
     }
 
@@ -1951,8 +1969,8 @@ exports.createGuestOrder = async (req, res) => {
       const Affiliation = require('../Models/Affiliation');
       const affiliateDoc = await Affiliation.findById(affiliateId);
       if (affiliateDoc) {
-        // استخدم الميثود الجاهز
-        await affiliateDoc.updateSales(total, order._id);
+        // استخدم الميثود الجاهز - العمولة من مجموع أسعار المنتجات فقط (بدون التوصيل)
+        await affiliateDoc.updateSales(subtotal, order._id);
       }
     }
 
@@ -2386,6 +2404,318 @@ exports.calculateFinalPrice = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: error.message 
+    });
+  }
+};
+
+/**
+ * Get orders that came through affiliate links
+ * @route GET /api/orders/store/:storeId/affiliate-orders
+ */
+exports.getAffiliateOrders = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { affiliateId, startDate, endDate, status } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ success: false, message: 'Store ID is required' });
+    }
+
+    // Build filter
+    const filter = {
+      'store.id': storeId,
+      'affiliateTracking.isAffiliateOrder': true
+    };
+
+    if (affiliateId) {
+      filter['affiliateTracking.affiliateId'] = affiliateId;
+    }
+
+    if (startDate && endDate) {
+      filter.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    if (status) {
+      filter.status = status;
+    }
+
+    const orders = await Order.find(filter)
+      .sort({ createdAt: -1 })
+      .select('orderNumber createdAt status pricing affiliateTracking user items');
+
+    // Get affiliate information
+    const Affiliation = require('../Models/Affiliation');
+    const affiliateIds = [...new Set(orders.map(order => order.affiliateTracking?.affiliateId).filter(Boolean))];
+    const affiliates = await Affiliation.find({ _id: { $in: affiliateIds } })
+      .select('firstName lastName email affiliateCode percent');
+
+    // Create affiliate lookup map
+    const affiliateMap = {};
+    affiliates.forEach(affiliate => {
+      affiliateMap[affiliate._id.toString()] = affiliate;
+    });
+
+    // Add affiliate info to orders
+    const ordersWithAffiliateInfo = orders.map(order => {
+      const orderObj = order.toObject();
+      if (order.affiliateTracking?.affiliateId) {
+        orderObj.affiliateInfo = affiliateMap[order.affiliateTracking.affiliateId.toString()];
+      }
+      return orderObj;
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Affiliate orders retrieved successfully',
+      data: {
+        orders: ordersWithAffiliateInfo,
+        totalOrders: orders.length,
+        totalCommission: orders.reduce((sum, order) => sum + (order.affiliateTracking?.commissionEarned || 0), 0),
+        averageConversionTime: orders.length > 0 ? 
+          orders.reduce((sum, order) => sum + (order.affiliateTracking?.conversionTime || 0), 0) / orders.length : 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Get affiliate orders error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Get affiliate order statistics
+ * @route GET /api/orders/store/:storeId/affiliate-stats
+ */
+exports.getAffiliateOrderStats = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { startDate, endDate } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ success: false, message: 'Store ID is required' });
+    }
+
+    const filter = {
+      'store.id': storeId,
+      'affiliateTracking.isAffiliateOrder': true
+    };
+
+    if (startDate && endDate) {
+      filter.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    const stats = await Order.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: '$pricing.total' },
+          totalCommission: { $sum: '$affiliateTracking.commissionEarned' },
+          averageOrderValue: { $avg: '$pricing.total' },
+          averageConversionTime: { $avg: '$affiliateTracking.conversionTime' }
+        }
+      }
+    ]);
+
+    // Get top performing affiliates
+    const topAffiliates = await Order.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: '$affiliateTracking.affiliateId',
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: '$pricing.total' },
+          totalCommission: { $sum: '$affiliateTracking.commissionEarned' }
+        }
+      },
+      { $sort: { totalCommission: -1 } },
+      { $limit: 10 }
+    ]);
+
+    // Get affiliate details for top performers
+    const Affiliation = require('../Models/Affiliation');
+    const affiliateIds = topAffiliates.map(item => item._id).filter(Boolean);
+    const affiliates = await Affiliation.find({ _id: { $in: affiliateIds } })
+      .select('firstName lastName email affiliateCode percent');
+
+    const affiliateMap = {};
+    affiliates.forEach(affiliate => {
+      affiliateMap[affiliate._id.toString()] = affiliate;
+    });
+
+    const topAffiliatesWithInfo = topAffiliates.map(item => ({
+      ...item,
+      affiliateInfo: affiliateMap[item._id.toString()]
+    }));
+
+    res.status(200).json({
+      success: true,
+      message: 'Affiliate order statistics retrieved successfully',
+      data: {
+        summary: stats[0] || {
+          totalOrders: 0,
+          totalRevenue: 0,
+          totalCommission: 0,
+          averageOrderValue: 0,
+          averageConversionTime: 0
+        },
+        topAffiliates: topAffiliatesWithInfo
+      }
+    });
+
+  } catch (error) {
+    console.error('Get affiliate order stats error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Get orders by guest ID
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getOrdersByGuestId = async (req, res) => {
+  try {
+    const { guestId } = req.params;
+    const { page = 1, limit = 10, status, storeId } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    console.log('🔍 getOrdersByGuestId - guestId:', guestId);
+    console.log('🔍 getOrdersByGuestId - storeId from query:', storeId);
+
+    if (!guestId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Guest ID is required' 
+      });
+    }
+
+    // Build query
+    let query = { guestId: guestId };
+
+    // Add store filter if provided
+    if (storeId) {
+      query['store.id'] = new mongoose.Types.ObjectId(storeId);
+      console.log('🔍 getOrdersByGuestId - Added store filter:', storeId);
+    }
+
+    // Add status filter if provided
+    if (status) {
+      query.status = status;
+      console.log('🔍 getOrdersByGuestId - Added status filter:', status);
+    }
+
+    console.log('🔍 getOrdersByGuestId - Final query:', JSON.stringify(query, null, 2));
+
+    // Get orders with pagination
+    const orders = await Order.find(query)
+      .populate('store', 'nameAr nameEn whatsappNumber slug')
+      .populate('deliveryArea', 'locationAr locationEn price estimatedDays')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get total count
+    const total = await Order.countDocuments(query);
+    const totalPages = Math.ceil(total / parseInt(limit));
+
+    // Calculate spending statistics
+    const spendingQuery = { guestId: guestId };
+    if (storeId) {
+      spendingQuery['store.id'] = new mongoose.Types.ObjectId(storeId);
+    }
+    
+    const allGuestOrders = await Order.find(spendingQuery);
+    const totalSpending = allGuestOrders.reduce((sum, order) => {
+      const orderTotal = order.pricing?.total || 0;
+      console.log('🔍 Order total for spending calculation:', orderTotal, 'Order ID:', order._id);
+      return sum + orderTotal;
+    }, 0);
+    const averageSpending = allGuestOrders.length > 0 ? totalSpending / allGuestOrders.length : 0;
+    const lastOrderDate = allGuestOrders.length > 0 
+      ? new Date(Math.max(...allGuestOrders.map(order => new Date(order.createdAt))))
+      : null;
+
+    console.log('🔍 getOrdersByGuestId - Found orders count:', orders.length);
+    console.log('🔍 getOrdersByGuestId - Total orders:', total);
+    console.log('🔍 getOrdersByGuestId - All guest orders for spending calculation:', allGuestOrders.length);
+    console.log('🔍 getOrdersByGuestId - Total spending:', totalSpending);
+    console.log('🔍 getOrdersByGuestId - Average spending:', averageSpending);
+    console.log('🔍 getOrdersByGuestId - Last order date:', lastOrderDate);
+
+    // Shape the response for the frontend
+    const shapedOrders = orders.map(order => ({
+      id: order.orderNumber,
+      orderNumber: order.orderNumber,
+      storeName: order.store?.nameEn,
+      storeId: order.store?._id,
+      storePhone: order.store?.whatsappNumber,
+      storeUrl: order.store ? `/store/${order.store.slug}` : '',
+      currency: order.currency,
+      price: order.pricing?.total,
+      status: order.status,
+      statusAr: order.statusAr,
+      paymentStatus: order.paymentStatus,
+      paymentStatusAr: order.paymentStatusAr,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      items: order.items?.map(item => ({
+        id: item.productId,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        totalPrice: item.totalPrice,
+        variant: item.variant,
+        selectedSpecifications: item.selectedSpecifications,
+        selectedColors: item.selectedColors
+      })) || [],
+      deliveryArea: order.deliveryArea ? {
+        locationAr: order.deliveryArea.locationAr,
+        locationEn: order.deliveryArea.locationEn,
+        price: order.deliveryArea.price,
+        estimatedDays: order.deliveryArea.estimatedDays
+      } : null,
+      notes: order.notes,
+      isGift: order.isGift,
+      affiliateTracking: order.affiliateTracking
+    }));
+
+    res.status(200).json({
+      success: true,
+      message: 'Orders retrieved successfully',
+      data: {
+        orders: shapedOrders,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages,
+          totalItems: total,
+          itemsPerPage: parseInt(limit),
+          hasNextPage: parseInt(page) < totalPages,
+          hasPrevPage: parseInt(page) > 1
+        },
+        statistics: {
+          totalOrders: total,
+          totalSpending,
+          averageSpending: Math.round(averageSpending * 100) / 100,
+          lastOrderDate,
+          guestId
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get orders by guest ID error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error retrieving orders',
+      error: error.message 
     });
   }
 };

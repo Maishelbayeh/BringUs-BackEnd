@@ -155,6 +155,7 @@ const orderSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Affiliate tracking information
   affiliate: {
     firstName: { type: String },
     lastName: { type: String },
@@ -193,6 +194,21 @@ const orderSchema = new mongoose.Schema({
     isVerified: { type: Boolean },
     verificationDate: { type: Date },
     verifiedBy: { type: String },
+  },
+  
+  // Additional affiliate tracking fields
+  affiliateTracking: {
+    isAffiliateOrder: { type: Boolean, default: false },
+    affiliateId: { type: mongoose.Schema.Types.ObjectId, ref: 'Affiliation' },
+    referralSource: { type: String, enum: ['direct_link', 'social_media', 'email', 'other'] },
+    utmSource: { type: String },
+    utmMedium: { type: String },
+    utmCampaign: { type: String },
+    clickTimestamp: { type: Date },
+    orderTimestamp: { type: Date },
+    conversionTime: { type: Number }, // Time in minutes from click to order
+    commissionEarned: { type: Number, default: 0 },
+    commissionPercentage: { type: Number, default: 0 }
   },
   deliveryArea: {
     locationAr: { type: String },

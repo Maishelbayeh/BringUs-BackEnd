@@ -1064,15 +1064,55 @@ exports.getWithoutVariants = async (req, res) => {
       isActive: true
     };
 
-    if (category) filter.category = category;
+    // تطبيق جميع الفلاتر معاً
+    console.log('🔍 Building comprehensive filter with multiple criteria...');
+
+    // 1. فلترة الفئات (دعم متعدد)
+    if (category) {
+      if (category.includes('||')) {
+        const categoryIds = category.split('||').map(cat => cat.trim());
+        filter.category = { $in: categoryIds };
+        console.log('📂 Applied multi-category filter:', categoryIds);
+      } else {
+        filter.category = category;
+        console.log('📂 Applied single category filter:', category);
+      }
+    }
+
+    // 2. فلترة السعر
     if (minPrice || maxPrice) {
       filter.finalPrice = {};
-      if (minPrice) filter.finalPrice.$gte = parseFloat(minPrice);
-      if (maxPrice) filter.finalPrice.$lte = parseFloat(maxPrice);
+      if (minPrice) {
+        filter.finalPrice.$gte = parseFloat(minPrice);
+        console.log('💰 Applied min price filter:', minPrice);
+      }
+      if (maxPrice) {
+        filter.finalPrice.$lte = parseFloat(maxPrice);
+        console.log('💰 Applied max price filter:', maxPrice);
+      }
     }
+
+    // 3. فلترة البحث
     if (search) {
       filter.$text = { $search: search };
+      console.log('🔍 Applied search filter:', search);
     }
+
+    // 4. فلترة الألوان (في قاعدة البيانات)
+    if (colors && Array.isArray(colors) && colors.length > 0) {
+      // إنشاء regex patterns للألوان
+      const colorPatterns = colors.map(color => new RegExp(color, 'i'));
+      filter.colors = { $regex: { $in: colorPatterns } };
+      console.log('🎨 Applied colors filter:', colors);
+    }
+
+    // 5. فلترة العلامات (في قاعدة البيانات)
+    if (productLabels && Array.isArray(productLabels) && productLabels.length > 0) {
+      filter.productLabels = { $in: productLabels };
+      console.log('🏷️ Applied product labels filter:', productLabels);
+    }
+
+    console.log('✅ Final filter object:', JSON.stringify(filter, null, 2));
 
     // Build sort object
     let sortObj = {};
@@ -1129,38 +1169,8 @@ exports.getWithoutVariants = async (req, res) => {
       return !isVariant;
     });
 
-    // Apply additional filters
-    if (colors && Array.isArray(colors) && colors.length > 0) {
-      products = products.filter(product => {
-        // Parse product colors
-        let productColors = [];
-        try {
-          productColors = typeof product.colors === 'string' ? JSON.parse(product.colors) : product.colors;
-        } catch (error) {
-          productColors = [];
-        }
-        
-        // Flatten the colors array (handle nested arrays)
-        const flattenedColors = productColors.flat();
-        
-        // Check if any of the requested colors exist in the product
-        return colors.some(requestedColor => 
-          flattenedColors.includes(requestedColor)
-        );
-      });
-    }
-
-    if (productLabels && Array.isArray(productLabels) && productLabels.length > 0) {
-      products = products.filter(product => {
-        // Check if any of the requested labels exist in the product
-        return productLabels.some(requestedLabelId => 
-          product.productLabels && 
-          product.productLabels.some(label => 
-            label._id && label._id.toString() === requestedLabelId
-          )
-        );
-      });
-    }
+    // تم دمج الفلاتر الإضافية في الفلتر الأساسي لتحسين الأداء
+    console.log('✅ All filters applied at database level for better performance');
 
     // Apply pagination after filtering
     const paginatedProducts = products.slice(skip, skip + parseInt(limit));
