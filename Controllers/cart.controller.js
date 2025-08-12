@@ -58,6 +58,26 @@ function isSameCartItem(item1, item2) {
   return true;
 }
 
+// دالة مساعدة لحساب المخزون المتاح بناءً على الـ specifications المختارة
+function getAvailableStock(product, selectedSpecifications = []) {
+  let availableStock = product.stock;
+  
+  if (selectedSpecifications && selectedSpecifications.length > 0) {
+    for (const selectedSpec of selectedSpecifications) {
+      const specValue = product.specificationValues.find(spec => 
+        spec.specificationId.toString() === selectedSpec.specificationId &&
+        spec.valueId === selectedSpec.valueId
+      );
+      
+      if (specValue && specValue.quantity < availableStock) {
+        availableStock = specValue.quantity;
+      }
+    }
+  }
+  
+  return availableStock;
+}
+
 // دالة جديدة لدمج guest cart مع user cart عند تسجيل الدخول
 exports.mergeGuestCartToUser = async (req, res) => {
   try {
@@ -199,13 +219,35 @@ exports.getCart = async (req, res) => {
     const query = getCartQuery(req);
     let cart = await Cart.findOne(query).populate('items.product');
     if (!cart) cart = await Cart.create({ ...query, items: [] });
-    // Remove items where product is out of stock
+    
+    // Remove items where product is out of stock or inactive
     const originalLength = cart.items.length;
-    cart.items = cart.items.filter(item => item.product && item.product.availableQuantity > 0);
+    const removedItems = cart.items.filter(item => {
+      if (!item.product || !item.product.isActive) return true;
+      
+      const availableStock = getAvailableStock(item.product, item.selectedSpecifications);
+      return availableStock <= 0;
+    });
+    
+    cart.items = cart.items.filter(item => {
+      if (!item.product || !item.product.isActive) return false;
+      
+      const availableStock = getAvailableStock(item.product, item.selectedSpecifications);
+      return availableStock > 0;
+    });
+    
     if (cart.items.length !== originalLength) {
       await cart.save();
       await cart.populate('items.product');
+      
+      return res.json({ 
+        success: true, 
+        data: cart,
+        message: `Removed ${removedItems.length} unavailable items from cart`,
+        removedItemsCount: removedItems.length
+      });
     }
+    
     return res.json({ success: true, data: cart });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -245,6 +287,49 @@ exports.addToCart = async (req, res) => {
     const prod = await Product.findOne({ _id: product, store: req.store._id });
     if (!prod) return res.status(404).json({ success: false, message: 'Product not found in this store' });
     
+    // التحقق من أن المنتج نشط
+    if (!prod.isActive) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Product is not available' 
+      });
+    }
+    
+    // التحقق من توفر المخزون بناءً على الـ specifications المختارة
+    const availableStock = getAvailableStock(prod, selectedSpecifications);
+    
+    // التحقق من وجود جميع الـ specifications المختارة
+    if (selectedSpecifications && selectedSpecifications.length > 0) {
+      for (const selectedSpec of selectedSpecifications) {
+        const specValue = prod.specificationValues.find(spec => 
+          spec.specificationId.toString() === selectedSpec.specificationId &&
+          spec.valueId === selectedSpec.valueId
+        );
+        
+        if (!specValue) {
+          return res.status(400).json({ 
+            success: false, 
+            message: `Selected specification not found: ${selectedSpec.valueId}` 
+          });
+        }
+      }
+    }
+    
+    if (availableStock <= 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Selected product variant is out of stock' 
+      });
+    }
+    
+    // التحقق من أن الكمية المطلوبة متوفرة
+    if (quantity > availableStock) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Only ${availableStock} items available in stock for selected specifications` 
+      });
+    }
+    
     const query = getCartQuery(req);
     let cart = await Cart.findOne(query);
     if (!cart) cart = await Cart.create({ ...query, items: [] });
@@ -262,6 +347,20 @@ exports.addToCart = async (req, res) => {
     
     // البحث عن عنصر مطابق في السلة
     const itemIndex = cart.items.findIndex(item => isSameCartItem(item, newItem));
+    
+    let totalQuantity = quantity;
+    if (itemIndex > -1) {
+      // إذا وجد عنصر مطابق، حساب الكمية الإجمالية
+      totalQuantity += cart.items[itemIndex].quantity;
+    }
+    
+    // التحقق من أن الكمية الإجمالية لا تتجاوز المخزون المتاح
+    if (totalQuantity > availableStock) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot add ${quantity} items. Total quantity (${totalQuantity}) exceeds available stock (${availableStock}) for selected specifications` 
+      });
+    }
     
     if (itemIndex > -1) {
       // إذا وجد عنصر مطابق، زيادة الكمية
@@ -304,6 +403,56 @@ exports.updateCartItem = async (req, res) => {
     
     const itemIndex = cart.items.findIndex(i => i.product.toString() === productId);
     if (itemIndex === -1) return res.status(404).json({ success: false, message: 'Product not in cart' });
+    
+    // التحقق من المخزون إذا كانت الكمية أكبر من صفر
+    if (quantity > 0) {
+      const product = await Product.findOne({ _id: productId, store: req.store._id });
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'Product not found' });
+      }
+      
+      // التحقق من أن المنتج نشط
+      if (!product.isActive) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Product is not available' 
+        });
+      }
+      
+      // التحقق من توفر المخزون بناءً على الـ specifications المختارة
+      const availableStock = getAvailableStock(product, selectedSpecifications);
+      
+      // التحقق من وجود جميع الـ specifications المختارة
+      if (selectedSpecifications && selectedSpecifications.length > 0) {
+        for (const selectedSpec of selectedSpecifications) {
+          const specValue = product.specificationValues.find(spec => 
+            spec.specificationId.toString() === selectedSpec.specificationId &&
+            spec.valueId === selectedSpec.valueId
+          );
+          
+          if (!specValue) {
+            return res.status(400).json({ 
+              success: false, 
+              message: `Selected specification not found: ${selectedSpec.valueId}` 
+            });
+          }
+        }
+      }
+      
+      if (availableStock <= 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Selected product variant is out of stock' 
+        });
+      }
+      
+      if (quantity > availableStock) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Only ${availableStock} items available in stock for selected specifications` 
+        });
+      }
+    }
     
     if (quantity === 0) {
       cart.items.splice(itemIndex, 1);
@@ -360,9 +509,22 @@ exports.getCartTotals = async (req, res) => {
     let cart = await Cart.findOne(query).populate('items.product');
     if (!cart) cart = await Cart.create({ ...query, items: [] });
     
-    // Remove items where product is out of stock
+    // Remove items where product is out of stock or inactive
     const originalLength = cart.items.length;
-    cart.items = cart.items.filter(item => item.product && item.product.availableQuantity > 0);
+    const removedItems = cart.items.filter(item => {
+      if (!item.product || !item.product.isActive) return true;
+      
+      const availableStock = getAvailableStock(item.product, item.selectedSpecifications);
+      return availableStock <= 0;
+    });
+    
+    cart.items = cart.items.filter(item => {
+      if (!item.product || !item.product.isActive) return false;
+      
+      const availableStock = getAvailableStock(item.product, item.selectedSpecifications);
+      return availableStock > 0;
+    });
+    
     if (cart.items.length !== originalLength) {
       await cart.save();
       await cart.populate('items.product');
@@ -404,7 +566,7 @@ exports.getCartTotals = async (req, res) => {
     const tax = subtotal * 0.1; // 10% tax
     const total = subtotal + tax;
     
-    return res.json({
+    const response = {
       success: true,
       data: {
         items: itemsWithPrices,
@@ -414,7 +576,15 @@ exports.getCartTotals = async (req, res) => {
         total: total,
         itemCount: cart.items.length
       }
-    });
+    };
+    
+    // إضافة رسالة إذا تم إزالة منتجات غير متوفرة
+    if (removedItems.length > 0) {
+      response.message = `Removed ${removedItems.length} unavailable items from cart`;
+      response.removedItemsCount = removedItems.length;
+    }
+    
+    return res.json(response);
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
