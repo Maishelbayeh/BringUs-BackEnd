@@ -4,6 +4,7 @@ const Product = require('../Models/Product');
 const Store = require('../Models/Store');
 const mongoose = require('mongoose');
 
+
 /**
  * Helper function to validate product stock availability for both general stock and specification quantities
  * @param {Object} product - The product document
@@ -461,6 +462,7 @@ exports.getOrdersByStore = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 /**
  * Create a new order for a store (supports both authenticated users and guests)
