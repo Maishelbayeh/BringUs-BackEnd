@@ -463,6 +463,7 @@ exports.getOrdersByStore = async (req, res) => {
   }
 };
 
+
 /**
  * Create a new order for a store (supports both authenticated users and guests)
  * @route POST /api/orders/store/:storeId
