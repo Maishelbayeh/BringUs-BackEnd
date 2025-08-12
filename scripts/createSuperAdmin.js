@@ -2,49 +2,48 @@ const mongoose = require('mongoose');
 const User = require('../Models/User');
 require('dotenv').config();
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mais_helbayeh:ojTOYKEzJuyH1GCU@cluster0.9b4mdpc.mongodb.net/bringus?retryWrites=true&w=majority&appName=Cluster0', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => {
-  //CONSOLE.log('✅ Connected to MongoDB');
-})
-.catch((err) => {
-  //CONSOLE.error('❌ MongoDB connection error:', err);
-  process.exit(1);
-});
-
-const createSuperAdmin = async () => {
+async function createSuperAdmin() {
   try {
+    // Connect to MongoDB
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/bringus');
+    console.log('Connected to MongoDB');
+
     // Check if superadmin already exists
-    const existingSuperAdmin = await User.findOne({ role: 'superadmin' });
+    const existingSuperAdmin = await User.findOne({ 
+      email: 'superadmin@gmail.com',
+      role: 'superadmin'
+    });
+
     if (existingSuperAdmin) {
-      //CONSOLE.log('❌ Superadmin already exists:', existingSuperAdmin.email);
-      process.exit(0);
+      console.log('Superadmin already exists with email: superadmin@gmail.com');
+      return;
     }
 
     // Create superadmin
     const superAdmin = await User.create({
       firstName: 'Super',
       lastName: 'Admin',
-      email: 'admin@bringus.com',
-      password: 'admin123456',
+      email: 'superadmin@gmail.com',
+      password: '123123',
       role: 'superadmin',
       status: 'active',
-      isEmailVerified: true
+      isEmailVerified: true,
+      isActive: true
     });
 
-    //CONSOLE.log('✅ Superadmin created successfully!');
-    //CONSOLE.log('📧 Email:', superAdmin.email);
-    //CONSOLE.log('🔑 Password: admin123456');
-    //CONSOLE.log('🆔 User ID:', superAdmin._id);
-    
-    process.exit(0);
-  } catch (error) {
-    //CONSOLE.error('❌ Error creating superadmin:', error.message);
-    process.exit(1);
-  }
-};
+    console.log('Superadmin created successfully:');
+    console.log('Email: superadmin@gmail.com');
+    console.log('Password: 123123');
+    console.log('Role: superadmin');
+    console.log('ID:', superAdmin._id);
 
+  } catch (error) {
+    console.error('Error creating superadmin:', error);
+  } finally {
+    await mongoose.disconnect();
+    console.log('Disconnected from MongoDB');
+  }
+}
+
+// Run the script
 createSuperAdmin(); 

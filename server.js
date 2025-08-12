@@ -132,6 +132,7 @@ const socialCommentRoutes = require('./Routes/socialComment');
 const orderRoutes = require('./Routes/order');
 const likesRoutes = require('./Routes/likes');
 const cartRoutes = require('./Routes/cart.routes');
+const superadminRoutes = require('./Routes/superadmin');
 
 // Route middleware
 app.use('/api/auth', authRoutes);
@@ -152,6 +153,7 @@ app.use('/api/social-comments', socialCommentRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/likes', likesRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/superadmin', superadminRoutes);
 
 /**
  * @swagger
@@ -223,6 +225,7 @@ app.get('/api', (req, res) => {
       products: '/api/products',
       wholesalers: '/api/wholesalers',
       termsConditions: '/api/terms-conditions',
+      superadmin: '/api/superadmin',
       health: '/api/health',
       docs: '/api-docs'
     },
