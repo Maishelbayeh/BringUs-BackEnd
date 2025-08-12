@@ -280,7 +280,7 @@ class StoreController {
     }
   }
 
-  
+
   // Get customers by store ID
   static async getCustomersByStoreId(req, res) {
     try {
@@ -524,6 +524,7 @@ class StoreController {
     }
   }
 
+  
   /**
    * Get guest customers by store ID
    * @route GET /api/stores/:storeId/guests
