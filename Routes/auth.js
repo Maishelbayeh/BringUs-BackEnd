@@ -138,6 +138,7 @@ router.post('/register', [
       password,
       phone
     });
+    
 
     // Generate JWT token
     const token = user.getJwtToken();
