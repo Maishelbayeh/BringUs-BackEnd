@@ -2,24 +2,25 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 const { requireSuperAdmin } = require('../middleware/superadminAuth');
-const SuperAdminController = require('../Controllers/SuperAdminController');
-
-// All routes require authentication and superadmin role
-router.use(protect);
-router.use(requireSuperAdmin);
+const {
+    getAllStores,
+    getStoreById,
+    updateStoreStatus,
+    getSystemStatistics
+} = require('../Controllers/SuperAdminController');
 
 /**
  * @swagger
  * /api/superadmin/stores:
  *   get:
- *     summary: Get all stores with owners information (Superadmin only)
- *     description: Retrieve all stores with their owners information. Only accessible by superadmin users.
+ *     summary: Get all stores with their owners
+ *     description: Retrieve all stores in the system along with their associated owners
  *     tags: [Superadmin]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Stores retrieved successfully
+ *         description: Successfully retrieved all stores
  *         content:
  *           application/json:
  *             schema:
@@ -33,29 +34,23 @@ router.use(requireSuperAdmin);
  *                   items:
  *                     $ref: '#/components/schemas/StoreWithOwners'
  *                 count:
- *                   type: number
+ *                   type: integer
  *                   example: 5
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
  *       403:
- *         description: Access denied - Superadmin role required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Forbidden - User is not a superadmin
  *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Internal server error
  */
-router.get('/stores', SuperAdminController.getAllStores);
+router.get('/stores', protect, requireSuperAdmin, getAllStores);
 
 /**
  * @swagger
  * /api/superadmin/stores/{storeId}:
  *   get:
- *     summary: Get store by ID with owners information (Superadmin only)
- *     description: Retrieve a specific store with its owners information by store ID. Only accessible by superadmin users.
+ *     summary: Get store by ID with owners
+ *     description: Retrieve a specific store by its ID along with its associated owners
  *     tags: [Superadmin]
  *     security:
  *       - bearerAuth: []
@@ -65,11 +60,10 @@ router.get('/stores', SuperAdminController.getAllStores);
  *         required: true
  *         schema:
  *           type: string
- *         description: Store ID
- *         example: "507f1f77bcf86cd799439011"
+ *         description: The store ID
  *     responses:
  *       200:
- *         description: Store retrieved successfully
+ *         description: Successfully retrieved store
  *         content:
  *           application/json:
  *             schema:
@@ -80,39 +74,23 @@ router.get('/stores', SuperAdminController.getAllStores);
  *                   example: true
  *                 data:
  *                   $ref: '#/components/schemas/StoreWithOwners'
- *       400:
- *         description: Store ID is required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
  *       403:
- *         description: Access denied - Superadmin role required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Forbidden - User is not a superadmin
  *       404:
  *         description: Store not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Internal server error
  */
-router.get('/stores/:storeId', SuperAdminController.getStoreById);
+router.get('/stores/:storeId', protect, requireSuperAdmin, getStoreById);
 
 /**
  * @swagger
  * /api/superadmin/stores/{storeId}/status:
- *   patch:
- *     summary: Update store status (Superadmin only)
- *     description: Update the status of a specific store. Only accessible by superadmin users.
+ *   put:
+ *     summary: Update store status
+ *     description: Update the status of a specific store (active, inactive, suspended)
  *     tags: [Superadmin]
  *     security:
  *       - bearerAuth: []
@@ -122,22 +100,20 @@ router.get('/stores/:storeId', SuperAdminController.getStoreById);
  *         required: true
  *         schema:
  *           type: string
- *         description: Store ID
- *         example: "507f1f77bcf86cd799439011"
+ *         description: The store ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - status
  *             properties:
  *               status:
  *                 type: string
  *                 enum: [active, inactive, suspended]
- *                 description: New store status
- *                 example: "active"
- *             required:
- *               - status
+ *                 description: The new status for the store
  *     responses:
  *       200:
  *         description: Store status updated successfully
@@ -151,48 +127,34 @@ router.get('/stores/:storeId', SuperAdminController.getStoreById);
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Store status updated successfully"
+ *                   example: Store status updated successfully
  *                 data:
  *                   $ref: '#/components/schemas/Store'
  *       400:
- *         description: Invalid request data
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Invalid status value
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
  *       403:
- *         description: Access denied - Superadmin role required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Forbidden - User is not a superadmin
  *       404:
  *         description: Store not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Internal server error
  */
-router.patch('/stores/:storeId/status', SuperAdminController.updateStoreStatus);
+router.put('/stores/:storeId/status', protect, requireSuperAdmin, updateStoreStatus);
 
 /**
  * @swagger
  * /api/superadmin/statistics:
  *   get:
- *     summary: Get stores statistics (Superadmin only)
- *     description: Retrieve comprehensive statistics about all stores. Only accessible by superadmin users.
+ *     summary: Get system-wide statistics
+ *     description: Retrieve comprehensive statistics about the entire system including stores, users, products, orders, and revenue
  *     tags: [Superadmin]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Statistics retrieved successfully
+ *         description: Successfully retrieved system statistics
  *         content:
  *           application/json:
  *             schema:
@@ -204,75 +166,70 @@ router.patch('/stores/:storeId/status', SuperAdminController.updateStoreStatus);
  *                 data:
  *                   type: object
  *                   properties:
- *                     totalStores:
- *                       type: number
- *                       example: 25
- *                     activeStores:
- *                       type: number
- *                       example: 20
- *                     inactiveStores:
- *                       type: number
- *                       example: 3
- *                     suspendedStores:
- *                       type: number
- *                       example: 2
- *                     totalOwners:
- *                       type: number
- *                       example: 45
- *                     totalProducts:
- *                       type: number
- *                       example: 1250
- *                     totalOrders:
- *                       type: number
- *                       example: 890
- *                     totalRevenue:
- *                       type: number
- *                       example: 125000.50
- *                     averageRevenuePerStore:
- *                       type: number
- *                       example: 5000.02
- *                     storesByStatus:
+ *                     stores:
  *                       type: object
  *                       properties:
+ *                         total:
+ *                           type: integer
+ *                           example: 50
  *                         active:
- *                           type: number
- *                           example: 20
+ *                           type: integer
+ *                           example: 35
  *                         inactive:
- *                           type: number
- *                           example: 3
+ *                           type: integer
+ *                           example: 10
  *                         suspended:
+ *                           type: integer
+ *                           example: 5
+ *                         subscribed:
+ *                           type: integer
+ *                           example: 25
+ *                         trial:
+ *                           type: integer
+ *                           example: 8
+ *                         expired:
+ *                           type: integer
+ *                           example: 7
+ *                     users:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                           example: 1500
+ *                     products:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                           example: 5000
+ *                     orders:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                           example: 2500
+ *                         recent:
+ *                           type: integer
+ *                           example: 150
+ *                     revenue:
+ *                       type: object
+ *                       properties:
+ *                         total:
  *                           type: number
- *                           example: 2
- *                     topPerformingStores:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           storeId:
- *                             type: string
- *                             example: "507f1f77bcf86cd799439011"
- *                           storeName:
- *                             type: string
- *                             example: "Electronics Store"
- *                           revenue:
- *                             type: number
- *                             example: 15000.00
- *                           orders:
- *                             type: number
- *                             example: 150
+ *                           example: 75000.50
+ *                     activity:
+ *                       type: object
+ *                       properties:
+ *                         newStores:
+ *                           type: integer
+ *                           example: 12
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
  *       403:
- *         description: Access denied - Superadmin role required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Forbidden - User is not a superadmin
  *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Internal server error
  */
-router.get('/statistics', SuperAdminController.getStoresStatistics);
+router.get('/statistics', protect, requireSuperAdmin, getSystemStatistics);
 
 module.exports = router;
