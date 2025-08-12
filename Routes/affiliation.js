@@ -12,6 +12,7 @@ const {
   getAffiliatePayments,
   createAffiliatePayment,
   deleteAffiliate,
+  getAffiliateByCode,
 } = require('../Controllers/AffiliationController');
 const { protect, authorize } = require('../middleware/auth');
 const { verifyStoreAccess } = require('../middleware/storeAuth');
@@ -241,6 +242,36 @@ router.get('/stats', protect, authorize('admin', 'superadmin'), verifyStoreAcces
  *         description: Internal server error
  */
 router.get('/store/:storeId', getAffiliatesByStoreId);
+
+/**
+ * @swagger
+ * /api/affiliations/code/{affiliateCode}:
+ *   get:
+ *     summary: Get affiliate by code
+ *     description: Get affiliate information by affiliate code (public endpoint)
+ *     tags: [Affiliation]
+ *     parameters:
+ *       - in: path
+ *         name: affiliateCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Affiliate code
+ *       - in: query
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     responses:
+ *       200:
+ *         description: Affiliate found successfully
+ *       404:
+ *         description: Affiliate not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/code/:affiliateCode', getAffiliateByCode);
 
 /**
  * @swagger

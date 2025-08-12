@@ -317,6 +317,7 @@ affiliationSchema.statics.getTopAffiliates = function(storeId, limit = 10) {
 };
 
 // Instance method to update sales and commission
+// salesAmount should be the subtotal (product prices only, excluding delivery costs)
 affiliationSchema.methods.updateSales = function(salesAmount, orderId) {
   this.totalSales += salesAmount;
   this.totalOrders += 1;

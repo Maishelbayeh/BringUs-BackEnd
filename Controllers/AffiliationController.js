@@ -1072,6 +1072,95 @@ const createAffiliatePayment = async (req, res) => {
 
 /**
  * @swagger
+ * /api/affiliations/code/{affiliateCode}:
+ *   get:
+ *     summary: Get affiliate by code
+ *     description: Get affiliate information by affiliate code (public endpoint)
+ *     tags: [Affiliation]
+ *     parameters:
+ *       - in: path
+ *         name: affiliateCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Affiliate code
+ *       - in: query
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     responses:
+ *       200:
+ *         description: Affiliate found successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Affiliation'
+ *       404:
+ *         description: Affiliate not found
+ *       500:
+ *         description: Internal server error
+ */
+const getAffiliateByCode = async (req, res) => {
+  try {
+    const { affiliateCode } = req.params;
+    const { storeId } = req.query;
+
+    if (!affiliateCode || !storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Affiliate code and store ID are required'
+      });
+    }
+
+    const affiliate = await Affiliation.findOne({
+      affiliateCode: affiliateCode.toUpperCase(),
+      store: storeId,
+      status: 'Active'
+    });
+
+    if (!affiliate) {
+      return res.status(404).json({
+        success: false,
+        message: 'Affiliate not found or inactive'
+      });
+    }
+
+    // Return only necessary information for tracking
+    const affiliateData = {
+      id: affiliate._id,
+      firstName: affiliate.firstName,
+      lastName: affiliate.lastName,
+      email: affiliate.email,
+      affiliateCode: affiliate.affiliateCode,
+      affiliateLink: affiliate.affiliateLink,
+      percent: affiliate.percent,
+      status: affiliate.status
+    };
+
+    res.status(200).json({
+      success: true,
+      message: 'Affiliate found successfully',
+      data: affiliateData
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error getting affiliate by code',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
  * /api/affiliations/{id}:
  *   delete:
  *     summary: Delete affiliate
@@ -1150,4 +1239,5 @@ module.exports = {
   getAffiliatePayments,
   createAffiliatePayment,
   deleteAffiliate,
+  getAffiliateByCode,
 }; 

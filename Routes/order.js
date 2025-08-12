@@ -1777,4 +1777,296 @@ router.get('/store/:storeId/wholesaler-status/:userId', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/orders/store/{storeId}/affiliate-orders:
+ *   get:
+ *     summary: Get orders that came through affiliate links
+ *     description: Retrieve all orders that were created through affiliate referral links
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *       - in: query
+ *         name: affiliateId
+ *         schema:
+ *           type: string
+ *         description: Filter by specific affiliate ID
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *         description: Start date for filtering (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *         description: End date for filtering (YYYY-MM-DD)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Filter by order status
+ *     responses:
+ *       200:
+ *         description: Affiliate orders retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orders:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     totalOrders:
+ *                       type: number
+ *                     totalCommission:
+ *                       type: number
+ *                     averageConversionTime:
+ *                       type: number
+ *       400:
+ *         description: Invalid request data
+ *       500:
+ *         description: Server error
+ */
+router.get('/store/:storeId/affiliate-orders', async (req, res) => {
+  try {
+    await OrderController.getAffiliateOrders(req, res);
+  } catch (error) {
+    console.error('Get affiliate orders route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting affiliate orders',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/orders/store/{storeId}/affiliate-stats:
+ *   get:
+ *     summary: Get affiliate order statistics
+ *     description: Retrieve statistics about orders that came through affiliate links
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *         description: Start date for filtering (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *         description: End date for filtering (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Affiliate order statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     summary:
+ *                       type: object
+ *                     topAffiliates:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       400:
+ *         description: Invalid request data
+ *       500:
+ *         description: Server error
+ */
+router.get('/store/:storeId/affiliate-stats', async (req, res) => {
+  try {
+    await OrderController.getAffiliateOrderStats(req, res);
+  } catch (error) {
+    console.error('Get affiliate order stats route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting affiliate order statistics',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/orders/guest/{guestId}:
+ *   get:
+ *     summary: Get orders by guest ID
+ *     description: Retrieve all orders for a specific guest user
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: guestId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Guest ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, shipped, delivered, cancelled]
+ *         description: Filter by order status
+ *       - in: query
+ *         name: storeId
+ *         schema:
+ *           type: string
+ *         description: Filter by store ID
+ *     responses:
+ *       200:
+ *         description: Orders retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Orders retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orders:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             description: Order number
+ *                           orderNumber:
+ *                             type: string
+ *                           storeName:
+ *                             type: string
+ *                           storeId:
+ *                             type: string
+ *                           storePhone:
+ *                             type: string
+ *                           storeUrl:
+ *                             type: string
+ *                           currency:
+ *                             type: string
+ *                           price:
+ *                             type: number
+ *                           status:
+ *                             type: string
+ *                           statusAr:
+ *                             type: string
+ *                           paymentStatus:
+ *                             type: string
+ *                           paymentStatusAr:
+ *                             type: string
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
+ *                           items:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                           deliveryArea:
+ *                             type: object
+ *                           notes:
+ *                             type: object
+ *                           isGift:
+ *                             type: boolean
+ *                           affiliateTracking:
+ *                             type: object
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         currentPage:
+ *                           type: integer
+ *                         totalPages:
+ *                           type: integer
+ *                         totalItems:
+ *                           type: integer
+ *                         itemsPerPage:
+ *                           type: integer
+ *                         hasNextPage:
+ *                           type: boolean
+ *                         hasPrevPage:
+ *                           type: boolean
+ *                     statistics:
+ *                       type: object
+ *                       properties:
+ *                         totalOrders:
+ *                           type: integer
+ *                         totalSpending:
+ *                           type: number
+ *                         averageSpending:
+ *                           type: number
+ *                         lastOrderDate:
+ *                           type: string
+ *                           format: date-time
+ *                         guestId:
+ *                           type: string
+ *       400:
+ *         description: Bad request - guest ID is required
+ *       500:
+ *         description: Server error
+ */
+router.get('/guest/:guestId', async (req, res) => {
+  try {
+    await OrderController.getOrdersByGuestId(req, res);
+  } catch (error) {
+    console.error('Get orders by guest ID route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting orders by guest ID',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router; 
