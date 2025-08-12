@@ -201,7 +201,7 @@ exports.getCart = async (req, res) => {
     if (!cart) cart = await Cart.create({ ...query, items: [] });
     // Remove items where product is out of stock
     const originalLength = cart.items.length;
-    cart.items = cart.items.filter(item => item.product && item.product.stock > 0);
+    cart.items = cart.items.filter(item => item.product && item.product.availableQuantity > 0);
     if (cart.items.length !== originalLength) {
       await cart.save();
       await cart.populate('items.product');
@@ -362,7 +362,7 @@ exports.getCartTotals = async (req, res) => {
     
     // Remove items where product is out of stock
     const originalLength = cart.items.length;
-    cart.items = cart.items.filter(item => item.product && item.product.stock > 0);
+    cart.items = cart.items.filter(item => item.product && item.product.availableQuantity > 0);
     if (cart.items.length !== originalLength) {
       await cart.save();
       await cart.populate('items.product');
