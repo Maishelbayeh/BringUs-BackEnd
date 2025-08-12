@@ -133,6 +133,7 @@ const orderRoutes = require('./Routes/order');
 const likesRoutes = require('./Routes/likes');
 const cartRoutes = require('./Routes/cart.routes');
 const superadminRoutes = require('./Routes/superadmin');
+const subscriptionRoutes = require('./Routes/subscription');
 
 // Route middleware
 app.use('/api/auth', authRoutes);
@@ -154,6 +155,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/likes', likesRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/superadmin', superadminRoutes);
+app.use('/api/subscription', subscriptionRoutes);
 
 /**
  * @swagger
@@ -325,11 +327,11 @@ const swaggerOptions = {
         Store: {
           type: 'object',
           properties: {
-            _id: { type: 'string', example: '507f1f77bcf86cd799439012' },
-            nameAr: { type: 'string', example: 'متجري' },
-            nameEn: { type: 'string', example: 'My Store' },
-            descriptionAr: { type: 'string', example: 'متجر رائع' },
-            descriptionEn: { type: 'string', example: 'A great store' },
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            nameAr: { type: 'string', example: 'متجر الإلكترونيات' },
+            nameEn: { type: 'string', example: 'Electronics Store' },
+            descriptionAr: { type: 'string', example: 'متجر متخصص في الأجهزة الإلكترونية' },
+            descriptionEn: { type: 'string', example: 'Specialized electronics store' },
             logo: {
               type: 'object',
               properties: {
@@ -337,26 +339,8 @@ const swaggerOptions = {
                 url: { type: 'string', example: 'https://pub-237eec0793554bacb7debfc287be3b32.r2.dev/store-logos/1234567890-logo.png' }
               }
             },
-            slug: { type: 'string', example: 'mystore' },
+            slug: { type: 'string', example: 'electronics-store' },
             status: { type: 'string', enum: ['active', 'inactive', 'suspended'], example: 'active' },
-            whatsappNumber: { type: 'string', example: '+1234567890' },
-            contact: {
-              type: 'object',
-              properties: {
-                email: { type: 'string', format: 'email', example: 'contact@mystore.com' },
-                phone: { type: 'string', example: '+1234567890' },
-                address: {
-                  type: 'object',
-                  properties: {
-                    street: { type: 'string', example: '123 Main St' },
-                    city: { type: 'string', example: 'New York' },
-                    state: { type: 'string', example: 'NY' },
-                    zipCode: { type: 'string', example: '10001' },
-                    country: { type: 'string', example: 'USA' }
-                  }
-                }
-              }
-            },
             settings: {
               type: 'object',
               properties: {
@@ -383,8 +367,145 @@ const swaggerOptions = {
                 }
               }
             },
+            whatsappNumber: { type: 'string', example: '+1234567890' },
+            contact: {
+              type: 'object',
+              properties: {
+                email: { type: 'string', format: 'email', example: 'contact@mystore.com' },
+                phone: { type: 'string', example: '+1234567890' },
+                address: {
+                  type: 'object',
+                  properties: {
+                    street: { type: 'string', example: '123 Main St' },
+                    city: { type: 'string', example: 'New York' },
+                    state: { type: 'string', example: 'NY' },
+                    zipCode: { type: 'string', example: '10001' },
+                    country: { type: 'string', example: 'USA' }
+                  }
+                }
+              }
+            },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        StoreWithOwners: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            nameAr: { type: 'string', example: 'متجر الإلكترونيات' },
+            nameEn: { type: 'string', example: 'Electronics Store' },
+            descriptionAr: { type: 'string', example: 'متجر متخصص في الأجهزة الإلكترونية' },
+            descriptionEn: { type: 'string', example: 'Specialized electronics store' },
+            logo: {
+              type: 'object',
+              properties: {
+                public_id: { type: 'string', example: 'store-logos/1234567890-logo.png' },
+                url: { type: 'string', example: 'https://pub-237eec0793554bacb7debfc287be3b32.r2.dev/store-logos/1234567890-logo.png' }
+              }
+            },
+            slug: { type: 'string', example: 'electronics-store' },
+            status: { type: 'string', enum: ['active', 'inactive', 'suspended'], example: 'active' },
+            settings: {
+              type: 'object',
+              properties: {
+                currency: { type: 'string', example: 'ILS' },
+                mainColor: { type: 'string', example: '#000000' },
+                language: { type: 'string', example: 'en' },
+                storeDiscount: { type: 'number', example: 0 },
+                timezone: { type: 'string', example: 'UTC' },
+                taxRate: { type: 'number', example: 0 },
+                shippingEnabled: { type: 'boolean', example: true },
+                storeSocials: {
+                  type: 'object',
+                  properties: {
+                    facebook: { type: 'string', example: 'https://facebook.com/mystore' },
+                    instagram: { type: 'string', example: 'https://instagram.com/mystore' },
+                    twitter: { type: 'string', example: 'https://twitter.com/mystore' },
+                    youtube: { type: 'string', example: 'https://youtube.com/mystore' },
+                    linkedin: { type: 'string', example: 'https://linkedin.com/mystore' },
+                    telegram: { type: 'string', example: 'https://t.me/mystore' },
+                    snapchat: { type: 'string', example: 'mystore' },
+                    pinterest: { type: 'string', example: 'https://pinterest.com/mystore' },
+                    tiktok: { type: 'string', example: 'https://tiktok.com/@mystore' }
+                  }
+                }
+              }
+            },
+            whatsappNumber: { type: 'string', example: '+1234567890' },
+            contact: {
+              type: 'object',
+              properties: {
+                email: { type: 'string', format: 'email', example: 'contact@mystore.com' },
+                phone: { type: 'string', example: '+1234567890' },
+                address: {
+                  type: 'object',
+                  properties: {
+                    street: { type: 'string', example: '123 Main St' },
+                    city: { type: 'string', example: 'New York' },
+                    state: { type: 'string', example: 'NY' },
+                    zipCode: { type: 'string', example: '10001' },
+                    country: { type: 'string', example: 'USA' }
+                  }
+                }
+              }
+            },
+            owners: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  _id: { type: 'string', example: '507f1f77bcf86cd799439012' },
+                  userId: {
+                    type: 'object',
+                    properties: {
+                      _id: { type: 'string', example: '507f1f77bcf86cd799439013' },
+                      firstName: { type: 'string', example: 'أحمد' },
+                      lastName: { type: 'string', example: 'محمد' },
+                      email: { type: 'string', example: 'ahmed@example.com' },
+                      phone: { type: 'string', example: '+1234567890' },
+                      status: { type: 'string', example: 'active' },
+                      isActive: { type: 'boolean', example: true }
+                    }
+                  },
+                  status: { type: 'string', enum: ['active', 'inactive'], example: 'active' },
+                  permissions: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    example: ['manage_products', 'manage_orders', 'manage_users']
+                  },
+                  isPrimaryOwner: { type: 'boolean', example: true },
+                  createdAt: { type: 'string', format: 'date-time' },
+                  updatedAt: { type: 'string', format: 'date-time' }
+                }
+              }
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        StoreSubscription: {
+          type: 'object',
+          properties: {
+            isSubscribed: { type: 'boolean', example: true },
+            plan: { 
+              type: 'string', 
+              enum: ['free', 'monthly', 'quarterly', 'semi_annual', 'annual'], 
+              example: 'monthly' 
+            },
+            startDate: { type: 'string', format: 'date-time', example: '2024-01-01T00:00:00.000Z' },
+            endDate: { type: 'string', format: 'date-time', example: '2024-02-01T00:00:00.000Z' },
+            lastPaymentDate: { type: 'string', format: 'date-time', example: '2024-01-01T00:00:00.000Z' },
+            nextPaymentDate: { type: 'string', format: 'date-time', example: '2024-02-01T00:00:00.000Z' },
+            trialEndDate: { type: 'string', format: 'date-time', example: '2024-01-15T00:00:00.000Z' },
+            autoRenew: { type: 'boolean', example: true },
+            paymentMethod: { 
+              type: 'string', 
+              enum: ['credit_card', 'paypal', 'bank_transfer', 'cash'], 
+              example: 'credit_card' 
+            },
+            amount: { type: 'number', example: 99.99 },
+            currency: { type: 'string', example: 'USD' }
           }
         },
         Owner: {
@@ -609,6 +730,36 @@ const swaggerOptions = {
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' }
           }
+        },
+        Subscription: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '507f1f77bcf86cd799439020' },
+            userId: { $ref: '#/components/schemas/User' },
+            storeId: { $ref: '#/components/schemas/Store' },
+            plan: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '507f1f77bcf86cd799439021' },
+                name: { type: 'string', example: 'Basic Plan' },
+                price: { type: 'number', example: 100 },
+                features: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['10 products', '100 orders', '1000 visitors']
+                },
+                duration: { type: 'string', example: '1 month' },
+                isActive: { type: 'boolean', example: true }
+              }
+            },
+            status: { type: 'string', enum: ['active', 'inactive', 'cancelled'], example: 'active' },
+            startDate: { type: 'string', format: 'date-time' },
+            endDate: { type: 'string', format: 'date-time' },
+            paymentMethod: { type: 'string', example: 'credit card' },
+            paymentStatus: { type: 'string', enum: ['paid', 'pending', 'failed'], example: 'paid' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
         }
       }
     },
@@ -623,7 +774,9 @@ const swaggerOptions = {
       { name: 'ProductSpecifications', description: 'Product specification management endpoints' },
       // { name: 'ProductVariants', description: 'Product variant management endpoints' },
       { name: 'Units', description: 'Product unit management endpoints' },
-      { name: 'Products', description: 'Product management endpoints' }
+      { name: 'Products', description: 'Product management endpoints' },
+      { name: 'Superadmin', description: 'Superadmin management endpoints (Superadmin only)' },
+      { name: 'Subscriptions', description: 'Subscription management endpoints' }
     ]
   },
   apis: ['./Routes/*.js'], // Path to the API docs
@@ -655,6 +808,10 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 API available at http://localhost:${PORT}/api`);
+  
+  // Start subscription service cron job
+  const SubscriptionService = require('./services/SubscriptionService');
+  SubscriptionService.startCronJob();
 });
 
 module.exports = app; 
