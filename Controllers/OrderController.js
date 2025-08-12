@@ -4,6 +4,7 @@ const Product = require('../Models/Product');
 const Store = require('../Models/Store');
 const mongoose = require('mongoose');
 
+
 /**
  * Helper function to validate product stock availability for both general stock and specification quantities
  * @param {Object} product - The product document
