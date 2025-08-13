@@ -115,9 +115,9 @@ mongoose.connect(MONGODB_URI, {
 
 // Import routes
 const authRoutes = require('./Routes/auth');
-const userRoutes = require('./Routes/userRoutes');
-const ownerRoutes = require('./Routes/owner');
+const userRoutes = require('./Routes/user');
 const storeRoutes = require('./Routes/store');
+const ownerRoutes = require('./Routes/owner');
 const productMetaRoutes = require('./Routes/productMeta');
 const deliveryMethodRoutes = require('./Routes/deliveryMethod');
 const paymentMethodRoutes = require('./Routes/paymentMethod');
@@ -134,6 +134,8 @@ const likesRoutes = require('./Routes/likes');
 const cartRoutes = require('./Routes/cart.routes');
 const superadminRoutes = require('./Routes/superadmin');
 const subscriptionRoutes = require('./Routes/subscription');
+const subscriptionPlanRoutes = require('./Routes/subscriptionPlan');
+const storeInfoRoutes = require('./Routes/storeInfo');
 
 // Route middleware
 app.use('/api/auth', authRoutes);
@@ -156,6 +158,8 @@ app.use('/api/likes', likesRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/subscription-plans', subscriptionPlanRoutes);
+app.use('/api/store-info', storeInfoRoutes);
 
 /**
  * @swagger
@@ -760,23 +764,167 @@ const swaggerOptions = {
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' }
           }
+        },
+        SubscriptionPlan: {
+          type: 'object',
+          properties: {
+            _id: {
+              type: 'string',
+              example: '507f1f77bcf86cd799439011'
+            },
+            name: {
+              type: 'string',
+              example: 'Premium Monthly'
+            },
+            nameAr: {
+              type: 'string',
+              example: 'بريميوم شهري'
+            },
+            description: {
+              type: 'string',
+              example: 'Premium monthly subscription with unlimited features'
+            },
+            descriptionAr: {
+              type: 'string',
+              example: 'اشتراك شهري بريميوم مع ميزات غير محدودة'
+            },
+            type: {
+              type: 'string',
+              enum: ['free', 'monthly', 'quarterly', 'semi_annual', 'annual', 'custom'],
+              example: 'monthly'
+            },
+            duration: {
+              type: 'integer',
+              example: 30
+            },
+            price: {
+              type: 'number',
+              example: 99.99
+            },
+            currency: {
+              type: 'string',
+              enum: ['USD', 'EUR', 'ILS', 'SAR', 'AED', 'EGP'],
+              example: 'USD'
+            },
+            features: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: {
+                    type: 'string',
+                    example: 'Unlimited Products'
+                  },
+                  nameAr: {
+                    type: 'string',
+                    example: 'منتجات غير محدودة'
+                  },
+                  description: {
+                    type: 'string',
+                    example: 'Add unlimited products to your store'
+                  },
+                  descriptionAr: {
+                    type: 'string',
+                    example: 'أضف منتجات غير محدودة لمتجرك'
+                  },
+                  included: {
+                    type: 'boolean',
+                    example: true
+                  }
+                }
+              }
+            },
+            isActive: {
+              type: 'boolean',
+              example: true
+            },
+            isPopular: {
+              type: 'boolean',
+              example: false
+            },
+            sortOrder: {
+              type: 'integer',
+              example: 1
+            },
+            maxProducts: {
+              type: 'integer',
+              example: -1
+            },
+            maxOrders: {
+              type: 'integer',
+              example: -1
+            },
+            maxUsers: {
+              type: 'integer',
+              example: -1
+            },
+            storageLimit: {
+              type: 'integer',
+              example: -1
+            },
+            customFeatures: {
+              type: 'object',
+              example: {}
+            },
+            createdBy: {
+              type: 'object',
+              properties: {
+                _id: {
+                  type: 'string'
+                },
+                firstName: {
+                  type: 'string'
+                },
+                lastName: {
+                  type: 'string'
+                },
+                email: {
+                  type: 'string'
+                }
+              }
+            },
+            updatedBy: {
+              type: 'object',
+              properties: {
+                _id: {
+                  type: 'string'
+                },
+                firstName: {
+                  type: 'string'
+                },
+                lastName: {
+                  type: 'string'
+                },
+                email: {
+                  type: 'string'
+                }
+              }
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time'
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time'
+            }
+          }
         }
       }
     },
     tags: [
-      { name: 'Authentication', description: 'User authentication endpoints' },
+      { name: 'Auth', description: 'Authentication endpoints' },
       { name: 'Users', description: 'User management endpoints' },
       { name: 'Stores', description: 'Store management endpoints' },
-      { name: 'Owners', description: 'Store ownership management endpoints' },
-      { name: 'Health', description: 'Health check endpoints' },
-      { name: 'Categories', description: 'Category management endpoints' },
-      { name: 'ProductLabels', description: 'Product label management endpoints' },
-      { name: 'ProductSpecifications', description: 'Product specification management endpoints' },
-      // { name: 'ProductVariants', description: 'Product variant management endpoints' },
-      { name: 'Units', description: 'Product unit management endpoints' },
+      { name: 'Owners', description: 'Store owner management endpoints' },
       { name: 'Products', description: 'Product management endpoints' },
-      { name: 'Superadmin', description: 'Superadmin management endpoints (Superadmin only)' },
-      { name: 'Subscriptions', description: 'Subscription management endpoints' }
+      { name: 'Categories', description: 'Category management endpoints' },
+      { name: 'Affiliations', description: 'Affiliate management endpoints' },
+      { name: 'Superadmin', description: 'Superadmin management endpoints' },
+      { name: 'Subscriptions', description: 'Subscription management endpoints' },
+      { name: 'Subscription Plans', description: 'Subscription plan management endpoints' },
+      { name: 'Store Info', description: 'Store information extraction endpoints' },
+      { name: 'Health', description: 'Health check endpoints' }
     ]
   },
   apis: ['./Routes/*.js'], // Path to the API docs
@@ -809,7 +957,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 API available at http://localhost:${PORT}/api`);
   
-  // Start subscription service cron job
+  // Start subscription cron job
   const SubscriptionService = require('./services/SubscriptionService');
   SubscriptionService.startCronJob();
 });

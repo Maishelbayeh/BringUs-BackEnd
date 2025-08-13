@@ -127,8 +127,7 @@ router.get('/', isSuperAdmin, StoreController.getAllStores);
  *   post:
  *     summary: Create a new store
  *     tags: [Stores]
- *     security:
- *       - bearerAuth: []
+ 
  *     requestBody:
  *       required: true
  *       content:

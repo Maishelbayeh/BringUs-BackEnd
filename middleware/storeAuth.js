@@ -1,5 +1,7 @@
 const Store = require('../Models/Store');
 const Owner = require('../Models/Owner');
+const jwt = require('jsonwebtoken');
+const User = require('../Models/User');
 
 // Middleware to verify store access (supports both authenticated and guest users)
 exports.verifyStoreAccess = async (req, res, next) => {
@@ -136,5 +138,209 @@ exports.checkStoreOwnership = async (req, res, next) => {
       error: 'Store ownership verification failed',
       message: error.message
     });
+  }
+}; 
+
+/**
+ * Middleware to extract store ID from JWT token
+ * This middleware decodes the JWT token and extracts the storeId
+ * It adds the storeId to req.storeId for use in subsequent middleware/routes
+ */
+exports.extractStoreId = async (req, res, next) => {
+  try {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access denied. No token provided.'
+      });
+    }
+
+    try {
+      const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+      const decoded = jwt.verify(token, jwtSecret);
+      
+      // Extract storeId from token
+      if (decoded.storeId) {
+        req.storeId = decoded.storeId;
+      } else {
+        // If no storeId in token, try to get it from user's store field
+        const user = await User.findById(decoded.id);
+        if (user && user.store) {
+          req.storeId = user.store;
+        }
+      }
+
+      next();
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Token extraction error',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Middleware to extract store ID from JWT token (optional version)
+ * This middleware works even if no token is provided
+ */
+exports.extractStoreIdOptional = async (req, res, next) => {
+  try {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      // No token provided, continue without storeId
+      return next();
+    }
+
+    try {
+      const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+      const decoded = jwt.verify(token, jwtSecret);
+      
+      // Extract storeId from token
+      if (decoded.storeId) {
+        req.storeId = decoded.storeId;
+      } else {
+        // If no storeId in token, try to get it from user's store field
+        const user = await User.findById(decoded.id);
+        if (user && user.store) {
+          req.storeId = user.store;
+        }
+      }
+
+      next();
+    } catch (error) {
+      // Invalid token, continue without storeId
+      return next();
+    }
+  } catch (error) {
+    // Error occurred, continue without storeId
+    return next();
+  }
+};
+
+/**
+ * Middleware to require store ID from token
+ * This middleware ensures that a valid storeId is present in the request
+ */
+exports.requireStoreId = async (req, res, next) => {
+  try {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access denied. No token provided.'
+      });
+    }
+
+    try {
+      const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+      const decoded = jwt.verify(token, jwtSecret);
+      
+      let storeId = null;
+
+      // Extract storeId from token
+      if (decoded.storeId) {
+        storeId = decoded.storeId;
+      } else {
+        // If no storeId in token, try to get it from user's store field
+        const user = await User.findById(decoded.id);
+        if (user && user.store) {
+          storeId = user.store;
+        }
+      }
+
+      if (!storeId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Store ID not found in token or user data'
+        });
+      }
+
+      req.storeId = storeId;
+      next();
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Token extraction error',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Utility function to get store ID from token (for use in controllers)
+ * @param {string} token - JWT token
+ * @returns {string|null} - Store ID or null if not found
+ */
+exports.getStoreIdFromToken = async (token) => {
+  try {
+    if (!token) return null;
+
+    const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+    const decoded = jwt.verify(token, jwtSecret);
+    
+    // Extract storeId from token
+    if (decoded.storeId) {
+      return decoded.storeId;
+    } else {
+      // If no storeId in token, try to get it from user's store field
+      const user = await User.findById(decoded.id);
+      if (user && user.store) {
+        return user.store;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    return null;
+  }
+};
+
+/**
+ * Utility function to get store ID from request headers
+ * @param {Object} headers - Request headers
+ * @returns {string|null} - Store ID or null if not found
+ */
+exports.getStoreIdFromHeaders = async (headers) => {
+  try {
+    let token;
+
+    if (headers.authorization && headers.authorization.startsWith('Bearer')) {
+      token = headers.authorization.split(' ')[1];
+    }
+
+    if (!token) return null;
+
+    return await exports.getStoreIdFromToken(token);
+  } catch (error) {
+    return null;
   }
 }; 

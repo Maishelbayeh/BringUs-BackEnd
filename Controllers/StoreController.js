@@ -26,7 +26,6 @@ class StoreController {
         whatsappNumber
       } = req.body;
       
-      const userId = req.user._id;
 
       // Parse JSON strings if they come as strings from multipart/form-data
       if (typeof contact === 'string') {
@@ -111,21 +110,21 @@ class StoreController {
       const store = await Store.create(storeData);
 
       // Create owner record
-      await Owner.create({
-        userId,
-        storeId: store._id,
-        isPrimaryOwner: true,
-        permissions: [
-          'manage_store',
-          'manage_users',
-          'manage_products',
-          'manage_categories',
-          'manage_orders',
-          'manage_inventory',
-          'view_analytics',
-          'manage_settings'
-        ]
-      });
+      // await Owner.create({
+      //   userId,
+      //   storeId: store._id,
+      //   isPrimaryOwner: true,
+      //   permissions: [
+      //     'manage_store',
+      //     'manage_users',
+      //     'manage_products',
+      //     'manage_categories',
+      //     'manage_orders',
+      //     'manage_inventory',
+      //     'view_analytics',
+      //     'manage_settings'
+      //   ]
+      // });
 
       await store.populate('contact');
       return success(res, { data: store, message: 'Store created successfully', statusCode: 201 });

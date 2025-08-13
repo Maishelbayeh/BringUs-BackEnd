@@ -53,10 +53,11 @@ const storeSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
-    plan: {
-      type: String,
-      enum: ['free', 'monthly', 'quarterly', 'semi_annual', 'annual'],
-      default: 'free'
+
+    planId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SubscriptionPlan',
+      default: null
     },
     startDate: {
       type: Date,
@@ -87,6 +88,10 @@ const storeSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
+    referenceId: {
+      type: String,
+      default: null
+    },
     paymentMethod: {
       type: String,
       enum: ['credit_card', 'paypal', 'bank_transfer', 'cash'],
@@ -101,6 +106,55 @@ const storeSchema = new mongoose.Schema({
       default: 'USD'
     }
   },
+
+  // Subscription history to track all activities
+  subscriptionHistory: [{
+    action: {
+      type: String,
+      enum: [
+        'trial_started',
+        'trial_extended', 
+        'subscription_activated',
+        'subscription_renewed',
+        'subscription_cancelled',
+        'subscription_expired',
+        'payment_received',
+        'payment_failed',
+        'plan_changed',
+        'amount_changed',
+        'auto_renew_changed',
+        'payment_method_changed',
+        'store_deactivated',
+        'store_reactivated'
+      ],
+      required: true
+    },
+    description: {
+      type: String,
+      required: true
+    },
+    details: {
+      type: Object,
+      default: {}
+    },
+    performedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: false // null for system actions
+    },
+    performedAt: {
+      type: Date,
+      default: Date.now
+    },
+    previousState: {
+      type: Object,
+      default: null
+    },
+    newState: {
+      type: Object,
+      default: null
+    }
+  }],
   
   settings: {
     currency: {
@@ -230,6 +284,48 @@ storeSchema.methods.shouldBeDeactivated = function() {
   return this.subscription.trialEndDate && new Date() > this.subscription.trialEndDate;
 };
 
+// Method to deactivate store when subscription/trial expires
+storeSchema.methods.deactivateIfExpired = async function() {
+  if (this.shouldBeDeactivated()) {
+    const previousStatus = this.status;
+    this.status = 'inactive';
+    this.subscription.isSubscribed = false;
+    
+    // Add to subscription history
+    await this.addSubscriptionHistory(
+      'store_deactivated',
+      'Store deactivated due to expired subscription/trial',
+      {
+        previousStatus,
+        newStatus: 'inactive',
+        reason: this.subscription.isSubscribed ? 'subscription_expired' : 'trial_expired'
+      }
+    );
+    
+    return true; // Store was deactivated
+  }
+  return false; // Store was not deactivated
+};
+
+// Method to reactivate store
+storeSchema.methods.reactivateStore = async function(performedBy = null) {
+  const previousStatus = this.status;
+  this.status = 'active';
+  
+  // Add to subscription history
+  await this.addSubscriptionHistory(
+    'store_reactivated',
+    'Store reactivated',
+    {
+      previousStatus,
+      newStatus: 'active'
+    },
+    performedBy
+  );
+  
+  return this.save();
+};
+
 // Method to activate subscription
 storeSchema.methods.activateSubscription = function(plan, durationInDays, amount = 0) {
   const now = new Date();
@@ -254,6 +350,76 @@ storeSchema.methods.extendTrial = function(daysToAdd) {
   currentTrialEnd.setDate(currentTrialEnd.getDate() + daysToAdd);
   this.subscription.trialEndDate = currentTrialEnd;
   return this.save();
+};
+
+// Method to add subscription history entry
+storeSchema.methods.addSubscriptionHistory = function(action, description, details = {}, performedBy = null) {
+  const historyEntry = {
+    action,
+    description,
+    details,
+    performedBy,
+    performedAt: new Date()
+  };
+  
+  this.subscriptionHistory.push(historyEntry);
+  return this.save();
+};
+
+// Method to get subscription history with pagination
+storeSchema.methods.getSubscriptionHistory = function(page = 1, limit = 10) {
+  const skip = (page - 1) * limit;
+  const history = this.subscriptionHistory
+    .sort((a, b) => new Date(b.performedAt) - new Date(a.performedAt))
+    .slice(skip, skip + limit);
+  
+  return {
+    history,
+    pagination: {
+      page,
+      limit,
+      total: this.subscriptionHistory.length,
+      pages: Math.ceil(this.subscriptionHistory.length / limit)
+    }
+  };
+};
+
+// Method to get recent subscription activities
+storeSchema.methods.getRecentActivities = function(days = 30) {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+  
+  return this.subscriptionHistory
+    .filter(entry => new Date(entry.performedAt) >= cutoffDate)
+    .sort((a, b) => new Date(b.performedAt) - new Date(a.performedAt));
+};
+
+// Method to get subscription statistics
+storeSchema.methods.getSubscriptionStats = function() {
+  const stats = {
+    totalActions: this.subscriptionHistory.length,
+    actionsByType: {},
+    lastActivity: null,
+    trialExtensions: 0,
+    payments: 0,
+    cancellations: 0
+  };
+  
+  if (this.subscriptionHistory.length > 0) {
+    stats.lastActivity = this.subscriptionHistory[this.subscriptionHistory.length - 1];
+    
+    this.subscriptionHistory.forEach(entry => {
+      // Count by action type
+      stats.actionsByType[entry.action] = (stats.actionsByType[entry.action] || 0) + 1;
+      
+      // Count specific actions
+      if (entry.action === 'trial_extended') stats.trialExtensions++;
+      if (entry.action === 'payment_received') stats.payments++;
+      if (entry.action === 'subscription_cancelled') stats.cancellations++;
+    });
+  }
+  
+  return stats;
 };
 
 storeSchema.pre('remove', async function(next) {
