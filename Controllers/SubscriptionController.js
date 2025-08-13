@@ -803,7 +803,7 @@ const reactivateStore = async (req, res) => {
 };
 
 /**
- * Get store status information
+ * Get store status information (Public endpoint - no authentication required)
  */
 const getStoreStatus = async (req, res) => {
     try {
@@ -817,11 +817,12 @@ const getStoreStatus = async (req, res) => {
             });
         }
 
-        // Check if store should be deactivated
+        // Check if store should be deactivated (this will happen automatically)
         if (store.shouldBeDeactivated()) {
             await store.deactivateIfExpired();
         }
 
+        // Return public status information (no sensitive data)
         res.status(200).json({
             success: true,
             data: {
@@ -852,6 +853,58 @@ const getStoreStatus = async (req, res) => {
     }
 };
 
+/**
+ * Get store status by slug (Public endpoint - no authentication required)
+ */
+const getStoreStatusBySlug = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        
+        const store = await Store.findOne({ slug });
+        if (!store) {
+            return res.status(404).json({
+                success: false,
+                message: 'Store not found'
+            });
+        }
+
+        // Check if store should be deactivated (this will happen automatically)
+        if (store.shouldBeDeactivated()) {
+            await store.deactivateIfExpired();
+        }
+
+        // Return public status information (no sensitive data)
+        res.status(200).json({
+            success: true,
+            data: {
+                storeId: store._id,
+                storeName: store.nameEn,
+                slug: store.slug,
+                status: store.status,
+                isSubscriptionActive: store.isSubscriptionActive,
+                isTrialExpired: store.isTrialExpired,
+                daysUntilTrialExpires: store.daysUntilTrialExpires,
+                daysUntilSubscriptionExpires: store.daysUntilSubscriptionExpires,
+                subscription: {
+                    isSubscribed: store.subscription.isSubscribed,
+                    endDate: store.subscription.endDate,
+                    trialEndDate: store.subscription.trialEndDate,
+                    planId: store.subscription.planId,
+                    amount: store.subscription.amount,
+                    currency: store.subscription.currency
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error getting store status by slug:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     getSubscriptionStats,
     checkStoreSubscription,
@@ -867,5 +920,6 @@ module.exports = {
     getStoreSubscriptionStats,
     getAllRecentActivities,
     reactivateStore,
-    getStoreStatus
+    getStoreStatus,
+    getStoreStatusBySlug
 };

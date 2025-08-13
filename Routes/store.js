@@ -92,42 +92,12 @@ const upload = multer({
  */
 router.get('/slug/:slug', StoreController.getStoreBySlug);
 
-router.use(protect);
-router.use(isActive);
-
-router.get('/:id', StoreController.getStore);
-
-/**
- * @swagger
- * /api/stores:
- *   get:
- *     summary: Get all stores (Superadmin only)
- *     tags: [Stores]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: All stores retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Success'
- *       403:
- *         description: Superadmin access required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.get('/', isSuperAdmin, StoreController.getAllStores);
-
 /**
  * @swagger
  * /api/stores:
  *   post:
- *     summary: Create a new store
+ *     summary: Create a new store (Public - No authentication required)
  *     tags: [Stores]
- 
  *     requestBody:
  *       required: true
  *       content:
@@ -278,6 +248,37 @@ router.get('/', isSuperAdmin, StoreController.getAllStores);
  *               $ref: '#/components/schemas/Error'
  */
 router.post('/', upload.single('logo'), StoreController.createStore);
+
+router.use(protect);
+router.use(isActive);
+
+router.get('/:id', StoreController.getStore);
+
+/**
+ * @swagger
+ * /api/stores:
+ *   get:
+ *     summary: Get all stores (Superadmin only)
+ *     tags: [Stores]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All stores retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       403:
+ *         description: Superadmin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/', isSuperAdmin, StoreController.getAllStores);
+
+
 
 /**
  * @swagger
