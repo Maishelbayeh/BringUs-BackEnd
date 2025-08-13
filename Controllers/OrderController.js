@@ -509,6 +509,7 @@ exports.createOrder = async (req, res) => {
     let userSnapshot;
     
     if (user) {
+      
       // للمستخدمين المسجلين
       const foundUser = await User.findById(user);
       if (!foundUser) {
