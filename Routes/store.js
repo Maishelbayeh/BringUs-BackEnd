@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const StoreController = require('../Controllers/StoreController');
-const { protect, authorize, isActive } = require('../middleware/auth');
+const { protect, isActive } = require('../middleware/auth');
 const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 const { 
   hasStoreAccess, 
@@ -310,7 +310,7 @@ router.post('/', upload.single('logo'), StoreController.createStore);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/upload-image', upload.single('image'), async (req, res) => {
+router.post('/upload-image', upload.single('logo'), async (req, res) => {
   try {
     // التحقق من وجود الملف
     if (!req.file) {
@@ -563,7 +563,7 @@ router.get('/', isSuperAdmin, StoreController.getAllStores);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', hasStoreAccess, upload.single('logo'), StoreController.updateStore);
+router.put('/:id', protect, hasStoreAccess, StoreController.updateStore);
 
 /**
  * @swagger
@@ -601,7 +601,7 @@ router.put('/:id', hasStoreAccess, upload.single('logo'), StoreController.update
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:id', hasStoreAccess, isPrimaryOwner, StoreController.deleteStore);
+router.delete('/:id', protect, hasStoreAccess, isPrimaryOwner, StoreController.deleteStore);
 
 /**
  * @swagger
@@ -643,7 +643,7 @@ router.delete('/:id', hasStoreAccess, isPrimaryOwner, StoreController.deleteStor
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:storeId/stats', hasStoreAccess, hasPermission('view_analytics'), StoreController.getStoreStats);
+router.get('/:storeId/stats', protect, hasStoreAccess, hasPermission('view_analytics'), StoreController.getStoreStats);
 
 /**
  * @swagger
@@ -914,7 +914,7 @@ router.get('/:storeId/guests', StoreController.getGuestsByStoreId);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('manage_users'), StoreController.getCustomerById);
+router.get('/:storeId/customers/:customerId', protect, hasStoreAccess, hasPermission('manage_users'), StoreController.getCustomerById);
 
 /**
  * @swagger
@@ -985,7 +985,7 @@ router.get('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('man
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('manage_users'), StoreController.updateCustomer);
+router.put('/:storeId/customers/:customerId', protect, hasStoreAccess, hasPermission('manage_users'), StoreController.updateCustomer);
 
 
 
@@ -1032,7 +1032,7 @@ router.put('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('man
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('manage_users'), StoreController.deleteCustomer);
+router.delete('/:storeId/customers/:customerId', protect, hasStoreAccess, hasPermission('manage_users'), StoreController.deleteCustomer);
 
 
 

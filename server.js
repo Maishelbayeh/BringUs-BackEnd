@@ -137,6 +137,7 @@ const superadminRoutes = require('./Routes/superadmin');
 const subscriptionRoutes = require('./Routes/subscription');
 const subscriptionPlanRoutes = require('./Routes/subscriptionPlan');
 const storeInfoRoutes = require('./Routes/storeInfo');
+const subscriptionRenewalRoutes = require('./Routes/subscriptionRenewal');
 
 // Route middleware
 app.use('/api/auth', authRoutes);
@@ -162,6 +163,7 @@ app.use('/api/superadmin', superadminRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/subscription-plans', subscriptionPlanRoutes);
 app.use('/api/store-info', storeInfoRoutes);
+app.use('/api/subscription-renewal', subscriptionRenewalRoutes);
 
 /**
  * @swagger
@@ -236,6 +238,7 @@ app.get('/api', (req, res) => {
       wholesalers: '/api/wholesalers',
       termsConditions: '/api/terms-conditions',
       superadmin: '/api/superadmin',
+      subscriptionRenewal: '/api/subscription-renewal',
       health: '/api/health',
       docs: '/api-docs'
     },
@@ -928,6 +931,7 @@ const swaggerOptions = {
       { name: 'Subscriptions', description: 'Subscription management endpoints' },
       { name: 'Subscription Plans', description: 'Subscription plan management endpoints' },
       { name: 'Store Info', description: 'Store information extraction endpoints' },
+      { name: 'Subscription Renewal', description: 'Automatic subscription renewal endpoints' },
       { name: 'Health', description: 'Health check endpoints' }
     ]
   },
@@ -964,6 +968,10 @@ app.listen(PORT, () => {
   // Start subscription cron job
   const SubscriptionService = require('./services/SubscriptionService');
   SubscriptionService.startCronJob();
+  
+  // Start subscription renewal service
+  const SubscriptionRenewalService = require('./services/SubscriptionRenewalService');
+  SubscriptionRenewalService.startMonthlyCronJob();
 });
 
 module.exports = app; 

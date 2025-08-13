@@ -41,7 +41,7 @@ exports.requireStoreContext = async (req, res, next) => {
 exports.checkStoreAccess = async (req, res, next) => {
   try {
     const storeId = req.store._id;
-    const userId = req.user?.id;
+    const userId = req.user?._id;
 
     if (!userId) {
       return res.status(401).json({ 

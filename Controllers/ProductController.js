@@ -278,7 +278,7 @@ exports.getProductOptions = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const query = addStoreFilter(req);
+    const query = await addStoreFilter(req);
     
     const products = await Product.find(query)
       .populate('category')
@@ -314,7 +314,7 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const query = addStoreFilter(req, { _id: req.params.id });
+    const query = await addStoreFilter(req, { _id: req.params.id });
     
     const product = await Product.findOne(query)
       .populate('category')
@@ -679,7 +679,7 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const query = addStoreFilter(req, { _id: req.params.id });
+    const query = await addStoreFilter(req, { _id: req.params.id });
     
     const product = await Product.findOne(query);
     if (!product) {
@@ -851,7 +851,7 @@ exports.getVariants = async (req, res) => {
 exports.getByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    const query = addStoreFilter(req, { category: categoryId });
+    const query = await addStoreFilter(req, { category: categoryId });
     
     const products = await Product.find(query)
       .populate('category')
@@ -894,7 +894,7 @@ exports.getWithFilters = async (req, res) => {
       limit = 20
     } = req.query;
     
-    const query = addStoreFilter(req);
+    const query = await addStoreFilter(req);
     
     // Add filters
     if (category) query.category = category;

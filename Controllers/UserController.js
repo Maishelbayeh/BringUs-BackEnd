@@ -830,7 +830,7 @@ const deleteUser = async (req, res) => {
     }
 
     // Prevent user from deleting themselves
-    if (userToDelete._id.toString() === req.user.id.toString()) {
+    if (userToDelete._id.toString() === req.user._id.toString()) {
       return res.status(400).json({
         success: false,
         message: 'You cannot delete yourself'
@@ -951,7 +951,7 @@ const updateCurrentUserProfile = async (req, res) => {
       });
     }
 
-    const userId = req.user.id; // Get user ID from token
+    const userId = req.user._id; // Get user ID from token
     const { firstName, lastName, email, phone, addresses } = req.body;
 
     // Check if user exists

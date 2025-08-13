@@ -155,7 +155,7 @@ const getAllDeliveryMethods = async (req, res) => {
       // Try to get user's default store
       const Owner = require('../Models/Owner');
       const owner = await Owner.findOne({ 
-        userId: req.user.id,
+        userId: req.user._id,
         status: 'active'
       }).populate('storeId');
       
@@ -337,7 +337,7 @@ const createDeliveryMethod = async (req, res) => {
       // Try to get user's default store
       const Owner = require('../Models/Owner');
       const owner = await Owner.findOne({ 
-        userId: req.user.id,
+        userId: req.user._id,
         status: 'active'
       }).populate('storeId');
       

@@ -17,7 +17,7 @@ exports.verifyStoreAccess = async (req, res, next) => {
     // If still no storeId, try to get user's default store from database (for authenticated users)
     if (!storeId && req.user) {
       const owner = await Owner.findOne({ 
-        userId: req.user._id || req.user.id,
+        userId: req.user._id,
         status: 'active'
       }).populate('storeId');
       
@@ -60,7 +60,7 @@ exports.verifyStoreAccess = async (req, res, next) => {
     req.params.storeId = store._id;
     next();
   } catch (error) {
-    //CONSOLE.error('Store verification error:', error);
+    console.error('Store verification error:', error);
     res.status(500).json({ 
       error: 'Store verification failed',
       message: error.message
@@ -80,12 +80,12 @@ exports.checkStoreOwnership = async (req, res, next) => {
 
     let storeId = req.params.storeId || req.body.store || req.query.storeId;
     let storeSlug = req.params.storeSlug || req.body.storeSlug || req.query.storeSlug;
-    const userId = req.user?.id;
+    const userId = req.user?._id;
 
     // If no storeId is provided, try to get user's default store
     if (!storeId && !storeSlug) {
       const owner = await Owner.findOne({ 
-        userId: req.user.id,
+        userId: req.user._id,
         status: 'active'
       }).populate('storeId');
       
@@ -133,7 +133,7 @@ exports.checkStoreOwnership = async (req, res, next) => {
     req.storeOwner = owner;
     next();
   } catch (error) {
-    //CONSOLE.error('Store ownership verification error:', error);
+    console.error('Store ownership verification error:', error);
     res.status(500).json({ 
       error: 'Store ownership verification failed',
       message: error.message
@@ -170,7 +170,7 @@ exports.extractStoreId = async (req, res, next) => {
         req.storeId = decoded.storeId;
       } else {
         // If no storeId in token, try to get it from user's store field
-        const user = await User.findById(decoded.id);
+        const user = await User.findById(decoded._id || decoded.id);
         if (user && user.store) {
           req.storeId = user.store;
         }
@@ -260,16 +260,16 @@ exports.requireStoreId = async (req, res, next) => {
       
       let storeId = null;
 
-      // Extract storeId from token
-      if (decoded.storeId) {
-        storeId = decoded.storeId;
-      } else {
-        // If no storeId in token, try to get it from user's store field
-        const user = await User.findById(decoded.id);
-        if (user && user.store) {
-          storeId = user.store;
-        }
+          // Extract storeId from token
+    if (decoded.storeId) {
+      storeId = decoded.storeId;
+    } else {
+      // If no storeId in token, try to get it from user's store field
+      const user = await User.findById(decoded._id || decoded.id);
+      if (user && user.store) {
+        storeId = user.store;
       }
+    }
 
       if (!storeId) {
         return res.status(400).json({
@@ -312,7 +312,7 @@ exports.getStoreIdFromToken = async (token) => {
       return decoded.storeId;
     } else {
       // If no storeId in token, try to get it from user's store field
-      const user = await User.findById(decoded.id);
+      const user = await User.findById(decoded._id || decoded.id);
       if (user && user.store) {
         return user.store;
       }
