@@ -6,7 +6,6 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 
 
-
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
   try {
