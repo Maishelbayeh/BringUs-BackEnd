@@ -311,7 +311,7 @@ const getAllUsers = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req);
+    const filter = await addStoreFilter(req);
     
     // Filter by role if specified
     if (role) filter.role = role;
@@ -408,7 +408,7 @@ const getAllUsers = async (req, res) => {
 const getUserById = async (req, res) => {
   try {
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const user = await User.findOne(filter)
       .select('-password')
@@ -459,7 +459,7 @@ const getCustomers = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req);
+    const filter = await addStoreFilter(req);
     filter.role = { $in: ['client', 'wholesaler'] }; // Only customers
     
     if (status) filter.status = status;
@@ -521,7 +521,7 @@ const getStoreStaff = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req);
+    const filter = await addStoreFilter(req);
     filter.role = { $in: ['admin', 'superadmin'] }; // Only staff
     
     if (role) filter.role = role;
@@ -687,7 +687,7 @@ const updateUser = async (req, res) => {
     const { firstName, lastName, email, phone, role, status, isActive, isEmailVerified, addresses, store } = req.body;
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: id });
+    const filter = await addStoreFilter(req, { _id: id });
 
     // Check if user exists
     const existingUser = await User.findOne(filter);
@@ -818,7 +818,7 @@ const deleteUser = async (req, res) => {
     const { id } = req.params;
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: id });
+    const filter = await addStoreFilter(req, { _id: id });
 
     // Check if user exists
     const userToDelete = await User.findOne(filter);
