@@ -116,6 +116,7 @@ mongoose.connect(MONGODB_URI, {
 // Import routes
 const authRoutes = require('./Routes/auth');
 const userRoutes = require('./Routes/user');
+const userRoutes2 = require('./Routes/userRoutes');
 const storeRoutes = require('./Routes/store');
 const ownerRoutes = require('./Routes/owner');
 const productMetaRoutes = require('./Routes/productMeta');
@@ -139,7 +140,8 @@ const storeInfoRoutes = require('./Routes/storeInfo');
 
 // Route middleware
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/users', userRoutes);    
+  app.use('/api/users', userRoutes2);
 app.use('/api/owners', ownerRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/meta', productMetaRoutes);
@@ -219,6 +221,8 @@ app.get('/api', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       users: '/api/users',
+      users2: '/api/users2',
+      storeInfo: '/api/store-info',
       stores: '/api/stores',
       owners: '/api/owners',
       meta: '/api/meta',
