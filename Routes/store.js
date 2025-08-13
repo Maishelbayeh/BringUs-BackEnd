@@ -931,8 +931,7 @@ router.delete('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('
  *   post:
  *     summary: Upload image to Cloudflare R2
  *     tags: [Stores]
- *     security:
- *       - bearerAuth: []
+
  *     requestBody:
  *       required: true
  *       content:
