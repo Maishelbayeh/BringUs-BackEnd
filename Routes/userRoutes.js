@@ -1,5 +1,5 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
+const { body } = require('express-validator');
 const { createUser, getAllUsers, getUserById, updateUser, updateCurrentUserProfile, deleteUser, getCustomers, getStoreStaff } = require('../Controllers/UserController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -244,11 +244,9 @@ const validateProfileUpdate = [
  * @swagger
  * /api/users:
  *   post:
- *     summary: Create a new user (Admin/Superadmin only)
- *     description: Register a new user account
+ *     summary: Create a new user
+ *     description: Register a new user account (No authentication required)
  *     tags: [Users]
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -301,7 +299,7 @@ const validateProfileUpdate = [
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       403:
- *         description: Admin access required
+ *         description: Forbidden (not applicable for this endpoint)
  *         content:
  *           application/json:
  *             schema:
@@ -313,7 +311,7 @@ const validateProfileUpdate = [
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', protect, authorize('admin', 'superadmin'), validateUserCreation, createUser);
+router.post('/',  validateUserCreation, createUser);
 
 
 /**
