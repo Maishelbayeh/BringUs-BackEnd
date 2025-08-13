@@ -249,10 +249,119 @@ router.get('/slug/:slug', StoreController.getStoreBySlug);
  */
 router.post('/', upload.single('logo'), StoreController.createStore);
 
-router.use(protect);
-router.use(isActive);
+/**
+ * @swagger
+ * /api/stores/upload-image:
+ *   post:
+ *     summary: Upload image to Cloudflare R2
+ *     tags: [Stores]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - image
+ *               - storeId
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: "Image file to upload"
+ *               storeId:
+ *                 type: string
+ *                 example: "507f1f77bcf86cd799439012"
+ *                 description: "Store ID for organizing images"
+ *               folder:
+ *                 type: string
+ *                 example: "products"
+ *                 description: "Optional folder name (default: '')"
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     url:
+ *                       type: string
+ *                       example: "https://pub-237eec0793554bacb7debfc287be3b32.r2.dev/products/1234567890-123456789.png"
+ *                     key:
+ *                       type: string
+ *                       example: "products/1234567890-123456789.png"
+ *       400:
+ *         description: Invalid file or missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Upload failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post('/upload-image', upload.single('image'), async (req, res) => {
+  try {
+    // التحقق من وجود الملف
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No image file provided'
+      });
+    }
 
-router.get('/:id', StoreController.getStore);
+    // التحقق من وجود storeId
+    if (!req.body.storeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Store ID is required'
+      });
+    }
+
+    const { storeId } = req.body;
+
+    // رفع الصورة إلى Cloudflare
+    const result = await uploadToCloudflare(
+      req.file.buffer,
+      req.file.originalname,
+      'store-logos/'+storeId
+    );
+  
+    //CONSOLE.log('✅ Image uploaded successfully:', result);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        url: result.url,
+        key: result.key,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error uploading image:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload image',
+      details: error.message
+    });
+  }
+});
+
+
+
 
 /**
  * @swagger
@@ -925,119 +1034,7 @@ router.put('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('man
  */
 router.delete('/:storeId/customers/:customerId', hasStoreAccess, hasPermission('manage_users'), StoreController.deleteCustomer);
 
-/**
- * @swagger
- * /api/stores/upload-image:
- *   post:
- *     summary: Upload image to Cloudflare R2
- *     tags: [Stores]
 
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required:
- *               - image
- * 
- *               - storeId
- *             properties:
- *               image:
- *                 type: string
- *                 format: binary
- *                 description: "Image file to upload"
- *               storeId:
- *                 type: string
- *                 example: "507f1f77bcf86cd799439012"
- *                 description: "Store ID for organizing images"
- *               folder:
- *                 type: string
- *                 example: "products"
- *                 description: "Optional folder name (default: '')"
- *     responses:
- *       200:
- *         description: Image uploaded successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     url:
- *                       type: string
- *                       example: "https://pub-237eec0793554bacb7debfc287be3b32.r2.dev/products/1234567890-123456789.png"
- *                     key:
- *                       type: string
- *                       example: "products/1234567890-123456789.png"
- *       400:
- *         description: Invalid file or missing required fields
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Upload failed
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.post('/upload-image', protect, isActive, upload.single('image'), async (req, res) => {
-  try {
-    // التحقق من وجود الملف
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: 'No image file provided'
-      });
-    }
-
-    // التحقق من وجود storeId
-    if (!req.body.storeId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Store ID is required'
-      });
-    }
-
-    const { storeId } = req.body;
-    const folder = req.body.folder || 'general'; // مجلد افتراضي إذا لم يتم تحديده
-
-    // رفع الصورة إلى Cloudflare
-    const result = await uploadToCloudflare(
-      req.file.buffer,
-      req.file.originalname,
-      `${storeId}/${folder}`
-    );
-
-    //CONSOLE.log('✅ Image uploaded successfully:', result);
-
-    res.status(200).json({
-      success: true,
-      data: {
-        url: result.url,
-        key: result.key,
-        originalName: req.file.originalname,
-        size: req.file.size,
-        mimetype: req.file.mimetype
-      }
-    });
-
-  } catch (error) {
-    //CONSOLE.error('❌ Error uploading image:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to upload image',
-      details: error.message
-    });
-  }
-});
 
 /**
  * @swagger
@@ -1045,8 +1042,7 @@ router.post('/upload-image', protect, isActive, upload.single('image'), async (r
  *   post:
  *     summary: Upload multiple images to Cloudflare R2
  *     tags: [Stores]
- *     security:
- *       - bearerAuth: []
+
  *     requestBody:
  *       required: true
  *       content:
