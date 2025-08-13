@@ -123,7 +123,7 @@ const getAllStoreSliders = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Add store filter for isolation
-    let filter = addStoreFilter(req);
+    let filter = await addStoreFilter(req);
     
     // Override store filter if storeId is provided (for testing)
     if (storeId && req.user.role === 'superadmin') {
@@ -207,7 +207,7 @@ const getStoreSliderById = async (req, res) => {
     const { storeId } = req.query;
     
     // Add store filter for isolation
-    let filter = addStoreFilter(req, { _id: req.params.id });
+    let filter = await addStoreFilter(req, { _id: req.params.id });
     
     // Override store filter if storeId is provided (for testing)
     if (storeId && req.user.role === 'superadmin') {
@@ -365,7 +365,7 @@ const updateStoreSlider = async (req, res) => {
     }
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const slider = await StoreSlider.findOneAndUpdate(
       filter,
@@ -433,7 +433,7 @@ const updateStoreSlider = async (req, res) => {
 const deleteStoreSlider = async (req, res) => {
   try {
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const slider = await StoreSlider.findOneAndDelete(filter);
 
@@ -498,7 +498,7 @@ const deleteStoreSlider = async (req, res) => {
 const toggleActiveStatus = async (req, res) => {
   try {
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const slider = await StoreSlider.findOne(filter);
     
@@ -567,7 +567,7 @@ const toggleActiveStatus = async (req, res) => {
 const incrementViews = async (req, res) => {
   try {
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const slider = await StoreSlider.findOne(filter);
     
@@ -635,7 +635,7 @@ const incrementViews = async (req, res) => {
 const incrementClicks = async (req, res) => {
   try {
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const slider = await StoreSlider.findOne(filter);
     
@@ -718,7 +718,7 @@ const getActiveByType = async (req, res) => {
     }
 
     // Add store filter for isolation
-    let filter = addStoreFilter(req, { type, isActive: true });
+    let filter = await addStoreFilter(req, { type, isActive: true });
     
     // Override store filter if storeId is provided (for testing)
     if (storeId && req.user.role === 'superadmin') {
