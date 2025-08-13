@@ -508,6 +508,7 @@ exports.createOrder = async (req, res) => {
     // جلب بيانات المستخدم أو إنشاء بيانات الضيف
     let userSnapshot;
     
+    
     if (user) {
      console.log('user',user);
       const foundUser = await User.findById(user);
