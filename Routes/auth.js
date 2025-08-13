@@ -19,7 +19,7 @@ const router = express.Router();
  * /api/auth/register:
  *   post:
  *     summary: Register a new user
- *     tags: [Authentication]
+ *     tags: [Auth]
  *     requestBody:
  *       required: true
  *       content:
@@ -45,7 +45,7 @@ const router = express.Router();
  *               email:
  *                 type: string
  *                 format: email
- *                 example: "moon95@gmail.com"
+ *                 example: "superadmin@gmail.com"
  *               password:
  *                 type: string
  *                 minLength: 6
@@ -170,7 +170,7 @@ router.post('/register', [
  * /api/auth/login:
  *   post:
  *     summary: Login user
- *     tags: [Authentication]
+ *     tags: [Auth]
  *     requestBody:
  *       required: true
  *       content:
@@ -478,7 +478,7 @@ router.post('/login', [
  * /api/auth/me:
  *   get:
  *     summary: Get current user profile
- *     tags: [Authentication]
+ *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
  *     responses:

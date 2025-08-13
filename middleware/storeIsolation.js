@@ -132,7 +132,7 @@ exports.ensureStoreData = (modelName) => {
 };
 
 // Helper function to add store filter to queries
-exports.addStoreFilter = (req, query = {}) => {
+exports.addStoreFilter = async (req, query = {}) => {
   // If req.store is set, use it
   if (req.store) {
     query.store = req.store._id;
@@ -141,10 +141,13 @@ exports.addStoreFilter = (req, query = {}) => {
   else if (req.query.storeId && req.user && req.user.role === 'superadmin') {
     query.store = req.query.storeId;
   }
-  // Otherwise, try to get user's default store
-  else if (req.user) {
-    // This will be handled by the controller logic
-    // For now, we'll let the controller handle the store context
+  // Otherwise, try to get store ID from token
+  else {
+    const { getStoreIdFromHeaders } = require('./storeAuth');
+    const storeId = await getStoreIdFromHeaders(req.headers);
+    if (storeId) {
+      query.store = storeId;
+    }
   }
   
   return query;

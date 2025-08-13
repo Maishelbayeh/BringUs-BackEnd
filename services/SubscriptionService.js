@@ -7,166 +7,141 @@ class SubscriptionService {
   }
 
   /**
-   * Check and update store subscription status
-   * This method runs daily at 12:00 PM
+   * Check subscription status and update stores accordingly
    */
   async checkSubscriptionStatus() {
-    if (this.isRunning) {
-      console.log('⚠️ Subscription check already running, skipping...');
-      return;
-    }
-
-    this.isRunning = true;
-    console.log('🔄 Starting daily subscription status check...');
-
     try {
+      console.log('🔍 Starting subscription status check...');
+      
       const now = new Date();
-      const results = {
-        checked: 0,
-        deactivated: 0,
-        warnings: 0,
-        errors: 0,
-        details: []
-      };
+      let deactivatedCount = 0;
+      let warningCount = 0;
+      const warnings = [];
+      const deactivated = [];
 
-      // 1. Find stores that should be deactivated
+      // Find stores that should be deactivated
       const storesToDeactivate = await Store.find({
         $or: [
-          // Stores with expired trial (not subscribed and trial ended)
-          {
-            'subscription.isSubscribed': false,
-            'subscription.trialEndDate': { $lt: now },
-            status: { $ne: 'inactive' }
-          },
-          // Stores with expired subscription
+          // Expired paid subscriptions
           {
             'subscription.isSubscribed': true,
             'subscription.endDate': { $lt: now },
-            status: { $ne: 'inactive' }
+            status: 'active'
+          },
+          // Expired trial periods (14 days limit)
+          {
+            'subscription.isSubscribed': false,
+            'subscription.trialEndDate': { $lt: now },
+            status: 'active'
           }
         ]
       });
 
-      console.log(`📊 Found ${storesToDeactivate.length} stores to deactivate`);
-
-      // 2. Deactivate stores
+      // Deactivate stores using the new method
       for (const store of storesToDeactivate) {
-        try {
-          const oldStatus = store.status;
-          store.status = 'inactive';
-          await store.save();
-
-          results.deactivated++;
-          results.details.push({
+        const wasDeactivated = await store.deactivateIfExpired();
+        
+        if (wasDeactivated) {
+          deactivated.push({
             storeId: store._id,
             storeName: store.nameEn,
-            action: 'deactivated',
-            reason: store.subscription.isSubscribed ? 'subscription_expired' : 'trial_expired',
-            oldStatus,
-            newStatus: 'inactive'
+            reason: store.subscription.isSubscribed ? 'subscription_expired' : 'trial_expired'
           });
-
-          console.log(`🔴 Deactivated store: ${store.nameEn} (${store._id})`);
-        } catch (error) {
-          console.error(`❌ Error deactivating store ${store._id}:`, error.message);
-          results.errors++;
+          deactivatedCount++;
         }
       }
 
-      // 3. Find stores with expiring subscriptions (within 3 days)
+      // Find stores with expiring subscriptions/trials (within 3 days)
       const threeDaysFromNow = new Date();
       threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
-      const expiringStores = await Store.find({
+      const storesWithExpiringSubscriptions = await Store.find({
         $or: [
-          // Trial expiring within 3 days
-          {
-            'subscription.isSubscribed': false,
-            'subscription.trialEndDate': { 
-              $gte: now, 
-              $lte: threeDaysFromNow 
-            },
-            status: 'active'
-          },
-          // Subscription expiring within 3 days
+          // Expiring paid subscriptions
           {
             'subscription.isSubscribed': true,
-            'subscription.endDate': { 
-              $gte: now, 
-              $lte: threeDaysFromNow 
-            },
+            'subscription.endDate': { $gte: now, $lte: threeDaysFromNow },
+            status: 'active'
+          },
+          // Expiring trial periods
+          {
+            'subscription.isSubscribed': false,
+            'subscription.trialEndDate': { $gte: now, $lte: threeDaysFromNow },
             status: 'active'
           }
         ]
       });
 
-      console.log(`⚠️ Found ${expiringStores.length} stores with expiring subscriptions`);
+      // Generate warnings
+      for (const store of storesWithExpiringSubscriptions) {
+        const expiryDate = store.subscription.isSubscribed 
+          ? store.subscription.endDate 
+          : store.subscription.trialEndDate;
+        
+        const daysUntilExpiry = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
 
-      // 4. Log warnings for expiring stores
-      for (const store of expiringStores) {
-        const daysLeft = store.subscription.isSubscribed 
-          ? store.daysUntilSubscriptionExpires 
-          : store.daysUntilTrialExpires;
-
-        results.warnings++;
-        results.details.push({
+        warnings.push({
           storeId: store._id,
           storeName: store.nameEn,
-          action: 'warning',
-          reason: 'expiring_soon',
-          daysLeft,
-          type: store.subscription.isSubscribed ? 'subscription' : 'trial'
+          daysUntilExpiry,
+          type: store.subscription.isSubscribed ? 'subscription' : 'trial',
+          expiryDate
         });
 
-        console.log(`⚠️ Store expiring soon: ${store.nameEn} - ${daysLeft} days left`);
+        warningCount++;
       }
 
-      // 5. Get total count of checked stores
-      const totalStores = await Store.countDocuments();
-      results.checked = totalStores;
+      // Send notifications (placeholder for future implementation)
+      if (warnings.length > 0 || deactivated.length > 0) {
+        await sendNotifications(warnings, deactivated);
+      }
 
-      // 6. Log summary
-      console.log('📋 Subscription check completed:');
-      console.log(`   ✅ Total stores checked: ${results.checked}`);
-      console.log(`   🔴 Stores deactivated: ${results.deactivated}`);
-      console.log(`   ⚠️ Warnings generated: ${results.warnings}`);
-      console.log(`   ❌ Errors encountered: ${results.errors}`);
+      console.log(`✅ Subscription check completed:`);
+      console.log(`   - Deactivated: ${deactivatedCount} stores`);
+      console.log(`   - Warnings: ${warningCount} stores`);
 
-      // 7. Send notifications (you can implement this later)
-      await this.sendNotifications(results);
-
-      return results;
+      return {
+        deactivatedCount,
+        warningCount,
+        deactivated,
+        warnings,
+        checkedAt: now
+      };
 
     } catch (error) {
-      console.error('❌ Error in subscription check:', error);
+      console.error('❌ Error during subscription status check:', error);
       throw error;
-    } finally {
-      this.isRunning = false;
     }
   }
 
   /**
-   * Send notifications to store owners about their subscription status
+   * Send notifications for subscription events
+   * This is a placeholder for future notification implementation
    */
-  async sendNotifications(results) {
-    // TODO: Implement notification system
-    // This could include:
-    // - Email notifications
-    // - SMS notifications
-    // - Push notifications
-    // - Dashboard alerts
-    
-    console.log('📧 Notifications would be sent here...');
-    
-    // Example implementation:
-    for (const detail of results.details) {
-      if (detail.action === 'deactivated') {
-        // Send deactivation notification
-        console.log(`📧 Sending deactivation notification to ${detail.storeName}`);
-      } else if (detail.action === 'warning') {
-        // Send expiration warning
-        console.log(`📧 Sending expiration warning to ${detail.storeName} (${detail.daysLeft} days left)`);
+  async sendNotifications(warnings, deactivated) {
+    try {
+      console.log('📧 Sending subscription notifications...');
+      
+      // TODO: Implement actual notification logic
+      // This could include:
+      // - Email notifications to store owners
+      // - SMS notifications
+      // - Push notifications
+      // - Admin dashboard alerts
+      
+      if (warnings.length > 0) {
+        console.log(`⚠️ Sending ${warnings.length} expiry warnings`);
+        // await sendExpiryWarnings(warnings);
       }
+      
+      if (deactivated.length > 0) {
+        console.log(`🔴 Sending ${deactivated.length} deactivation notifications`);
+        // await sendDeactivationNotifications(deactivated);
+      }
+      
+      console.log('✅ Notifications sent successfully');
+    } catch (error) {
+      console.error('❌ Error sending notifications:', error);
     }
   }
 
@@ -261,19 +236,27 @@ class SubscriptionService {
   }
 
   /**
-   * Start the cron job
+   * Start the cron job for daily subscription checks
    */
   startCronJob() {
-    // Run every day at 12:00 PM
-    cron.schedule('0 12 * * *', async () => {
-      console.log('⏰ Daily subscription check triggered by cron job');
-      await this.checkSubscriptionStatus();
+    if (this.cronJob) {
+      console.log('⚠️ Cron job already running');
+      return;
+    }
+
+    // Schedule daily check at 12:00 PM (Asia/Jerusalem timezone)
+    this.cronJob = cron.schedule('0 12 * * *', async () => {
+      console.log('🕛 Daily subscription check triggered at 12:00 PM');
+      try {
+        await this.checkSubscriptionStatus();
+      } catch (error) {
+        console.error('❌ Error in daily subscription check:', error);
+      }
     }, {
-      scheduled: true,
-      timezone: "Asia/Jerusalem" // Adjust timezone as needed
+      timezone: 'Asia/Jerusalem'
     });
 
-    console.log('✅ Subscription cron job started (daily at 12:00 PM)');
+    console.log('✅ Daily subscription cron job started (12:00 PM daily)');
   }
 
   /**

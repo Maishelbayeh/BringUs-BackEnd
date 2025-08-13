@@ -142,7 +142,7 @@ const getAllAffiliates = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Add store filter for isolation
-    let filter = addStoreFilter(req);
+    let filter = await addStoreFilter(req);
     
     // Override store filter if storeId is provided (for testing)
     if (storeId && req.user.role === 'superadmin') {
@@ -253,8 +253,18 @@ const getAffiliateStats = async (req, res) => {
   try {
     const { storeId } = req.query;
     
-    // Determine store ID
-    let targetStoreId = req.store._id;
+    // Extract store ID from token using the new middleware
+    const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
+    let targetStoreId = await getStoreIdFromHeaders(req.headers);
+    
+    if (!targetStoreId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID not found in token'
+      });
+    }
+    
+    // Allow superadmin to override store ID
     if (storeId && req.user.role === 'superadmin') {
       targetStoreId = storeId;
     }
@@ -417,8 +427,18 @@ const getTopPerformers = async (req, res) => {
   try {
     const { limit = 10, storeId } = req.query;
     
-    // Determine store ID
-    let targetStoreId = req.store._id;
+    // Extract store ID from token using the new middleware
+    const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
+    let targetStoreId = await getStoreIdFromHeaders(req.headers);
+    
+    if (!targetStoreId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID not found in token'
+      });
+    }
+    
+    // Allow superadmin to override store ID
     if (storeId && req.user.role === 'superadmin') {
       targetStoreId = storeId;
     }
@@ -483,7 +503,7 @@ const getAffiliateById = async (req, res) => {
     const { storeId } = req.query;
     
     // Add store filter for isolation
-    let filter = addStoreFilter(req, { _id: req.params.id });
+    let filter = await addStoreFilter(req, { _id: req.params.id });
     
     // Override store filter if storeId is provided (for testing)
     if (storeId && req.user.role === 'superadmin') {
@@ -562,15 +582,39 @@ const createAffiliate = async (req, res) => {
         errors: errors.array()
       });
     }
-
+    
+    // Extract store ID from token using the new middleware
+    const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
+    const storeId = await getStoreIdFromHeaders(req.headers);
+    console.log('storeId', storeId);
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID not found in token'
+      });
+    }
+    
+    const Store = require('../Models/Store');
+    const store = await Store.findById(storeId);
+    
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found'
+      });
+    }
+    
+    const domain = store.slug;
+    console.log('domain', domain);
     // Check if email already exists in both Affiliation and User models
     const existingAffiliate = await Affiliation.findOne({
       email: req.body.email,
-      store: req.store._id
+      store: storeId
     });
 
     const existingUser = await User.findOne({
-      email: req.body.email
+      email: req.body.email,
+      store: storeId
     });
 
     if (existingAffiliate || existingUser) {
@@ -597,11 +641,14 @@ const createAffiliate = async (req, res) => {
     // Generate unique affiliate code
     const affiliateCode = await Affiliation.generateUniqueAffiliateCode();
 
+    const affiliateLink = `http://localhost:5174/${domain}/affiliate/${affiliateCode}`;
+
     // Add store and userId to the request body
     const affiliateData = {
       ...req.body,
+      affiliateLink,
       affiliateCode,
-      store: req.store._id,
+      store: storeId,
       userId: user._id
     };
 
@@ -695,9 +742,20 @@ const updateAffiliate = async (req, res) => {
 
     // Check if email is being updated and if it already exists
     if (req.body.email && req.body.email !== affiliate.email) {
+      // Extract store ID from token
+      const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
+      const storeId = await getStoreIdFromHeaders(req.headers);
+      
+      if (!storeId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Store ID not found in token'
+        });
+      }
+      
       const existingAffiliate = await Affiliation.findOne({
         email: req.body.email,
-        store: req.store._id,
+        store: storeId,
         _id: { $ne: req.params.id }
       });
 
@@ -902,9 +960,20 @@ const getAffiliatePayments = async (req, res) => {
       });
     }
 
+    // Extract store ID from token
+    const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
+    const storeId = await getStoreIdFromHeaders(req.headers);
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID not found in token'
+      });
+    }
+    
     // Build payment filter
     let paymentFilter = {
-      store: req.store._id,
+      store: storeId,
       affiliate: req.params.id
     };
 
@@ -1040,10 +1109,21 @@ const createAffiliatePayment = async (req, res) => {
       });
     }
 
+    // Extract store ID from token
+    const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
+    const storeId = await getStoreIdFromHeaders(req.headers);
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID not found in token'
+      });
+    }
+    
     // Create payment
     const paymentData = {
       ...req.body,
-      store: req.store._id,
+      store: storeId,
       affiliate: req.params.id,
       processedBy: req.user._id,
       previousBalance: affiliate.balance,
@@ -1197,7 +1277,7 @@ const getAffiliateByCode = async (req, res) => {
 const deleteAffiliate = async (req, res) => {
   try {
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     const affiliate = await Affiliation.findOne(filter);
     if (!affiliate) {
       return res.status(404).json({
