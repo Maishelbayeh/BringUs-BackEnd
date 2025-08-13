@@ -1,27 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const OwnerController = require('../Controllers/OwnerController');
-const { protect, authorize, isActive } = require('../middleware/auth');
 const { 
   hasStoreAccess, 
   hasPermission, 
   isPrimaryOwner, 
-  isAdmin, 
   isSuperAdmin 
 } = require('../middleware/permissions');
 
 // All routes require authentication
-router.use(protect);
-router.use(isActive);
+
 
 /**
  * @swagger
  * /api/owners:
  *   post:
- *     summary: Create a new owner (Superadmin only)
+ *     summary: Create a new owner
+ *     description: Create a new owner relationship (No authentication required)
  *     tags: [Owners]
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -63,7 +59,7 @@ router.use(isActive);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       403:
- *         description: Superadmin access required
+ *         description: Forbidden (not applicable for this endpoint)
  *         content:
  *           application/json:
  *             schema:
@@ -75,7 +71,7 @@ router.use(isActive);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', isSuperAdmin, OwnerController.createOwner);
+router.post('/',  OwnerController.createOwner);
 
 /**
  * @swagger
