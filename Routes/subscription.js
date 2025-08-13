@@ -965,8 +965,6 @@ router.patch('/stores/:storeId/reactivate',
  *     summary: Get store status information
  *     description: Get detailed status information for a specific store including subscription details
  *     tags: [Subscriptions]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: storeId
@@ -1027,16 +1025,10 @@ router.patch('/stores/:storeId/reactivate',
  *                           type: string
  *       404:
  *         description: Store not found
- *       401:
- *         description: Unauthorized - Invalid or missing token
- *       403:
- *         description: Forbidden - User is not a superadmin
  *       500:
  *         description: Internal server error
  */
 router.get('/stores/:storeId/status',
-    protect,
-    requireSuperAdmin,
     [
         param('storeId').isMongoId().withMessage('Invalid store ID')
     ],
