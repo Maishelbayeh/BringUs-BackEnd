@@ -252,6 +252,7 @@ router.post('/', upload.single('logo'), StoreController.createStore);
 router.use(protect);
 router.use(isActive);
 
+
 router.get('/:id', StoreController.getStore);
 
 /**
