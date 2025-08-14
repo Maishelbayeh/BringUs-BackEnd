@@ -43,7 +43,6 @@ const authenticateToken = async (req, res, next) => {
     });
   }
 };
-
 // @desc    Get user profile
 // @route   GET /api/users/profile
 // @access  Private
