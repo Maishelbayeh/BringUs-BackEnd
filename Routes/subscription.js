@@ -12,6 +12,8 @@ const {
     getExpiringStores,
     getDeactivatedStores,
     cancelSubscription,
+    disableAutoRenewal,
+    enableAutoRenewal,
     getAllSubscriptions,
     updateSubscription,
     getStoreSubscriptionHistory,
@@ -69,7 +71,7 @@ const {
  *       500:
  *         description: Internal server error
  */
-router.get('/stats', protect, requireSuperAdmin, getSubscriptionStats);
+router.get('/stats', protect,  getSubscriptionStats);
 
 /**
  * @swagger
@@ -159,7 +161,7 @@ router.get('/stats', protect, requireSuperAdmin, getSubscriptionStats);
  *       500:
  *         description: Internal server error
  */
-router.get('/stores', protect, requireSuperAdmin, getAllSubscriptions);
+router.get('/stores', protect,  getAllSubscriptions);
 
 /**
  * @swagger
@@ -199,7 +201,7 @@ router.get('/stores', protect, requireSuperAdmin, getAllSubscriptions);
  *       500:
  *         description: Internal server error
  */
-router.get('/stores/:storeId', protect, requireSuperAdmin, checkStoreSubscription);
+router.get('/stores/:storeId', protect,  checkStoreSubscription);
 
 /**
  * @swagger
@@ -357,7 +359,7 @@ router.post('/stores/:storeId',
  */
 router.put('/stores/:storeId', 
     protect, 
-    requireSuperAdmin,
+    
     [
         param('storeId').isMongoId().withMessage('Invalid store ID')
     ],
@@ -423,7 +425,7 @@ router.put('/stores/:storeId',
  */
 router.post('/stores/:storeId/trial',
     protect,
-    requireSuperAdmin,
+    
     [
         param('storeId').isMongoId().withMessage('Invalid store ID'),
         body('days').isInt({ min: 1, max: 365 }).withMessage('Days must be between 1 and 365')
@@ -483,7 +485,7 @@ router.post('/stores/:storeId/trial',
  */
 router.post('/stores/:storeId/cancel',
     protect,
-    requireSuperAdmin,
+    
     [
         param('storeId').isMongoId().withMessage('Invalid store ID')
     ],
@@ -535,7 +537,7 @@ router.post('/stores/:storeId/cancel',
  */
 router.get('/expiring', 
     protect, 
-    requireSuperAdmin,
+    
     [
         query('days').optional().isInt({ min: 1, max: 30 }).withMessage('Days must be between 1 and 30')
     ],
@@ -587,7 +589,7 @@ router.get('/expiring',
  */
 router.get('/deactivated',
     protect,
-    requireSuperAdmin,
+    
     [
         query('days').optional().isInt({ min: 1, max: 90 }).withMessage('Days must be between 1 and 90')
     ],
@@ -624,7 +626,7 @@ router.get('/deactivated',
  *       500:
  *         description: Internal server error
  */
-router.post('/trigger-check', protect, requireSuperAdmin, triggerSubscriptionCheck);
+router.post('/trigger-check', protect,  triggerSubscriptionCheck);
 
 /**
  * @swagger
@@ -794,7 +796,7 @@ router.get('/stores/:storeId/history',
  */
 router.get('/stores/:storeId/stats',
     protect,
-    requireSuperAdmin,
+    
     [
         param('storeId').isMongoId().withMessage('Invalid store ID')
     ],
@@ -886,7 +888,7 @@ router.get('/stores/:storeId/stats',
  */
 router.get('/activities',
     protect,
-    requireSuperAdmin,
+    
     [
         query('days').optional().isInt({ min: 1, max: 365 }).withMessage('Days must be between 1 and 365'),
         query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
@@ -951,7 +953,6 @@ router.get('/activities',
  */
 router.patch('/stores/:storeId/reactivate',
     protect,
-    requireSuperAdmin,
     [
         param('storeId').isMongoId().withMessage('Invalid store ID')
     ],
@@ -1033,6 +1034,160 @@ router.get('/stores/:storeId/status',
         param('storeId').isMongoId().withMessage('Invalid store ID')
     ],
     getStoreStatus
+);
+
+/**
+ * @swagger
+ * /api/subscription/stores/{storeId}/disable-auto-renewal:
+ *   patch:
+ *     summary: Disable auto-renewal for a store subscription
+ *     description: Disable automatic renewal for a store's subscription. The subscription will not renew automatically when it expires.
+ *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for disabling auto-renewal
+ *                 example: "Customer request"
+ *     responses:
+ *       200:
+ *         description: Auto-renewal disabled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Auto-renewal disabled successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     storeId:
+ *                       type: string
+ *                     storeName:
+ *                       type: string
+ *                     autoRenew:
+ *                       type: boolean
+ *                       example: false
+ *                     subscriptionEndDate:
+ *                       type: string
+ *                       format: date-time
+ *                     message:
+ *                       type: string
+ *                       example: "Subscription will not renew automatically when it expires"
+ *       400:
+ *         description: Auto-renewal is already disabled
+ *       404:
+ *         description: Store not found
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - User is not a superadmin
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/stores/:storeId/disable-auto-renewal',
+    protect,
+    [
+        param('storeId').isMongoId().withMessage('Invalid store ID'),
+        body('reason').optional().isString().withMessage('Reason must be a string')
+    ],
+    disableAutoRenewal
+);
+
+/**
+ * @swagger
+ * /api/subscription/stores/{storeId}/enable-auto-renewal:
+ *   patch:
+ *     summary: Enable auto-renewal for a store subscription
+ *     description: Enable automatic renewal for a store's subscription. The subscription will renew automatically when it expires.
+ *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for enabling auto-renewal
+ *                 example: "Customer request"
+ *     responses:
+ *       200:
+ *         description: Auto-renewal enabled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Auto-renewal enabled successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     storeId:
+ *                       type: string
+ *                     storeName:
+ *                       type: string
+ *                     autoRenew:
+ *                       type: boolean
+ *                       example: true
+ *                     subscriptionEndDate:
+ *                       type: string
+ *                       format: date-time
+ *                     message:
+ *                       type: string
+ *                       example: "Subscription will renew automatically when it expires"
+ *       400:
+ *         description: Auto-renewal is already enabled or subscription is inactive
+ *       404:
+ *         description: Store not found
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - User is not a superadmin
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/stores/:storeId/enable-auto-renewal',
+    protect,
+    [
+        param('storeId').isMongoId().withMessage('Invalid store ID'),
+        body('reason').optional().isString().withMessage('Reason must be a string')
+    ],
+    enableAutoRenewal
 );
 
 module.exports = router;

@@ -125,7 +125,9 @@ const storeSchema = new mongoose.Schema({
         'auto_renew_changed',
         'payment_method_changed',
         'store_deactivated',
-        'store_reactivated'
+        'store_reactivated',
+        'auto_renewal_disabled',
+        'auto_renewal_enabled'
       ],
       required: true
     },
