@@ -88,7 +88,8 @@ const productSchema = new mongoose.Schema({
         const youtubePatterns = [
           /^https?:\/\/(www\.)?youtube\.com\/watch\?v=[\w-]+/,
           /^https?:\/\/(www\.)?youtu\.be\/[\w-]+/,
-          /^https?:\/\/(www\.)?youtube\.com\/embed\/[\w-]+/
+          /^https?:\/\/(www\.)?youtube\.com\/embed\/[\w-]+/,
+          /^https?:\/\/(www\.)?youtube\.com\/shorts\/[\w-]+/
         ];
         
         // Social media video URL patterns
@@ -96,6 +97,7 @@ const productSchema = new mongoose.Schema({
           /^https?:\/\/(www\.)?facebook\.com\/.*\/videos\/\d+/,
           /^https?:\/\/(www\.)?instagram\.com\/p\/[\w-]+\//,
           /^https?:\/\/(www\.)?tiktok\.com\/@[\w-]+\/video\/\d+/,
+          /^https?:\/\/(www\.)?vt\.tiktok\.com\/[\w-]+\//,
           /^https?:\/\/(www\.)?twitter\.com\/\w+\/status\/\d+/,
           /^https?:\/\/(www\.)?x\.com\/\w+\/status\/\d+/
         ];
@@ -462,20 +464,24 @@ productSchema.virtual('videoId').get(function() {
   const youtubeWatchMatch = this.videoUrl.match(/youtube\.com\/watch\?v=([\w-]+)/);
   const youtubeShortMatch = this.videoUrl.match(/youtu\.be\/([\w-]+)/);
   const youtubeEmbedMatch = this.videoUrl.match(/youtube\.com\/embed\/([\w-]+)/);
+  const youtubeShortsMatch = this.videoUrl.match(/youtube\.com\/shorts\/([\w-]+)/);
   
   if (youtubeWatchMatch) return youtubeWatchMatch[1];
   if (youtubeShortMatch) return youtubeShortMatch[1];
   if (youtubeEmbedMatch) return youtubeEmbedMatch[1];
+  if (youtubeShortsMatch) return youtubeShortsMatch[1];
   
   // Social media patterns
   const facebookMatch = this.videoUrl.match(/facebook\.com\/.*\/videos\/(\d+)/);
   const instagramMatch = this.videoUrl.match(/instagram\.com\/p\/([\w-]+)/);
   const tiktokMatch = this.videoUrl.match(/tiktok\.com\/@[\w-]+\/video\/(\d+)/);
+  const tiktokShortMatch = this.videoUrl.match(/vt\.tiktok\.com\/([\w-]+)/);
   const twitterMatch = this.videoUrl.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/);
   
   if (facebookMatch) return facebookMatch[1];
   if (instagramMatch) return instagramMatch[1];
   if (tiktokMatch) return tiktokMatch[1];
+  if (tiktokShortMatch) return tiktokShortMatch[1];
   if (twitterMatch) return twitterMatch[1];
   
   return null;
@@ -491,7 +497,7 @@ productSchema.virtual('videoPlatform').get(function() {
     return 'facebook';
   } else if (this.videoUrl.includes('instagram.com')) {
     return 'instagram';
-  } else if (this.videoUrl.includes('tiktok.com')) {
+  } else if (this.videoUrl.includes('tiktok.com') || this.videoUrl.includes('vt.tiktok.com')) {
     return 'tiktok';
   } else if (this.videoUrl.includes('twitter.com') || this.videoUrl.includes('x.com')) {
     return 'twitter';
