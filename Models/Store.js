@@ -187,26 +187,27 @@ const storeSchema = new mongoose.Schema({
       type: Boolean,
       default: true
     },
+    lahzaToken:{
+      type: String,
+      default: null
+    },
 
     storeSocials: {
-      type:   Object,
-      default: {
-        facebook: String,
-        instagram: String,
-        twitter: String,
-        youtube: String,
-        linkedin: String,
-        telegram: String,
-        snapchat: String,
-        pinterest: String,
-        tiktok: String,
-      }
+      facebook: String,
+      instagram: String,
+      twitter: String,
+      youtube: String,
+      linkedin: String,
+      telegram: String,
+      snapchat: String,
+      pinterest: String,
+      tiktok: String
     }
   },
   //whatsapp number
   whatsappNumber: {
     type: String,
-    required: [false, 'WhatsApp number is required']
+    required: false
   },
   contact: {
     email: {

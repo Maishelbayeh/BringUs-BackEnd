@@ -742,6 +742,6 @@ router.put('/:id', protect, authorize('admin', 'superadmin'), validateUserUpdate
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:id', protect, authorize('admin', 'superadmin'), deleteUser);
+router.delete('/:id',  deleteUser);
 
 module.exports = router; 

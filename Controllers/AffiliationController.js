@@ -729,7 +729,7 @@ const updateAffiliate = async (req, res) => {
     }
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const affiliate = await Affiliation.findOne(filter);
 
@@ -847,7 +847,7 @@ const updateAffiliate = async (req, res) => {
 const verifyAffiliate = async (req, res) => {
   try {
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const affiliate = await Affiliation.findOne(filter);
 
@@ -949,7 +949,7 @@ const getAffiliatePayments = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const affiliate = await Affiliation.findOne(filter);
 
@@ -1090,7 +1090,7 @@ const createAffiliatePayment = async (req, res) => {
     }
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const affiliate = await Affiliation.findOne(filter);
 

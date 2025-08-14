@@ -192,7 +192,7 @@ const getAllPaymentMethods = async (req, res) => {
       // Try to get user's default store
       const Owner = require('../Models/Owner');
       const owner = await Owner.findOne({ 
-        userId: req.user.id,
+        userId: req.user._id,
         status: 'active'
       }).populate('storeId');
       
@@ -298,7 +298,7 @@ const getPaymentMethodById = async (req, res) => {
       // Try to get user's default store
       const Owner = require('../Models/Owner');
       const owner = await Owner.findOne({ 
-        userId: req.user.id,
+        userId: req.user._id,
         status: 'active'
       }).populate('storeId');
       
@@ -975,7 +975,7 @@ const updatePaymentMethodWithFiles = async (req, res) => {
     }
 
     // Get existing payment method
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     const existingMethod = await PaymentMethod.findOne(filter);
     
     if (!existingMethod) {
@@ -1109,6 +1109,9 @@ const updatePaymentMethodWithFiles = async (req, res) => {
     });
   } catch (error) {
     console.error('Update payment method with files error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    console.error('Error code:', error.code);
     
     // Handle model validation errors
     if (error.message === 'Default payment method cannot be inactive') {
@@ -1129,8 +1132,9 @@ const updatePaymentMethodWithFiles = async (req, res) => {
     
     res.status(500).json({
       success: false,
-      message: 'Error updating payment method',
-      error: error.message
+      message: 'Something went wrong!',
+      error: 'Internal server error',
+      details: error.stack
     });
   }
 };
@@ -1220,7 +1224,7 @@ const updatePaymentMethod = async (req, res) => {
     }
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const paymentMethod = await PaymentMethod.findOneAndUpdate(
       filter,
@@ -1306,7 +1310,7 @@ const updatePaymentMethod = async (req, res) => {
 const deletePaymentMethod = async (req, res) => {
   try {
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const paymentMethod = await PaymentMethod.findOne(filter);
 
@@ -1383,7 +1387,7 @@ const deletePaymentMethod = async (req, res) => {
 const toggleActiveStatus = async (req, res) => {
   try {
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const paymentMethod = await PaymentMethod.findOne(filter);
     
@@ -1461,7 +1465,7 @@ const toggleActiveStatus = async (req, res) => {
 const setAsDefault = async (req, res) => {
   try {
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const paymentMethod = await PaymentMethod.findOne(filter);
     
@@ -1573,7 +1577,7 @@ const uploadLogo = async (req, res) => {
     }
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const paymentMethod = await PaymentMethod.findOne(filter);
     
@@ -1679,7 +1683,7 @@ const uploadQrCode = async (req, res) => {
     }
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const paymentMethod = await PaymentMethod.findOne(filter);
     
@@ -1817,7 +1821,7 @@ const uploadPaymentImage = async (req, res) => {
     }
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const paymentMethod = await PaymentMethod.findOne(filter);
     
@@ -1921,7 +1925,7 @@ const removePaymentImage = async (req, res) => {
     }
 
     // Add store filter for isolation
-    const filter = addStoreFilter(req, { _id: req.params.id });
+    const filter = await addStoreFilter(req, { _id: req.params.id });
     
     const paymentMethod = await PaymentMethod.findOne(filter);
     

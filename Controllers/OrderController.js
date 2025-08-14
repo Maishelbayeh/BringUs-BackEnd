@@ -1999,7 +1999,7 @@ exports.createGuestOrder = async (req, res) => {
 exports.deleteOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
     const userRole = req.user.role;
 
     if (!orderId) {

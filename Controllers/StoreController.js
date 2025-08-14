@@ -177,6 +177,18 @@ class StoreController {
     try {
       const { id } = req.params;
       const updateData = { ...req.body };
+      
+      console.log('Update store - ID:', id);
+      console.log('Update store - Request body:', req.body);
+      console.log('Update store - Update data:', updateData);
+
+      // Validate store ID format
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        return error(res, { 
+          message: 'Invalid store ID format', 
+          statusCode: 400 
+        });
+      }
 
       // Parse JSON strings for complex objects
       if (updateData.contact && typeof updateData.contact === 'string') {
@@ -216,18 +228,31 @@ class StoreController {
             url: uploadResult.url
           };
         } catch (uploadError) {
-          //CONSOLE.error('Logo upload error:', uploadError);
+          console.error('Logo upload error:', uploadError);
           return error(res, { 
             message: 'Failed to upload logo', 
             statusCode: 500 
           });
         }
+      } else if (updateData.logo && typeof updateData.logo === 'object') {
+        // Logo is already provided as an object, keep it as is
+        // No need to process it further
+        console.log('Logo provided as object:', updateData.logo);
+      }
+
+      // Check if store exists before updating
+      const existingStore = await Store.findById(id);
+      if (!existingStore) {
+        return error(res, { 
+          message: 'Store not found', 
+          statusCode: 404 
+        });
       }
 
       // Check if slug already exists (if being updated)
       if (updateData.slug) {
-        const existingStore = await Store.findOne({ slug: updateData.slug, _id: { $ne: id } });
-        if (existingStore) {
+        const storeWithSameSlug = await Store.findOne({ slug: updateData.slug, _id: { $ne: id } });
+        if (storeWithSameSlug) {
           return error(res, { 
             message: 'Store slug already exists', 
             statusCode: 400 
@@ -235,19 +260,83 @@ class StoreController {
         }
       }
 
-      const store = await Store.findByIdAndUpdate(
-        id,
-        updateData,
-        { new: true, runValidators: true }
-      ).populate('contact', 'email phone address');
-
-      if (!store) {
-        return error(res, { message: 'Store not found', statusCode: 404 });
+      console.log('Update store - About to update with data:', updateData);
+      
+      // Validate required fields if they're being updated
+      if (updateData.contact && !updateData.contact.email) {
+        return error(res, { 
+          message: 'Contact email is required', 
+          statusCode: 400 
+        });
       }
-      return success(res, { data: store, message: 'Store updated successfully' });
+
+      if (updateData.nameAr && !updateData.nameAr.trim()) {
+        return error(res, { 
+          message: 'Arabic name is required', 
+          statusCode: 400 
+        });
+      }
+
+      if (updateData.nameEn && !updateData.nameEn.trim()) {
+        return error(res, { 
+          message: 'English name is required', 
+          statusCode: 400 
+        });
+      }
+
+      if (updateData.slug && !updateData.slug.trim()) {
+        return error(res, { 
+          message: 'Slug is required', 
+          statusCode: 400 
+        });
+      }
+      
+      console.log('Update store - About to execute database update...');
+      
+      try {
+        const store = await Store.findByIdAndUpdate(
+          id,
+          updateData,
+          { new: true, runValidators: true }
+        ).populate('contact', 'email phone address');
+
+        console.log('Update store - Database update successful');
+        console.log('Update store - Result:', store);
+
+        if (!store) {
+          return error(res, { message: 'Store not found', statusCode: 404 });
+        }
+        return success(res, { data: store, message: 'Store updated successfully' });
+      } catch (dbError) {
+        console.error('Update store - Database error:', dbError);
+        console.error('Update store - Database error name:', dbError.name);
+        console.error('Update store - Database error code:', dbError.code);
+        console.error('Update store - Database error message:', dbError.message);
+        
+        // Handle specific database errors
+        if (dbError.name === 'ValidationError') {
+          return error(res, { 
+            message: 'Validation error', 
+            error: dbError.message,
+            statusCode: 400 
+          });
+        }
+        
+        if (dbError.code === 11000) {
+          return error(res, { 
+            message: 'Duplicate key error - slug already exists', 
+            statusCode: 400 
+          });
+        }
+        
+        throw dbError; // Re-throw to be caught by outer catch block
+      }
     } catch (err) {
-      //CONSOLE.error('Update store error:', err);
-      return error(res, { message: 'Update store error', error: err });
+      console.error('Update store error:', err);
+      console.error('Update store error stack:', err.stack);
+      console.error('Update store error name:', err.name);
+      console.error('Update store error code:', err.code);
+      return error(res, { message: 'Server error', error: err.message, details: err.stack });
     }
   }
 

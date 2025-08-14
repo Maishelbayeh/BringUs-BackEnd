@@ -112,10 +112,12 @@ exports.hasStoreAccess = async (req, res, next) => {
     req.owner = owner;
     next();
   } catch (error) {
-    //CONSOLE.error('Store access middleware error:', error);
+    console.error('Store access middleware error:', error);
+    console.error('Store access middleware error stack:', error.stack);
     return res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error',
+      details: error.message
     });
   }
 };
