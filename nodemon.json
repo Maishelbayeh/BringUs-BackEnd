@@ -1,0 +1,45 @@
+{
+  "watch": [
+    "server.js",
+    "Routes/",
+    "Controllers/",
+    "Models/",
+    "middleware/",
+    "services/",
+    "utils/",
+    "validators/"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules/",
+    "logs/",
+    "*.log",
+    "npm-debug.log*",
+    "yarn-debug.log*",
+    "yarn-error.log*",
+    "lerna-debug.log*",
+    ".git/",
+    ".DS_Store",
+    "coverage/",
+    "test/",
+    "tests/",
+    "*.test.js",
+    "*.spec.js",
+    "examples/",
+    "scripts/"
+  ],
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "delay": 1000,
+  "verbose": true,
+  "colours": true,
+  "restartable": "rs",
+  "legacyWatch": false,
+  "pollingInterval": 1000,
+  "events": {
+    "restart": "echo '🔄 Server restarted due to changes...'",
+    "crash": "echo '💥 Server crashed, restarting...'",
+    "exit": "echo '👋 Server stopped'"
+  }
+}

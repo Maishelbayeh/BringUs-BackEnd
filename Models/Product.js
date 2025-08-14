@@ -77,6 +77,38 @@ const productSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  videoUrl: {
+    type: String,
+    default: null,
+    validate: {
+      validator: function(videoUrl) {
+        if (!videoUrl) return true; // Allow null/empty values
+        
+        // YouTube URL patterns
+        const youtubePatterns = [
+          /^https?:\/\/(www\.)?youtube\.com\/watch\?v=[\w-]+/,
+          /^https?:\/\/(www\.)?youtu\.be\/[\w-]+/,
+          /^https?:\/\/(www\.)?youtube\.com\/embed\/[\w-]+/
+        ];
+        
+        // Social media video URL patterns
+        const socialPatterns = [
+          /^https?:\/\/(www\.)?facebook\.com\/.*\/videos\/\d+/,
+          /^https?:\/\/(www\.)?instagram\.com\/p\/[\w-]+\//,
+          /^https?:\/\/(www\.)?tiktok\.com\/@[\w-]+\/video\/\d+/,
+          /^https?:\/\/(www\.)?twitter\.com\/\w+\/status\/\d+/,
+          /^https?:\/\/(www\.)?x\.com\/\w+\/status\/\d+/
+        ];
+        
+        // Check if URL matches any pattern
+        const isValidYouTube = youtubePatterns.some(pattern => pattern.test(videoUrl));
+        const isValidSocial = socialPatterns.some(pattern => pattern.test(videoUrl));
+        
+        return isValidYouTube || isValidSocial;
+      },
+      message: 'Video URL must be a valid YouTube, Facebook, Instagram, TikTok, or Twitter video URL'
+    }
+  },
   productLabels: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ProductLabel'
@@ -420,6 +452,72 @@ productSchema.virtual('specificationStockStatus').get(function() {
 // Virtual to check if product is a parent
 productSchema.virtual('isParent').get(function() {
   return this.hasVariants && this.variants && this.variants.length > 0;
+});
+
+// Virtual to extract video ID from URL
+productSchema.virtual('videoId').get(function() {
+  if (!this.videoUrl) return null;
+  
+  // YouTube patterns
+  const youtubeWatchMatch = this.videoUrl.match(/youtube\.com\/watch\?v=([\w-]+)/);
+  const youtubeShortMatch = this.videoUrl.match(/youtu\.be\/([\w-]+)/);
+  const youtubeEmbedMatch = this.videoUrl.match(/youtube\.com\/embed\/([\w-]+)/);
+  
+  if (youtubeWatchMatch) return youtubeWatchMatch[1];
+  if (youtubeShortMatch) return youtubeShortMatch[1];
+  if (youtubeEmbedMatch) return youtubeEmbedMatch[1];
+  
+  // Social media patterns
+  const facebookMatch = this.videoUrl.match(/facebook\.com\/.*\/videos\/(\d+)/);
+  const instagramMatch = this.videoUrl.match(/instagram\.com\/p\/([\w-]+)/);
+  const tiktokMatch = this.videoUrl.match(/tiktok\.com\/@[\w-]+\/video\/(\d+)/);
+  const twitterMatch = this.videoUrl.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/);
+  
+  if (facebookMatch) return facebookMatch[1];
+  if (instagramMatch) return instagramMatch[1];
+  if (tiktokMatch) return tiktokMatch[1];
+  if (twitterMatch) return twitterMatch[1];
+  
+  return null;
+});
+
+// Virtual to get video platform type
+productSchema.virtual('videoPlatform').get(function() {
+  if (!this.videoUrl) return null;
+  
+  if (this.videoUrl.includes('youtube.com') || this.videoUrl.includes('youtu.be')) {
+    return 'youtube';
+  } else if (this.videoUrl.includes('facebook.com')) {
+    return 'facebook';
+  } else if (this.videoUrl.includes('instagram.com')) {
+    return 'instagram';
+  } else if (this.videoUrl.includes('tiktok.com')) {
+    return 'tiktok';
+  } else if (this.videoUrl.includes('twitter.com') || this.videoUrl.includes('x.com')) {
+    return 'twitter';
+  }
+  
+  return 'unknown';
+});
+
+// Virtual to get embed URL for video
+productSchema.virtual('videoEmbedUrl').get(function() {
+  if (!this.videoUrl || !this.videoId) return null;
+  
+  switch (this.videoPlatform) {
+    case 'youtube':
+      return `https://www.youtube.com/embed/${this.videoId}`;
+    case 'facebook':
+      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(this.videoUrl)}&show_text=false&width=560&height=315`;
+    case 'instagram':
+      return `https://www.instagram.com/p/${this.videoId}/embed/`;
+    case 'tiktok':
+      return `https://www.tiktok.com/@username/video/${this.videoId}`;
+    case 'twitter':
+      return `https://platform.twitter.com/widgets/tweet.html?id=${this.videoId}`;
+    default:
+      return this.videoUrl;
+  }
 });
 
 // Ensure virtual fields are serialized

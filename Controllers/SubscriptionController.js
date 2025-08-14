@@ -470,6 +470,162 @@ const cancelSubscription = async (req, res) => {
 };
 
 /**
+ * Disable auto-renewal for a store subscription
+ */
+const disableAutoRenewal = async (req, res) => {
+    try {
+        const { storeId } = req.params;
+        const { reason } = req.body;
+
+        // Get current store to save previous state
+        const currentStore = await Store.findById(storeId);
+        if (!currentStore) {
+            return res.status(404).json({
+                success: false,
+                message: 'Store not found'
+            });
+        }
+
+        // Check if auto-renewal is already disabled
+        if (!currentStore.subscription.autoRenew) {
+            return res.status(400).json({
+                success: false,
+                message: 'Auto-renewal is already disabled'
+            });
+        }
+
+        // Save previous state
+        const previousState = {
+            subscription: { ...currentStore.subscription.toObject() },
+            status: currentStore.status
+        };
+
+        // Update store subscription to disable auto-renewal
+        const updatedStore = await Store.findByIdAndUpdate(
+            storeId,
+            {
+                'subscription.autoRenew': false
+            },
+            { new: true, runValidators: true }
+        );
+
+        // Add to subscription history
+        await updatedStore.addSubscriptionHistory(
+            'auto_renewal_disabled',
+            `Auto-renewal disabled${reason ? ` - Reason: ${reason}` : ''}`,
+            {
+                reason: reason || 'No reason provided',
+                disabledBy: req.user._id,
+                disabledAt: new Date(),
+                previousState
+            },
+            req.user._id
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Auto-renewal disabled successfully',
+            data: {
+                storeId: updatedStore._id,
+                storeName: updatedStore.nameEn,
+                autoRenew: updatedStore.subscription.autoRenew,
+                subscriptionEndDate: updatedStore.subscription.endDate,
+                message: 'Subscription will not renew automatically when it expires'
+            }
+        });
+    } catch (error) {
+        console.error('Error disabling auto-renewal:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Enable auto-renewal for a store subscription
+ */
+const enableAutoRenewal = async (req, res) => {
+    try {
+        const { storeId } = req.params;
+        const { reason } = req.body;
+
+        // Get current store to save previous state
+        const currentStore = await Store.findById(storeId);
+        if (!currentStore) {
+            return res.status(404).json({
+                success: false,
+                message: 'Store not found'
+            });
+        }
+
+        // Check if auto-renewal is already enabled
+        if (currentStore.subscription.autoRenew) {
+            return res.status(400).json({
+                success: false,
+                message: 'Auto-renewal is already enabled'
+            });
+        }
+
+        // Check if subscription is active
+        if (!currentStore.subscription.isSubscribed) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot enable auto-renewal for inactive subscription'
+            });
+        }
+
+        // Save previous state
+        const previousState = {
+            subscription: { ...currentStore.subscription.toObject() },
+            status: currentStore.status
+        };
+
+        // Update store subscription to enable auto-renewal
+        const updatedStore = await Store.findByIdAndUpdate(
+            storeId,
+            {
+                'subscription.autoRenew': true
+            },
+            { new: true, runValidators: true }
+        );
+
+        // Add to subscription history
+        await updatedStore.addSubscriptionHistory(
+            'auto_renewal_enabled',
+            `Auto-renewal enabled${reason ? ` - Reason: ${reason}` : ''}`,
+            {
+                reason: reason || 'No reason provided',
+                enabledBy: req.user._id,
+                enabledAt: new Date(),
+                previousState
+            },
+            req.user._id
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Auto-renewal enabled successfully',
+            data: {
+                storeId: updatedStore._id,
+                storeName: updatedStore.nameEn,
+                autoRenew: updatedStore.subscription.autoRenew,
+                subscriptionEndDate: updatedStore.subscription.endDate,
+                message: 'Subscription will renew automatically when it expires'
+            }
+        });
+    } catch (error) {
+        console.error('Error enabling auto-renewal:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+};
+
+/**
  * Get all subscriptions with filters
  */
 const getAllSubscriptions = async (req, res) => {
@@ -914,6 +1070,8 @@ module.exports = {
     getExpiringStores,
     getDeactivatedStores,
     cancelSubscription,
+    disableAutoRenewal,
+    enableAutoRenewal,
     getAllSubscriptions,
     updateSubscription,
     getStoreSubscriptionHistory,

@@ -445,7 +445,7 @@ exports.create = async (req, res) => {
       compareAtPrice, costPrice, productOrder = 0, visibility = true, isActive = true,
       isFeatured = false, isOnSale = false, salePercentage = 0, attributes = [],
       specifications = [], tags = [], weight, dimensions, rating = 0, numReviews = 0,
-      views = 0, soldCount = 0, seo,
+      views = 0, soldCount = 0, seo, videoUrl,
       specificationValues = [],
       lowStockThreshold = 5
     } = req.body;
@@ -521,7 +521,7 @@ exports.create = async (req, res) => {
       compareAtPrice, costPrice, productOrder, visibility, isActive, isFeatured, isOnSale, salePercentage,
       attributes, specifications, tags, weight, dimensions, rating, numReviews, views, soldCount, seo,
       specificationValues: finalSpecificationValues,
-      barcodes,
+      barcodes, videoUrl,
       lowStockThreshold
     };
 
@@ -556,7 +556,7 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { storeId, categories, colors, specificationValues } = req.body;
+    const { storeId, categories, colors, specificationValues, videoUrl } = req.body;
     
     console.log('🔍 Backend update - Received categories:', categories);
     console.log('🔍 Backend update - categories type:', typeof categories);
@@ -1544,6 +1544,35 @@ exports.addVariant = async (req, res) => {
     } else {
       // If productLabels is not provided, set it as empty array
       variantData.productLabels = [];
+    }
+
+    // Handle videoUrl for variant
+    if (variantData.videoUrl) {
+      // Validate video URL format
+      const youtubePatterns = [
+        /^https?:\/\/(www\.)?youtube\.com\/watch\?v=[\w-]+/,
+        /^https?:\/\/(www\.)?youtu\.be\/[\w-]+/,
+        /^https?:\/\/(www\.)?youtube\.com\/embed\/[\w-]+/
+      ];
+      
+      const socialPatterns = [
+        /^https?:\/\/(www\.)?facebook\.com\/.*\/videos\/\d+/,
+        /^https?:\/\/(www\.)?instagram\.com\/p\/[\w-]+\//,
+        /^https?:\/\/(www\.)?tiktok\.com\/@[\w-]+\/video\/\d+/,
+        /^https?:\/\/(www\.)?twitter\.com\/\w+\/status\/\d+/,
+        /^https?:\/\/(www\.)?x\.com\/\w+\/status\/\d+/
+      ];
+      
+      const isValidYouTube = youtubePatterns.some(pattern => pattern.test(variantData.videoUrl));
+      const isValidSocial = socialPatterns.some(pattern => pattern.test(variantData.videoUrl));
+      
+      if (!isValidYouTube && !isValidSocial) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid video URL format',
+          message: 'Video URL must be a valid YouTube, Facebook, Instagram, TikTok, or Twitter video URL'
+        });
+      }
     }
 
     // Handle categories for variant - use categories if available, otherwise use category
