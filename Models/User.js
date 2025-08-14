@@ -112,12 +112,7 @@ const userSchema = new mongoose.Schema({
   // Store association for customers
   store: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Store',
-    required: function() {
-      // Store is required for customers (clients) and admins, but not for superadmin
-      return this.role === 'client' || this.role === 'admin';
-      
-    }
+    ref: 'Store'
   }
   
 }, {

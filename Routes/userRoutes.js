@@ -89,7 +89,8 @@ const validateUserCreation = [
     .optional()
     .custom((value, { req }) => {
       // Store is required for admin and client roles
-      if ((req.body.role === 'admin' || req.body.role === 'client') && !value) {
+      const role = req.body.role || 'client'; // Default to client if no role provided
+      if ((role === 'admin' || role === 'client') && !value) {
         throw new Error('Store is required for admin and client roles');
       }
       return true;
