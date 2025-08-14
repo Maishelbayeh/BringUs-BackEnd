@@ -176,14 +176,21 @@ const createUser = async (req, res) => {
         addr.zipCode && addr.zipCode.trim() && 
         addr.country && addr.country.trim()
       );
-    } else {
+        } else {
       userData.addresses = [];
     }
-
     // Add store if provided and user is admin or client
-    if (store && (role === 'admin' || role === 'client')) {
+    if (store && (userData.role === 'admin' || userData.role === 'client')) {
       // If store is an object with _id, extract the _id
       userData.store = typeof store === 'object' && store._id ? store._id : store;
+    }
+    
+    // Validate store requirement for admin and client roles
+    if ((userData.role === 'admin' || userData.role === 'client') && !userData.store) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store is required for admin and client roles'
+      });
     }
 
     // Create user
