@@ -164,9 +164,66 @@ router.post('/register', [
 
     });
     
-
     // Generate JWT token
     const token = user.getJwtToken();
+
+    // Send email verification OTP if store is provided
+    let emailVerificationSent = false;
+    let emailVerificationError = null;
+    
+    console.log(`🔧 Attempting to send email verification OTP to: ${user.email}`);
+    
+    if (store) {
+      try {
+        const Store = require('../Models/Store');
+        const storeData = await Store.findById(store);
+        
+        if (storeData) {
+          console.log(`📧 Store found: ${storeData.nameEn || storeData.nameAr} (${storeData.slug})`);
+          
+          // Import and call the email verification function
+          const UserController = require('../Controllers/UserController');
+          
+          // Create a mock request object for the email verification
+          const mockReq = {
+            body: {
+              email: user.email,
+              storeSlug: storeData.slug
+            }
+          };
+          
+          // Create a mock response object to capture the result
+          const mockRes = {
+            status: (code) => ({
+              json: (data) => {
+                if (code === 200) {
+                  emailVerificationSent = true;
+                  console.log('✅ Email verification OTP sent successfully');
+                  console.log(`   Email: ${user.email}`);
+                  console.log(`   Store: ${storeData.nameEn || storeData.nameAr}`);
+                } else {
+                  emailVerificationError = data.message;
+                  console.log('⚠️ Email verification failed:', data.message);
+                }
+              }
+            })
+          };
+          
+          // Send email verification
+          console.log('📤 Sending email verification OTP...');
+          await UserController.sendEmailVerification(mockReq, mockRes);
+        } else {
+          console.log('⚠️ Store not found for email verification');
+          emailVerificationError = 'Store not found';
+        }
+      } catch (error) {
+        console.log('⚠️ Error sending email verification:', error.message);
+        emailVerificationError = error.message;
+      }
+    } else {
+      console.log('⚠️ No store provided, skipping email verification');
+      emailVerificationError = 'No store provided';
+    }
 
     res.status(201).json({
       success: true,
@@ -181,6 +238,12 @@ router.post('/register', [
         store: user.store,
         status: user.status,
         addresses: user.addresses
+      },
+      emailVerification: {
+        sent: emailVerificationSent,
+        message: emailVerificationSent 
+          ? 'Email verification OTP sent successfully' 
+          : emailVerificationError || 'Email verification not sent'
       }
     });
   } catch (error) {
@@ -278,7 +341,8 @@ router.post('/register', [
  */
 router.post('/login', [
   body('email').isEmail().normalizeEmail().withMessage('Please enter a valid email'),
-  body('password').notEmpty().withMessage('Password is required')
+  body('password').notEmpty().withMessage('Password is required'),
+  body('storeSlug').optional().isString().withMessage('Store slug must be a string')
 ], async (req, res) => {
   try {
     // Check for validation errors
@@ -290,16 +354,63 @@ router.post('/login', [
       });
     }
 
-    const { email, password } = req.body;
-
-    // Check if user exists
-    const user = await User.findOne({ email }).select('+password').populate('store');
+    const { email, password, storeSlug } = req.body;
+    
+    // Handle different login scenarios based on role and storeSlug
+    let user = null;
+    let store = null;
+    
+    console.log(`🔍 Login attempt for email: ${email}, storeSlug: ${storeSlug || 'none'}`);
+    
+    if (storeSlug) {
+      // Find store by slug
+      const Store = require('../Models/Store');
+      store = await Store.findOne({ slug: storeSlug });
+      
+      if (!store) {
+        console.log(`❌ Store not found with slug: ${storeSlug}`);
+        return res.status(400).json({
+          success: false,
+          message: 'Store not found'
+        });
+      }
+      
+      console.log(`✅ Store found: ${store.nameEn || store.nameAr} (${store.slug})`);
+      
+      // Find user with email and store
+      user = await User.findOne({ email, store: store._id }).select('+password').populate('store');
+      
+      if (user) {
+        console.log(`✅ User found in store: ${user.firstName} ${user.lastName} (${user.role})`);
+      } else {
+        console.log(`❌ User not found with email: ${email} in store: ${store.slug}`);
+      }
+    } else {
+      // For superadmin or users without store, find by email only
+      console.log('🔍 Searching for user by email only (superadmin or no store)');
+      user = await User.findOne({ email }).select('+password').populate('store');
+      
+      if (user) {
+        console.log(`✅ User found: ${user.firstName} ${user.lastName} (${user.role})`);
+        if (user.store) {
+          console.log(`   Store: ${user.store.nameEn || user.store.nameAr}`);
+        } else {
+          console.log('   No store assigned');
+        }
+      } else {
+        console.log(`❌ User not found with email: ${email}`);
+      }
+    }
+    
     if (!user) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
       });
     }
+       
+
+
 
     // Check if password is correct
     const isPasswordCorrect = await user.comparePassword(password);
