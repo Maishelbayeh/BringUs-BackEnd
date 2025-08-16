@@ -170,7 +170,6 @@ router.post('/addresses', [
   body('street').notEmpty().withMessage('Street address is required'),
   body('city').notEmpty().withMessage('City is required'),
   body('state').notEmpty().withMessage('State is required'),
-  body('zipCode').notEmpty().withMessage('Zip code is required'),
   body('country').notEmpty().withMessage('Country is required'),
   body('isDefault').optional().isBoolean().withMessage('isDefault must be a boolean')
 ], async (req, res) => {
@@ -235,7 +234,6 @@ router.put('/addresses/:addressId', [
   body('street').optional().notEmpty().withMessage('Street address cannot be empty'),
   body('city').optional().notEmpty().withMessage('City cannot be empty'),
   body('state').optional().notEmpty().withMessage('State cannot be empty'),
-  body('zipCode').optional().notEmpty().withMessage('Zip code cannot be empty'),
   body('country').optional().notEmpty().withMessage('Country cannot be empty'),
   body('isDefault').optional().isBoolean().withMessage('isDefault must be a boolean')
 ], async (req, res) => {

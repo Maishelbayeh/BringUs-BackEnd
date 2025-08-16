@@ -9,6 +9,7 @@ const {
     triggerSubscriptionCheck,
     activateSubscription,
     extendTrial,
+    extendFreeTrial,
     getExpiringStores,
     getDeactivatedStores,
     cancelSubscription,
@@ -16,6 +17,7 @@ const {
     enableAutoRenewal,
     getAllSubscriptions,
     updateSubscription,
+    updateSubscriptionEndDate,
     getStoreSubscriptionHistory,
     getStoreSubscriptionStats,
     getAllRecentActivities,
@@ -78,7 +80,7 @@ router.get('/stats', protect,  getSubscriptionStats);
  * /api/subscription/stores:
  *   get:
  *     summary: Get all subscriptions with filters
- *     description: Retrieve all stores with their subscription information, with optional filtering and pagination
+ *     description: Retrieve all stores with their subscription information, with optional filtering, search, and pagination
  *     tags: [Subscriptions]
  *     security:
  *       - bearerAuth: []
@@ -95,6 +97,12 @@ router.get('/stats', protect,  getSubscriptionStats);
  *           type: string
  *           enum: [free, monthly, quarterly, semi_annual, annual]
  *         description: Filter by subscription plan
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search stores by name (English or Arabic)
+ *         example: "store"
  *       - in: query
  *         name: page
  *         schema:
@@ -114,7 +122,7 @@ router.get('/stats', protect,  getSubscriptionStats);
  *         name: sort
  *         schema:
  *           type: string
- *           enum: [createdAt, name, status]
+ *           enum: [createdAt, nameEn, nameAr, status]
  *           default: createdAt
  *         description: Field to sort by
  *       - in: query
@@ -154,6 +162,10 @@ router.get('/stats', protect,  getSubscriptionStats);
  *                     pages:
  *                       type: integer
  *                       example: 15
+ *                 search:
+ *                   type: string
+ *                   nullable: true
+ *                   description: The search term used (if any)
  *       401:
  *         description: Unauthorized - Invalid or missing token
  *       403:
@@ -435,6 +447,105 @@ router.post('/stores/:storeId/trial',
 
 /**
  * @swagger
+ * /api/subscription/stores/{storeId}/free-trial:
+ *   post:
+ *     summary: Extend free trial period for a store (Superadmin only)
+ *     description: Extend the free trial period for a specific store by a specified number of days. This is specifically for stores that are in trial mode and not subscribed.
+ *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The store ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - days
+ *             properties:
+ *               days:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 365
+ *                 description: Number of days to extend the free trial
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for extending the free trial
+ *                 example: "Customer request for more time to evaluate"
+ *     responses:
+ *       200:
+ *         description: Free trial extended successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Free trial extended by 30 days
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     storeId:
+ *                       type: string
+ *                     storeName:
+ *                       type: string
+ *                     previousTrialEnd:
+ *                       type: string
+ *                       format: date-time
+ *                     newTrialEnd:
+ *                       type: string
+ *                       format: date-time
+ *                     daysAdded:
+ *                       type: integer
+ *                     daysUntilExpiry:
+ *                       type: integer
+ *                     subscription:
+ *                       type: object
+ *                       properties:
+ *                         isSubscribed:
+ *                           type: boolean
+ *                         trialEndDate:
+ *                           type: string
+ *                           format: date-time
+ *                         isTrialExpired:
+ *                           type: boolean
+ *                     status:
+ *                       type: string
+ *       400:
+ *         description: Invalid request data or store has active subscription
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - User is not a superadmin
+ *       404:
+ *         description: Store not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/stores/:storeId/free-trial',
+    protect,
+    
+    [
+        param('storeId').isMongoId().withMessage('Invalid store ID'),
+        body('days').isInt({ min: 1, max: 365 }).withMessage('Days must be between 1 and 365'),
+        body('reason').optional().isString().withMessage('Reason must be a string')
+    ],
+    extendFreeTrial
+);
+
+/**
+ * @swagger
  * /api/subscription/stores/{storeId}/cancel:
  *   post:
  *     summary: Cancel subscription for a store
@@ -510,6 +621,12 @@ router.post('/stores/:storeId/cancel',
  *           maximum: 30
  *           default: 3
  *         description: Number of days to check for expiring subscriptions/trials
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search stores by name (English or Arabic)
+ *         example: "store"
  *     responses:
  *       200:
  *         description: Successfully retrieved expiring stores
@@ -528,6 +645,10 @@ router.post('/stores/:storeId/cancel',
  *                 count:
  *                   type: integer
  *                   example: 5
+ *                 search:
+ *                   type: string
+ *                   nullable: true
+ *                   description: The search term used (if any)
  *       401:
  *         description: Unauthorized - Invalid or missing token
  *       403:
@@ -562,6 +683,12 @@ router.get('/expiring',
  *           maximum: 90
  *           default: 7
  *         description: Number of days to look back for deactivated stores
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search stores by name (English or Arabic)
+ *         example: "store"
  *     responses:
  *       200:
  *         description: Successfully retrieved deactivated stores
@@ -580,6 +707,10 @@ router.get('/expiring',
  *                 count:
  *                   type: integer
  *                   example: 3
+ *                 search:
+ *                   type: string
+ *                   nullable: true
+ *                   description: The search term used (if any)
  *       401:
  *         description: Unauthorized - Invalid or missing token
  *       403:
@@ -1188,6 +1319,107 @@ router.patch('/stores/:storeId/enable-auto-renewal',
         body('reason').optional().isString().withMessage('Reason must be a string')
     ],
     enableAutoRenewal
+);
+
+/**
+ * @swagger
+ * /api/subscription/stores/{storeId}/end-date:
+ *   patch:
+ *     summary: Update subscription end date (Superadmin only)
+ *     description: Update the end date of a store's subscription. This allows superadmins to extend or shorten subscription periods.
+ *     tags: [Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - endDate
+ *             properties:
+ *               endDate:
+ *                 type: string
+ *                 format: date-time
+ *                 description: New end date for the subscription
+ *                 example: "2024-12-31T23:59:59.999Z"
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for updating the end date
+ *                 example: "Customer request for extension"
+ *     responses:
+ *       200:
+ *         description: Subscription end date updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Subscription end date updated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     storeId:
+ *                       type: string
+ *                     storeName:
+ *                       type: string
+ *                     previousEndDate:
+ *                       type: string
+ *                       format: date-time
+ *                     newEndDate:
+ *                       type: string
+ *                       format: date-time
+ *                     subscription:
+ *                       type: object
+ *                       properties:
+ *                         isSubscribed:
+ *                           type: boolean
+ *                         endDate:
+ *                           type: string
+ *                           format: date-time
+ *                         nextPaymentDate:
+ *                           type: string
+ *                           format: date-time
+ *                         plan:
+ *                           type: string
+ *                         planId:
+ *                           type: string
+ *                         amount:
+ *                           type: number
+ *                         currency:
+ *                           type: string
+ *       400:
+ *         description: Invalid request data or store does not have active subscription
+ *       404:
+ *         description: Store not found
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - User is not a superadmin
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/stores/:storeId/end-date',
+    protect,
+    [
+        param('storeId').isMongoId().withMessage('Invalid store ID'),
+        body('endDate').isISO8601().withMessage('End date must be a valid ISO 8601 date'),
+        body('reason').optional().isString().withMessage('Reason must be a string')
+    ],
+    updateSubscriptionEndDate
 );
 
 module.exports = router;

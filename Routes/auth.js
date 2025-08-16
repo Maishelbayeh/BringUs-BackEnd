@@ -107,7 +107,9 @@ router.post('/register', [
   body('lastName').trim().isLength({ min: 2, max: 50 }).withMessage('Last name must be between 2 and 50 characters'),
   body('email').isEmail().normalizeEmail().withMessage('Please enter a valid email'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
-  body('phone').optional().matches(/^[\+]?[1-9][\d]{0,15}$/).withMessage('Please enter a valid phone number')
+  body('phone').optional().matches(/^[\+]?[1-9][\d]{0,15}$/).withMessage('Please enter a valid phone number'),
+  body('role').optional().isIn(['client', 'admin', 'superadmin']).withMessage('Role must be client, admin, or superadmin'),
+  body('store').optional().isMongoId().withMessage('Store must be a valid MongoDB ID')
 ], async (req, res) => {
   try {
     // Check for validation errors
@@ -119,14 +121,32 @@ router.post('/register', [
       });
     }
 
-    const { firstName, lastName, email, password, phone } = req.body;
+    const { firstName, lastName, email, password, phone, store, role, status, addresses } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Validate store exists if provided
+    if (store) {
+      const Store = require('../Models/Store');
+      const storeExists = await Store.findById(store);
+      if (!storeExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'Store not found'
+        });
+      }
+    }
+
+    // Check if user already exists with same email, store, and role
+    console.log('🔍 Checking for existing user with:', { email, store, role });
+    const existingUser = await User.findOne({ 
+      email: email, 
+      store: store, 
+      role: role 
+    });
+    
     if (existingUser) {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
-        message: 'User already exists with this email'
+        message: 'User already exists with this email in this store with this role'
       });
     }
 
@@ -136,7 +156,12 @@ router.post('/register', [
       lastName,
       email,
       password,
-      phone
+      phone,
+      store: store,
+      role: role,
+      status: status,
+      addresses: addresses || []
+
     });
     
 
@@ -152,7 +177,10 @@ router.post('/register', [
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        role: user.role
+        role: user.role,
+        store: user.store,
+        status: user.status,
+        addresses: user.addresses
       }
     });
   } catch (error) {

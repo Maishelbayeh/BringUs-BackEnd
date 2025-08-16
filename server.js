@@ -138,6 +138,7 @@ const subscriptionRoutes = require('./Routes/subscription');
 const subscriptionPlanRoutes = require('./Routes/subscriptionPlan');
 const storeInfoRoutes = require('./Routes/storeInfo');
 const subscriptionRenewalRoutes = require('./Routes/subscriptionRenewal');
+const emailVerificationRoutes = require('./Routes/emailVerification');
 
 // Route middleware
 app.use('/api/auth', authRoutes);
@@ -164,6 +165,7 @@ app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/subscription-plans', subscriptionPlanRoutes);
 app.use('/api/store-info', storeInfoRoutes);
 app.use('/api/subscription-renewal', subscriptionRenewalRoutes);
+app.use('/api/email-verification', emailVerificationRoutes);
 
 /**
  * @swagger

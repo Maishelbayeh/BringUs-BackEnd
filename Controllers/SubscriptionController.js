@@ -327,17 +327,130 @@ const extendTrial = async (req, res) => {
 };
 
 /**
+ * Extend free trial period for a store (Superadmin only)
+ */
+const extendFreeTrial = async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation error',
+                errors: errors.array()
+            });
+        }
+
+        const { storeId } = req.params;
+        const { days, reason } = req.body;
+
+        if (!days || days <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Days must be a positive number'
+            });
+        }
+
+        if (days > 365) {
+            return res.status(400).json({
+                success: false,
+                message: 'Trial extension cannot exceed 365 days'
+            });
+        }
+
+        // Get current store
+        const store = await Store.findById(storeId);
+        if (!store) {
+            return res.status(404).json({
+                success: false,
+                message: 'Store not found'
+            });
+        }
+
+        // Check if store is currently in trial
+        if (store.subscription.isSubscribed) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot extend trial for a store with active subscription'
+            });
+        }
+
+        // Save previous state
+        const previousTrialEnd = store.subscription.trialEndDate;
+        const previousDaysUntilExpiry = store.daysUntilTrialExpires;
+
+        // Calculate new trial end date
+        const currentTrialEnd = store.subscription.trialEndDate || new Date();
+        const newTrialEnd = new Date(currentTrialEnd);
+        newTrialEnd.setDate(newTrialEnd.getDate() + days);
+
+        // Update trial end date
+        const updatedStore = await Store.findByIdAndUpdate(
+            storeId,
+            {
+                'subscription.trialEndDate': newTrialEnd,
+                'subscription.isSubscribed': false, // Ensure it's still in trial
+                status: 'active' // Ensure store is active
+            },
+            { new: true, runValidators: true }
+        );
+
+        // Add to subscription history
+        await updatedStore.addSubscriptionHistory(
+            'free_trial_extended',
+            `Free trial period extended by ${days} days${reason ? ` - Reason: ${reason}` : ''}`,
+            {
+                previousTrialEnd,
+                newTrialEnd,
+                daysAdded: days,
+                previousDaysUntilExpiry,
+                newDaysUntilExpiry: updatedStore.daysUntilTrialExpires,
+                reason: reason || 'No reason provided',
+                extendedBy: req.user._id,
+                extendedAt: new Date()
+            },
+            req.user._id
+        );
+
+        res.status(200).json({
+            success: true,
+            message: `Free trial extended by ${days} days`,
+            data: {
+                storeId: updatedStore._id,
+                storeName: updatedStore.nameEn,
+                previousTrialEnd,
+                newTrialEnd,
+                daysAdded: days,
+                daysUntilExpiry: updatedStore.daysUntilTrialExpires,
+                subscription: {
+                    isSubscribed: updatedStore.subscription.isSubscribed,
+                    trialEndDate: updatedStore.subscription.trialEndDate,
+                    isTrialExpired: updatedStore.isTrialExpired
+                },
+                status: updatedStore.status
+            }
+        });
+    } catch (error) {
+        console.error('Error extending free trial:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+};
+
+/**
  * Get stores with expiring subscriptions/trials
  */
 const getExpiringStores = async (req, res) => {
     try {
-        const { days = 3 } = req.query;
+        const { days = 3, search } = req.query;
         
         const expiringDate = new Date();
         expiringDate.setDate(expiringDate.getDate() + parseInt(days));
 
-        // Find stores with expiring subscriptions or trials
-        const expiringStores = await Store.find({
+        // Build filter
+        const filter = {
             $or: [
                 {
                     'subscription.isSubscribed': true,
@@ -348,12 +461,31 @@ const getExpiringStores = async (req, res) => {
                     'subscription.trialEndDate': { $lte: expiringDate, $gt: new Date() }
                 }
             ]
-        }).select('name nameAr subscription status createdAt');
+        };
+
+        // Add search filter for store name
+        if (search && search.trim()) {
+            const searchRegex = new RegExp(search.trim(), 'i'); // Case-insensitive search
+            filter.$and = [
+                {
+                    $or: [
+                        { nameEn: searchRegex },
+                        { nameAr: searchRegex }
+                    ]
+                }
+            ];
+        }
+
+        // Find stores with expiring subscriptions or trials
+        const expiringStores = await Store.find(filter)
+            .select('nameEn nameAr subscription status createdAt')
+            .sort({ createdAt: -1 });
 
         res.status(200).json({
             success: true,
             data: expiringStores,
-            count: expiringStores.length
+            count: expiringStores.length,
+            search: search || null
         });
     } catch (error) {
         console.error('Error fetching expiring stores:', error);
@@ -370,13 +502,13 @@ const getExpiringStores = async (req, res) => {
  */
 const getDeactivatedStores = async (req, res) => {
     try {
-        const { days = 7 } = req.query;
+        const { days = 7, search } = req.query;
         
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
 
-        // Find stores deactivated due to subscription/trial expiry
-        const deactivatedStores = await Store.find({
+        // Build filter
+        const filter = {
             status: 'inactive',
             updatedAt: { $gte: cutoffDate },
             $or: [
@@ -389,12 +521,31 @@ const getDeactivatedStores = async (req, res) => {
                     'subscription.trialEndDate': { $lt: new Date() }
                 }
             ]
-        }).select('name nameAr subscription status createdAt updatedAt');
+        };
+
+        // Add search filter for store name
+        if (search && search.trim()) {
+            const searchRegex = new RegExp(search.trim(), 'i'); // Case-insensitive search
+            filter.$and = [
+                {
+                    $or: [
+                        { nameEn: searchRegex },
+                        { nameAr: searchRegex }
+                    ]
+                }
+            ];
+        }
+
+        // Find stores deactivated due to subscription/trial expiry
+        const deactivatedStores = await Store.find(filter)
+            .select('nameEn nameAr subscription status createdAt updatedAt')
+            .sort({ updatedAt: -1 });
 
         res.status(200).json({
             success: true,
             data: deactivatedStores,
-            count: deactivatedStores.length
+            count: deactivatedStores.length,
+            search: search || null
         });
     } catch (error) {
         console.error('Error fetching deactivated stores:', error);
@@ -633,6 +784,7 @@ const getAllSubscriptions = async (req, res) => {
         const { 
             status, 
             plan, 
+            search,
             page = 1, 
             limit = 10,
             sort = 'createdAt',
@@ -651,7 +803,16 @@ const getAllSubscriptions = async (req, res) => {
         }
 
         if (plan) {
-            filter['subscription.plan'] = plan;
+            filter['subscription.planId'] = plan;
+        }
+
+        // Add search filter for store name
+        if (search && search.trim()) {
+            const searchRegex = new RegExp(search.trim(), 'i'); // Case-insensitive search
+            filter.$or = [
+                { nameEn: searchRegex },
+                { nameAr: searchRegex }
+            ];
         }
 
         // Build sort
@@ -663,7 +824,7 @@ const getAllSubscriptions = async (req, res) => {
 
         // Get stores with subscription info
         const stores = await Store.find(filter)
-            .select('name nameAr subscription status createdAt')
+            .select('nameEn nameAr subscription status createdAt')
             .sort(sortObj)
             .skip(skip)
             .limit(parseInt(limit))
@@ -680,7 +841,8 @@ const getAllSubscriptions = async (req, res) => {
                 limit: parseInt(limit),
                 total,
                 pages: Math.ceil(total / parseInt(limit))
-            }
+            },
+            search: search || null
         });
     } catch (error) {
         console.error('Error fetching subscriptions:', error);
@@ -762,6 +924,117 @@ const updateSubscription = async (req, res) => {
         });
     } catch (error) {
         console.error('Error updating subscription:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Update subscription end date (Superadmin only)
+ */
+const updateSubscriptionEndDate = async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation error',
+                errors: errors.array()
+            });
+        }
+
+        const { storeId } = req.params;
+        const { endDate, reason } = req.body;
+
+        // Validate endDate
+        if (!endDate) {
+            return res.status(400).json({
+                success: false,
+                message: 'End date is required'
+            });
+        }
+
+        const newEndDate = new Date(endDate);
+        if (isNaN(newEndDate.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid end date format'
+            });
+        }
+
+        // Get current store to save previous state
+        const currentStore = await Store.findById(storeId);
+        if (!currentStore) {
+            return res.status(404).json({
+                success: false,
+                message: 'Store not found'
+            });
+        }
+
+        // Check if store has an active subscription
+        if (!currentStore.subscription.isSubscribed) {
+            return res.status(400).json({
+                success: false,
+                message: 'Store does not have an active subscription'
+            });
+        }
+
+        // Save previous state
+        const previousState = {
+            subscription: { ...currentStore.subscription.toObject() },
+            status: currentStore.status
+        };
+
+        const previousEndDate = currentStore.subscription.endDate;
+
+        // Update subscription end date
+        const updatedStore = await Store.findByIdAndUpdate(
+            storeId,
+            {
+                'subscription.endDate': newEndDate,
+                'subscription.nextPaymentDate': newEndDate
+            },
+            { new: true, runValidators: true }
+        );
+
+        // Add to subscription history
+        await updatedStore.addSubscriptionHistory(
+            'end_date_updated',
+            `Subscription end date updated${reason ? ` - Reason: ${reason}` : ''}`,
+            {
+                previousEndDate,
+                newEndDate,
+                reason: reason || 'No reason provided',
+                updatedBy: req.user._id,
+                updatedAt: new Date()
+            },
+            req.user._id
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Subscription end date updated successfully',
+            data: {
+                storeId: updatedStore._id,
+                storeName: updatedStore.nameEn,
+                previousEndDate,
+                newEndDate,
+                subscription: {
+                    isSubscribed: updatedStore.subscription.isSubscribed,
+                    endDate: updatedStore.subscription.endDate,
+                    nextPaymentDate: updatedStore.subscription.nextPaymentDate,
+                    plan: updatedStore.subscription.plan,
+                    planId: updatedStore.subscription.planId,
+                    amount: updatedStore.subscription.amount,
+                    currency: updatedStore.subscription.currency
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error updating subscription end date:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -1067,6 +1340,7 @@ module.exports = {
     triggerSubscriptionCheck,
     activateSubscription,
     extendTrial,
+    extendFreeTrial,
     getExpiringStores,
     getDeactivatedStores,
     cancelSubscription,
@@ -1074,6 +1348,7 @@ module.exports = {
     enableAutoRenewal,
     getAllSubscriptions,
     updateSubscription,
+    updateSubscriptionEndDate,
     getStoreSubscriptionHistory,
     getStoreSubscriptionStats,
     getAllRecentActivities,

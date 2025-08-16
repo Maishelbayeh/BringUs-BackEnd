@@ -214,6 +214,7 @@ const restoreProductStock = async (product, quantity, selectedSpecifications = [
     product.stock += quantity;
     product.soldCount = Math.max(0, product.soldCount - quantity);
     console.log(`✅ Restored general stock for ${product.nameEn}: +${quantity} units`);
+    console.log(`✅ Updated sold count for ${product.nameEn}: -${quantity} units`);
     
     // Restore to specification quantities if specifications are selected
     if (selectedSpecifications && selectedSpecifications.length > 0) {
@@ -640,6 +641,10 @@ exports.createOrder = async (req, res) => {
       });
       // Update product stock from both general stock and specification quantities
       await reduceProductStock(product, item.quantity, cartItem ? cartItem.selectedSpecifications || [] : []);
+      
+      // Update sold count
+      product.soldCount += item.quantity;
+      await product.save();
     }
     console.log('discount',discount);
     // حساب التوتال كوست بدقة
@@ -894,6 +899,10 @@ exports.createOrderFromCart = async (req, res) => {
       
       // Update product stock from both general stock and specification quantities
       await reduceProductStock(product, cartItem.quantity, cartItem.selectedSpecifications || []);
+      
+      // Update sold count
+      product.soldCount += cartItem.quantity;
+      await product.save();
     }
 
     // حساب التوتال كوست بدقة
@@ -1935,6 +1944,10 @@ exports.createGuestOrder = async (req, res) => {
       });
       // Update product stock from both general stock and specification quantities
       await reduceProductStock(product, item.quantity, cartItem ? cartItem.selectedSpecifications || [] : []);
+      
+      // Update sold count
+      product.soldCount += item.quantity;
+      await product.save();
     }
     console.log('discount',discount);
 

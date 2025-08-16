@@ -287,7 +287,7 @@ exports.getAll = async (req, res) => {
       .populate('unit')
       .populate('store', 'name domain')
       .populate('specifications')
-      .populate('variants');
+      .populate('variants', '_id'); // Only populate variant IDs
     
     // تحويل الألوان من JSON string إلى array لكل منتج
     const processedProducts = products.map(product => parseProductColors(product));
@@ -329,7 +329,7 @@ exports.getById = async (req, res) => {
       .populate('images')
       .populate('mainImage')
       .populate('store', 'name domain')
-      .populate('variants');
+      .populate('variants', '_id'); // Only populate variant IDs
       
     if (!product) {
       return res.status(404).json({ 
@@ -445,7 +445,7 @@ exports.create = async (req, res) => {
       compareAtPrice, costPrice, productOrder = 0, visibility = true, isActive = true,
       isFeatured = false, isOnSale = false, salePercentage = 0, attributes = [],
       specifications = [], tags = [], weight, dimensions, rating = 0, numReviews = 0,
-      views = 0, soldCount = 0, seo, videoUrl,
+      views = 0, soldCount = 0, seo, videoUrl, productVideo,
       specificationValues = [],
       lowStockThreshold = 5
     } = req.body;
@@ -500,6 +500,15 @@ exports.create = async (req, res) => {
       }
     }
 
+    // Handle videoUrl/productVideo - allow empty/null values
+    let finalVideoUrl = null;
+    const videoValue = videoUrl || productVideo;
+    if (videoValue === null || videoValue === undefined || videoValue === '' || videoValue === 'null' || videoValue === 'undefined') {
+      finalVideoUrl = null;
+    } else if ((videoUrl && videoUrl.trim() !== '') || (productVideo && productVideo.trim() !== '')) {
+      finalVideoUrl = videoUrl || productVideo;
+    }
+
     // Handle specificationValues - ensure quantity and price are included
     let finalSpecificationValues = [];
     try {
@@ -511,6 +520,14 @@ exports.create = async (req, res) => {
       });
     }
 
+    // Handle attributes - ensure it's a valid array
+    let finalAttributes = [];
+    if (attributes && Array.isArray(attributes)) {
+      finalAttributes = attributes.filter(attr => 
+        attr && typeof attr === 'object' && attr.name && attr.value
+      );
+    }
+
     // Create product data
     const productData = {
       nameAr, nameEn, descriptionAr, descriptionEn, price, 
@@ -519,9 +536,9 @@ exports.create = async (req, res) => {
       unit, store: storeId,
       availableQuantity, stock, productLabels, colors: finalColors, images: imagesUrls, mainImage: mainImageUrl,
       compareAtPrice, costPrice, productOrder, visibility, isActive, isFeatured, isOnSale, salePercentage,
-      attributes, specifications, tags, weight, dimensions, rating, numReviews, views, soldCount, seo,
+      attributes: finalAttributes, specifications, tags, weight, dimensions, rating, numReviews, views, soldCount, seo,
       specificationValues: finalSpecificationValues,
-      barcodes, videoUrl,
+      barcodes, videoUrl: finalVideoUrl,
       lowStockThreshold
     };
 
@@ -556,7 +573,7 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { storeId, categories, colors, specificationValues, videoUrl } = req.body;
+    const { storeId, categories, colors, specificationValues, videoUrl, productVideo } = req.body;
     
     console.log('🔍 Backend update - Received categories:', categories);
     console.log('🔍 Backend update - categories type:', typeof categories);
@@ -612,6 +629,18 @@ exports.update = async (req, res) => {
       }
     }
 
+    // Handle videoUrl/productVideo - allow empty/null values
+    if (req.body.videoUrl !== undefined || req.body.productVideo !== undefined) {
+      const videoValue = req.body.videoUrl || req.body.productVideo;
+      if (videoValue === null || videoValue === undefined || videoValue === '' || videoValue === 'null' || videoValue === 'undefined') {
+        updateData.videoUrl = null;
+      } else if (videoValue && videoValue.trim() !== '') {
+        updateData.videoUrl = videoValue;
+      } else {
+        updateData.videoUrl = null;
+      }
+    }
+
     // Handle specificationValues - ensure quantity and price are included
     try {
       updateData.specificationValues = processSpecificationValues(specificationValues);
@@ -620,6 +649,17 @@ exports.update = async (req, res) => {
         success: false,
         error: error.message
       });
+    }
+
+    // Handle attributes - ensure it's a valid array
+    if (req.body.attributes) {
+      if (Array.isArray(req.body.attributes)) {
+        updateData.attributes = req.body.attributes.filter(attr => 
+          attr && typeof attr === 'object' && attr.name && attr.value
+        );
+      } else {
+        updateData.attributes = [];
+      }
     }
     // Handle main image upload
     if (req.files && req.files.mainImage && req.files.mainImage[0]) {
@@ -756,6 +796,24 @@ exports.createVariant = async (req, res) => {
       }
     }
 
+    // Handle attributes for variant - ensure it's a valid array
+    let finalAttributes = [];
+    if (variantData.attributes && Array.isArray(variantData.attributes)) {
+      finalAttributes = variantData.attributes.filter(attr => 
+        attr && typeof attr === 'object' && attr.name && attr.value
+      );
+    }
+
+    // Handle videoUrl/productVideo for variant - allow empty/null values
+    let finalVideoUrl = null;
+    const videoValue = variantData.videoUrl || variantData.productVideo;
+    if (videoValue === null || videoValue === undefined || videoValue === '' || videoValue === 'null' || videoValue === 'undefined') {
+      finalVideoUrl = null;
+    } else if ((variantData.videoUrl && variantData.videoUrl.trim() !== '') || 
+        (variantData.productVideo && variantData.productVideo.trim() !== '')) {
+      finalVideoUrl = variantData.videoUrl || variantData.productVideo;
+    }
+
     // Create variant product
     const variantProduct = new Product({
       ...variantData,
@@ -763,7 +821,9 @@ exports.createVariant = async (req, res) => {
       category: parentProduct.category, // Inherit category from parent
       unit: parentProduct.unit, // Inherit unit from parent
       hasVariants: false, // Variants cannot have their own variants
-      variants: []
+      variants: [],
+      attributes: finalAttributes,
+      videoUrl: finalVideoUrl
     });
 
     await variantProduct.save();
@@ -858,7 +918,7 @@ exports.getByCategory = async (req, res) => {
       .populate('categories')
       .populate('productLabel')
       .populate('unit')
-      .populate('variants');
+      .populate('variants', '_id'); // Only populate variant IDs
     
     // تحويل الألوان من JSON string إلى array لكل منتج
     const processedProducts = products.map(product => parseProductColors(product));
@@ -919,7 +979,7 @@ exports.getWithFilters = async (req, res) => {
       .populate('categories')
       .populate('productLabel')
       .populate('unit')
-      .populate('variants')
+      .populate('variants', '_id') // Only populate variant IDs
       .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -968,7 +1028,7 @@ exports.getWithVariants = async (req, res) => {
       .populate('productLabels')
       .populate('unit')
       .populate('store', 'name domain')
-      .populate('variants');
+      .populate('variants', '_id'); // Only populate variant IDs
     
     // تحويل الألوان من JSON string إلى array لكل منتج
     const processedProducts = products.map(product => parseProductColors(product));
@@ -1152,7 +1212,7 @@ exports.getWithoutVariants = async (req, res) => {
       .populate('specifications', 'descriptionAr descriptionEn')
       .populate('unit', 'nameAr nameEn symbol')
       .populate('store', 'name domain')
-      .populate('variants') // Include variants for parent products
+      .populate('variants', '_id') // Only populate variant IDs
       .sort(sortObj);
 
     // Filter out variant products (products that are variants of other products)
@@ -1250,12 +1310,7 @@ exports.getProductWithVariants = async (req, res) => {
         store: storeId,
         isActive: true
       })
-      .populate('category', 'nameAr nameEn')
-      .populate('categories', 'nameAr nameEn')
-      .populate('productLabels', 'nameAr nameEn color')
-      .populate('specifications', 'descriptionAr descriptionEn')
-      .populate('unit', 'nameAr nameEn symbol')
-      .populate('store', 'name domain')
+      .select('_id mainImage') // Only select ID and main image
       .sort({ createdAt: 1 }); // Sort variants by creation date
 
       variantsCount = variants.length;
@@ -1264,12 +1319,41 @@ exports.getProductWithVariants = async (req, res) => {
     // تحويل الألوان من JSON string إلى array للمنتج الرئيسي
     const processedProduct = parseProductColors(product);
     
-    // تحويل الألوان من JSON string إلى array للـ variants
-    const processedVariants = variants.map(variant => parseProductColors(variant));
+    // Ensure attributes is a clean array
+    if (processedProduct.attributes && Array.isArray(processedProduct.attributes)) {
+      processedProduct.attributes = processedProduct.attributes.filter(attr => 
+        attr && typeof attr === 'object' && attr.name && attr.value
+      );
+    } else {
+      processedProduct.attributes = [];
+    }
+    
+    // No need to process colors for variants since we only have ID and mainImage
+    const processedVariants = variants.map(variant => ({
+      _id: variant._id,
+      mainImage: variant.mainImage
+    }));
 
-    // Increment views for the main product
-    product.views += 1;
-    await product.save();
+    // Increment views for the main product using findOneAndUpdate to avoid validation issues
+    const updatedProduct = await Product.findOneAndUpdate(
+      { _id: product._id },
+      { 
+        $inc: { views: 1 },
+        $set: { 
+          attributes: Array.isArray(product.attributes) ? product.attributes : []
+        }
+      },
+      { 
+        new: true,
+        runValidators: false // Skip validation to avoid the attributes issue
+      }
+    );
+    
+    if (product.attributes && typeof product.attributes === 'string') {
+      console.warn(`⚠️ Found invalid attributes format for product ${product._id}:`, product.attributes);
+    }
+    
+    console.log(`👁️ Incremented views for product ${product.nameEn}: ${updatedProduct.views}`);
 
     res.json({
       success: true,
@@ -1355,9 +1439,26 @@ exports.getVariantDetails = async (req, res) => {
     // تحويل الألوان من JSON string إلى array للـ variant
     const processedVariant = parseProductColors(variant);
 
-    // Increment views for the variant
-    variant.views += 1;
-    await variant.save();
+    // Increment views for the variant using findOneAndUpdate to avoid validation issues
+    const updatedVariant = await Product.findOneAndUpdate(
+      { _id: variant._id },
+      { 
+        $inc: { views: 1 },
+        $set: { 
+          attributes: Array.isArray(variant.attributes) ? variant.attributes : []
+        }
+      },
+      { 
+        new: true,
+        runValidators: false // Skip validation to avoid the attributes issue
+      }
+    );
+    
+    if (variant.attributes && typeof variant.attributes === 'string') {
+      console.warn(`⚠️ Found invalid attributes format for variant ${variant._id}:`, variant.attributes);
+    }
+    
+    console.log(`👁️ Incremented views for variant ${variant.nameEn}: ${updatedVariant.views}`);
 
     res.json({
       success: true,
@@ -1546,9 +1647,13 @@ exports.addVariant = async (req, res) => {
       variantData.productLabels = [];
     }
 
-    // Handle videoUrl for variant
-    if (variantData.videoUrl) {
-      // Validate video URL format
+    // Handle videoUrl/productVideo for variant - allow empty/null values
+    const videoValue = variantData.videoUrl || variantData.productVideo;
+    if (videoValue === null || videoValue === undefined || videoValue === '' || videoValue === 'null' || videoValue === 'undefined') {
+      // Set to null if empty or null
+      variantData.videoUrl = null;
+    } else if (videoValue && videoValue.trim() !== '') {
+      // Validate video URL format only if not empty
       const youtubePatterns = [
         /^https?:\/\/(www\.)?youtube\.com\/watch\?v=[\w-]+/,
         /^https?:\/\/(www\.)?youtu\.be\/[\w-]+/,
@@ -1563,8 +1668,8 @@ exports.addVariant = async (req, res) => {
         /^https?:\/\/(www\.)?x\.com\/\w+\/status\/\d+/
       ];
       
-      const isValidYouTube = youtubePatterns.some(pattern => pattern.test(variantData.videoUrl));
-      const isValidSocial = socialPatterns.some(pattern => pattern.test(variantData.videoUrl));
+      const isValidYouTube = youtubePatterns.some(pattern => pattern.test(videoValue));
+      const isValidSocial = socialPatterns.some(pattern => pattern.test(videoValue));
       
       if (!isValidYouTube && !isValidSocial) {
         return res.status(400).json({
@@ -1573,6 +1678,23 @@ exports.addVariant = async (req, res) => {
           message: 'Video URL must be a valid YouTube, Facebook, Instagram, TikTok, or Twitter video URL'
         });
       }
+      variantData.videoUrl = videoValue;
+    } else {
+      // Set to null if empty
+      variantData.videoUrl = null;
+    }
+
+    // Handle attributes for variant - ensure it's a valid array
+    if (variantData.attributes) {
+      if (Array.isArray(variantData.attributes)) {
+        variantData.attributes = variantData.attributes.filter(attr => 
+          attr && typeof attr === 'object' && attr.name && attr.value
+        );
+      } else {
+        variantData.attributes = [];
+      }
+    } else {
+      variantData.attributes = [];
     }
 
     // Handle categories for variant - use categories if available, otherwise use category
@@ -1960,6 +2082,56 @@ exports.updateVariant = async (req, res) => {
       }
     }
 
+    // Handle videoUrl/productVideo for variant update - allow empty/null values
+    const videoValue = updateData.videoUrl || updateData.productVideo;
+    if (videoValue !== undefined) {
+      if (videoValue === null || videoValue === undefined || videoValue === '' || videoValue === 'null' || videoValue === 'undefined') {
+        // Set to null if empty or null
+        updateData.videoUrl = null;
+      } else if (videoValue && videoValue.trim() !== '') {
+        // Validate video URL format only if not empty
+        const youtubePatterns = [
+          /^https?:\/\/(www\.)?youtube\.com\/watch\?v=[\w-]+/,
+          /^https?:\/\/(www\.)?youtu\.be\/[\w-]+/,
+          /^https?:\/\/(www\.)?youtube\.com\/embed\/[\w-]+/
+        ];
+        
+        const socialPatterns = [
+          /^https?:\/\/(www\.)?facebook\.com\/.*\/videos\/\d+/,
+          /^https?:\/\/(www\.)?instagram\.com\/p\/[\w-]+\//,
+          /^https?:\/\/(www\.)?tiktok\.com\/@[\w-]+\/video\/\d+/,
+          /^https?:\/\/(www\.)?twitter\.com\/\w+\/status\/\d+/,
+          /^https?:\/\/(www\.)?x\.com\/\w+\/status\/\d+/
+        ];
+        
+        const isValidYouTube = youtubePatterns.some(pattern => pattern.test(videoValue));
+        const isValidSocial = socialPatterns.some(pattern => pattern.test(videoValue));
+        
+        if (!isValidYouTube && !isValidSocial) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid video URL format',
+            message: 'Video URL must be a valid YouTube, Facebook, Instagram, TikTok, or Twitter video URL'
+          });
+        }
+        updateData.videoUrl = videoValue;
+      } else {
+        // Set to null if empty
+        updateData.videoUrl = null;
+      }
+    }
+
+    // Handle attributes for variant update - ensure it's a valid array
+    if (updateData.attributes !== undefined) {
+      if (Array.isArray(updateData.attributes)) {
+        updateData.attributes = updateData.attributes.filter(attr => 
+          attr && typeof attr === 'object' && attr.name && attr.value
+        );
+      } else {
+        updateData.attributes = [];
+      }
+    }
+
     console.log('🔍 updateVariant - Specifications after processing:', updateData.specifications);
     console.log('🔍 updateVariant - SpecificationValues after processing:', updateData.specificationValues);
     console.log('🔍 updateVariant - SelectedSpecifications after processing:', updateData.selectedSpecifications);
@@ -2310,6 +2482,477 @@ exports.replaceColors = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error replacing colors',
+      error: error.message
+    });
+  }
+};
+
+// Increment product views
+exports.incrementViews = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required'
+      });
+    }
+
+    // Check if product exists and belongs to store
+    const product = await Product.findOne({ _id: productId, store: storeId });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Increment views using findOneAndUpdate to avoid validation issues
+    const updatedProduct = await Product.findOneAndUpdate(
+      { _id: productId, store: storeId },
+      { 
+        $inc: { views: 1 },
+        $set: { 
+          attributes: Array.isArray(product.attributes) ? product.attributes : []
+        }
+      },
+      { 
+        new: true,
+        runValidators: false // Skip validation to avoid the attributes issue
+      }
+    );
+
+    if (product.attributes && typeof product.attributes === 'string') {
+      console.warn(`⚠️ Found invalid attributes format for product ${product._id}:`, product.attributes);
+    }
+
+    res.json({
+      success: true,
+      message: 'Product views incremented successfully',
+      data: {
+        productId: updatedProduct._id,
+        views: updatedProduct.views
+      }
+    });
+  } catch (error) {
+    console.error('Increment views error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error incrementing product views',
+      error: error.message
+    });
+  }
+};
+
+// Add review to product
+exports.addReview = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { storeId, rating, comment, guestId, guestName, guestEmail } = req.body;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required'
+      });
+    }
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be between 1 and 5'
+      });
+    }
+
+    // Check if product exists and belongs to store
+    const product = await Product.findOne({ _id: productId, store: storeId });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Get user info
+    let userId = null;
+    let userName = '';
+    let userEmail = '';
+
+    if (req.user) {
+      // Authenticated user
+      userId = req.user._id;
+      userName = `${req.user.firstName} ${req.user.lastName}`;
+      userEmail = req.user.email;
+    } else if (guestId && guestName && guestEmail) {
+      // Guest user
+      userName = guestName;
+      userEmail = guestEmail;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'User authentication or guest information is required'
+      });
+    }
+
+    // Check if user already reviewed this product
+    const existingReview = product.getUserReview(userId, guestId);
+    if (existingReview) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already reviewed this product'
+      });
+    }
+
+    // Add review
+    const newReview = {
+      userId: userId,
+      guestId: guestId,
+      userName: userName,
+      userEmail: userEmail,
+      rating: rating,
+      comment: comment || '',
+      isVerified: false,
+      createdAt: new Date()
+    };
+
+    product.reviews.push(newReview);
+    await product.save();
+
+    // Get updated product with populated data
+    const updatedProduct = await Product.findById(productId)
+      .populate('category', 'nameAr nameEn')
+      .populate('categories', 'nameAr nameEn')
+      .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'descriptionAr descriptionEn')
+      .populate('unit', 'nameAr nameEn symbol')
+      .populate('store', 'name domain');
+
+    // تحويل الألوان من JSON string إلى array
+    const processedProduct = parseProductColors(updatedProduct);
+
+    res.status(201).json({
+      success: true,
+      message: 'Review added successfully',
+      data: {
+        product: processedProduct,
+        review: newReview
+      }
+    });
+  } catch (error) {
+    console.error('Add review error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding review',
+      error: error.message
+    });
+  }
+};
+
+// Update review
+exports.updateReview = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { storeId, rating, comment, guestId } = req.body;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required'
+      });
+    }
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be between 1 and 5'
+      });
+    }
+
+    // Check if product exists and belongs to store
+    const product = await Product.findOne({ _id: productId, store: storeId });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Get user info
+    let userId = null;
+    if (req.user) {
+      userId = req.user._id;
+    }
+
+    // Find existing review
+    const existingReview = product.getUserReview(userId, guestId);
+    if (!existingReview) {
+      return res.status(404).json({
+        success: false,
+        message: 'Review not found'
+      });
+    }
+
+    // Update review
+    existingReview.rating = rating;
+    if (comment !== undefined) {
+      existingReview.comment = comment;
+    }
+    existingReview.createdAt = new Date();
+
+    await product.save();
+
+    // Get updated product with populated data
+    const updatedProduct = await Product.findById(productId)
+      .populate('category', 'nameAr nameEn')
+      .populate('categories', 'nameAr nameEn')
+      .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'descriptionAr descriptionEn')
+      .populate('unit', 'nameAr nameEn symbol')
+      .populate('store', 'name domain');
+
+    // تحويل الألوان من JSON string إلى array
+    const processedProduct = parseProductColors(updatedProduct);
+
+    res.json({
+      success: true,
+      message: 'Review updated successfully',
+      data: {
+        product: processedProduct,
+        review: existingReview
+      }
+    });
+  } catch (error) {
+    console.error('Update review error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating review',
+      error: error.message
+    });
+  }
+};
+
+// Delete review
+exports.deleteReview = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { storeId, guestId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required'
+      });
+    }
+
+    // Check if product exists and belongs to store
+    const product = await Product.findOne({ _id: productId, store: storeId });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Get user info
+    let userId = null;
+    if (req.user) {
+      userId = req.user._id;
+    }
+
+    // Find existing review
+    const existingReview = product.getUserReview(userId, guestId);
+    if (!existingReview) {
+      return res.status(404).json({
+        success: false,
+        message: 'Review not found'
+      });
+    }
+
+    // Remove review
+    product.reviews = product.reviews.filter(review => {
+      if (userId) {
+        return review.userId.toString() !== userId.toString();
+      } else {
+        return review.guestId !== guestId;
+      }
+    });
+
+    await product.save();
+
+    // Get updated product with populated data
+    const updatedProduct = await Product.findById(productId)
+      .populate('category', 'nameAr nameEn')
+      .populate('categories', 'nameAr nameEn')
+      .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'descriptionAr descriptionEn')
+      .populate('unit', 'nameAr nameEn symbol')
+      .populate('store', 'name domain');
+
+    // تحويل الألوان من JSON string إلى array
+    const processedProduct = parseProductColors(updatedProduct);
+
+    res.json({
+      success: true,
+      message: 'Review deleted successfully',
+      data: {
+        product: processedProduct
+      }
+    });
+  } catch (error) {
+    console.error('Delete review error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting review',
+      error: error.message
+    });
+  }
+};
+
+// Get product reviews
+exports.getProductReviews = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { storeId, page = 1, limit = 10, sort = 'newest' } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required'
+      });
+    }
+
+    // Check if product exists and belongs to store
+    const product = await Product.findOne({ _id: productId, store: storeId });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    if (!product.reviews || product.reviews.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          reviews: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          },
+          summary: {
+            averageRating: 0,
+            totalReviews: 0,
+            verifiedReviews: 0
+          }
+        }
+      });
+    }
+
+    // Sort reviews
+    let sortedReviews = [...product.reviews];
+    switch (sort) {
+      case 'oldest':
+        sortedReviews.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        break;
+      case 'rating_high':
+        sortedReviews.sort((a, b) => b.rating - a.rating);
+        break;
+      case 'rating_low':
+        sortedReviews.sort((a, b) => a.rating - b.rating);
+        break;
+      case 'newest':
+      default:
+        sortedReviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        break;
+    }
+
+    // Pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const paginatedReviews = sortedReviews.slice(skip, skip + parseInt(limit));
+
+    // Calculate summary
+    const totalReviews = product.reviews.length;
+    const verifiedReviews = product.reviews.filter(review => review.isVerified).length;
+    const averageRating = product.rating;
+
+    res.json({
+      success: true,
+      data: {
+        reviews: paginatedReviews,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalReviews,
+          pages: Math.ceil(totalReviews / parseInt(limit))
+        },
+        summary: {
+          averageRating: averageRating,
+          totalReviews: totalReviews,
+          verifiedReviews: verifiedReviews
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get product reviews error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching product reviews',
+      error: error.message
+    });
+  }
+};
+
+// Verify review (Admin only)
+exports.verifyReview = async (req, res) => {
+  try {
+    const { productId, reviewId } = req.params;
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required'
+      });
+    }
+
+    // Check if product exists and belongs to store
+    const product = await Product.findOne({ _id: productId, store: storeId });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Find review
+    const review = product.reviews.id(reviewId);
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: 'Review not found'
+      });
+    }
+
+    // Toggle verification status
+    review.isVerified = !review.isVerified;
+    await product.save();
+
+    res.json({
+      success: true,
+      message: `Review ${review.isVerified ? 'verified' : 'unverified'} successfully`,
+      data: {
+        review: review
+      }
+    });
+  } catch (error) {
+    console.error('Verify review error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error verifying review',
       error: error.message
     });
   }
