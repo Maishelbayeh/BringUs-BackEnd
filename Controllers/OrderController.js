@@ -569,6 +569,17 @@ exports.createOrder = async (req, res) => {
       }
     }
 
+    let isWholesaler = false;
+
+
+    if (user) {
+      const foundUser = await User.findById(user);
+      if (foundUser.role === 'wholesaler') {
+        isWholesaler = true;
+      }
+    }
+    console.log('isWholesaler',isWholesaler);
+    let wholesalerDiscount = null;
     let discount = 0;
     let subtotal = 0;
     const processedItems = [];
@@ -594,15 +605,16 @@ exports.createOrder = async (req, res) => {
       }
       
       // Get wholesaler discount if user is wholesaler
-      let wholesalerDiscount = null;
-      if (user) {
+      // 
+      if (isWholesaler) {
         wholesalerDiscount = await getWholesalerDiscount(user, storeId);
         console.log('wholesalerDiscount',wholesalerDiscount);
       }
       
       // Calculate the current price based on user role
       let currentPrice = 0;
-      if (wholesalerDiscount ) {
+      if (isWholesaler) {
+        wholesalerDiscount =  wholesalerDiscount.discount;
         console.log('wholesalerDiscount',wholesalerDiscount);
         discount = wholesalerDiscount.discount;
         console.log('discount',discount);
@@ -646,11 +658,11 @@ exports.createOrder = async (req, res) => {
       product.soldCount += item.quantity;
       await product.save();
     }
-    console.log('discount',discount);
+ 
     // حساب التوتال كوست بدقة
 
     const deliveryCost = deliveryAreaData?.price || 0;
-    const Finaldiscount = discount > 0 ? (subtotal * discount / 100) : 0;
+    const Finaldiscount = wholesalerDiscount > 0 ? (subtotal * wholesalerDiscount / 100) : 0;
     console.log('Finaldiscount',Finaldiscount);
     console.log('subtotal',subtotal);
     const total = subtotal + deliveryCost - Finaldiscount;
@@ -670,7 +682,7 @@ exports.createOrder = async (req, res) => {
         subtotal,
         tax:0,
         shipping: deliveryCost,
-        discount,
+        discount:Finaldiscount,
         total
       },
       notes,
