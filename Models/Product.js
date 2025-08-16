@@ -491,6 +491,7 @@ productSchema.virtual('videoId').get(function() {
 productSchema.virtual('videoPlatform').get(function() {
   if (!this.videoUrl) return null;
   
+  
   if (this.videoUrl.includes('youtube.com') || this.videoUrl.includes('youtu.be')) {
     return 'youtube';
   } else if (this.videoUrl.includes('facebook.com')) {
