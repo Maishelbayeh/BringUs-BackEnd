@@ -112,6 +112,9 @@ const storeSchema = new mongoose.Schema({
     action: {
       type: String,
       enum: [
+        'free_trial_extended',
+        'free_trial_cancelled',
+        'end_date_updated',
         'trial_started',
         'trial_extended', 
         'subscription_activated',

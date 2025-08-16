@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: [true, 'Email is required'],
-    unique: true,
+    unique:   false,
     lowercase: true,
     match: [
       /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
@@ -77,7 +77,7 @@ const userSchema = new mongoose.Schema({
     },
     zipCode: {
       type: String,
-      required: true
+      required: false
     },
     country: {
       type: String,
@@ -99,6 +99,10 @@ const userSchema = new mongoose.Schema({
   },
   emailVerificationToken: String,
   emailVerificationExpire: Date,
+  // New fields for OTP-based email verification
+  emailVerificationOTP: String,
+  emailVerificationExpiry: Date,
+  emailVerifiedAt: Date,
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   lastLogin: {

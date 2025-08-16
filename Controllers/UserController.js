@@ -1,6 +1,9 @@
 const User = require('../Models/User');
 const { validationResult } = require('express-validator');
 const { addStoreFilter } = require('../middleware/storeIsolation');
+const Store = require('../Models/Store');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 /**
  * @swagger
@@ -147,12 +150,17 @@ const createUser = async (req, res) => {
 
     const { firstName, lastName, email, password, phone, role, store, addresses, status } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Check if user already exists in the same store
+    const existingUser = await User.findOne({ 
+      email: email,
+      store: store ,
+      role: role  // Ensure the role is the same as the user being created
+
+    });
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: 'User already exists with this email'
+        message: 'User already exists with this email in this store'
       });
     }
 
@@ -173,16 +181,19 @@ const createUser = async (req, res) => {
         addr.street && addr.street.trim() && 
         addr.city && addr.city.trim() && 
         addr.state && addr.state.trim() && 
-        addr.zipCode && addr.zipCode.trim() && 
         addr.country && addr.country.trim()
+        // zipCode is optional, so we don't validate it
       );
-        } else {
+    } else {
       userData.addresses = [];
     }
     // Add store if provided and user is admin or client
     if (store && (userData.role === 'admin' || userData.role === 'client')) {
       // If store is an object with _id, extract the _id
       userData.store = typeof store === 'object' && store._id ? store._id : store;
+      console.log(`🔧 Store assigned to user: ${userData.store}`);
+    } else {
+      console.log(`⚠️  No store assigned. Store: ${store}, Role: ${userData.role}`);
     }
     
     // Validate store requirement for admin and client roles
@@ -194,7 +205,14 @@ const createUser = async (req, res) => {
     }
 
     // Create user
+    console.log(`🔧 Creating user with data:`, {
+      email: userData.email,
+      role: userData.role,
+      store: userData.store,
+      addressesCount: userData.addresses.length
+    });
     const user = await User.create(userData);
+    console.log(`✅ User created with ID: ${user._id}, Store: ${user.store}`);
 
     // Generate JWT token
     const token = user.getJwtToken();
@@ -233,9 +251,16 @@ const createUser = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully',
-      data: userResponse,
-      token
+      message: 'User registered successfully',
+      token,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        store: user.store
+      }
     });
   } catch (error) {
     //CONSOLE.error('Create user error:', error);
@@ -1038,6 +1063,356 @@ const updateCurrentUserProfile = async (req, res) => {
   }
 };
 
+// Email verification functions
+const sendEmailVerification = async (req, res) => {
+  try {
+    const { email, storeSlug } = req.body;
+
+    // Validate email
+    if (!email || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Validate storeSlug
+    if (!storeSlug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store slug is required'
+      });
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found with this email'
+      });
+    }
+
+    // Check if email is already verified
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already verified'
+      });
+    }
+
+    // Get store information
+    let storeName = 'Our Store';
+    const store = await Store.findOne({ slug: storeSlug });
+    if (store) {
+      storeName = store.nameEn || store.nameAr || storeName;
+    }
+
+    // Generate 5-digit OTP
+    const otp = Math.floor(10000 + Math.random() * 90000).toString();
+    
+    // Store OTP in user document with expiration (15 minutes)
+    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    
+    user.emailVerificationOTP = otp;
+    user.emailVerificationExpiry = otpExpiry;
+    await user.save();
+
+    // Email content
+    const emailSubject = `Email Verification - ${storeName}`;
+    const emailBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+        <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <h2 style="color: #333; text-align: center; margin-bottom: 30px;">Email Verification</h2>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            Hello ${user.firstName} ${user.lastName},
+          </p>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            Thank you for registering with <strong>${storeName}</strong>. To complete your registration, please use the following verification code:
+          </p>
+          
+          <div style="background-color: #f0f8ff; border: 2px solid #007bff; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;">
+            <h1 style="color: #007bff; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 0;">${otp}</h1>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+            <strong>Important:</strong>
+          </p>
+          <ul style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+            <li>This code will expire in 15 minutes</li>
+            <li>Do not share this code with anyone</li>
+            <li>If you didn't request this verification, please ignore this email</li>
+          </ul>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            If you have any questions, please contact our support team.
+          </p>
+          
+          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <p style="color: #999; font-size: 12px;">
+              Best regards,<br>
+              <strong>${storeName}</strong> Team
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Send email (you'll need to configure your email service)
+    // For now, we'll just log the OTP
+    console.log(`📧 Email verification OTP for ${email}: ${otp}`);
+    console.log(`📧 Store: ${storeName}`);
+    console.log(`📧 Email content: ${emailBody}`);
+
+    // TODO: Configure nodemailer and send actual email
+    // const transporter = nodemailer.createTransporter({
+    //   host: process.env.SMTP_HOST,
+    //   port: process.env.SMTP_PORT,
+    //   secure: true,
+    //   auth: {
+    //     user: process.env.SMTP_USER,
+    //     pass: process.env.SMTP_PASS
+    //   }
+    // });
+    
+    // await transporter.sendMail({
+    //   from: process.env.SMTP_FROM,
+    //   to: email,
+    //   subject: emailSubject,
+    //   html: emailBody
+    // });
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification code sent successfully',
+      data: {
+        email: user.email,
+        expiresIn: '15 minutes'
+      }
+    });
+
+  } catch (error) {
+    console.error('Send email verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error sending verification code',
+      error: error.message
+    });
+  }
+};
+
+const verifyEmail = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // Validate input
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and OTP are required'
+      });
+    }
+
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if email is already verified
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already verified'
+      });
+    }
+
+    // Check if OTP exists and is not expired
+    if (!user.emailVerificationOTP || !user.emailVerificationExpiry) {
+      return res.status(400).json({
+        success: false,
+        message: 'No verification code found. Please request a new one.'
+      });
+    }
+
+    // Check if OTP is expired
+    if (new Date() > user.emailVerificationExpiry) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code has expired. Please request a new one.'
+      });
+    }
+
+    // Verify OTP
+    if (user.emailVerificationOTP !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification code'
+      });
+    }
+
+    // Mark email as verified
+    user.isEmailVerified = true;
+    user.emailVerificationOTP = undefined;
+    user.emailVerificationExpiry = undefined;
+    user.emailVerifiedAt = new Date();
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully',
+      data: {
+        email: user.email,
+        isEmailVerified: user.isEmailVerified,
+        emailVerifiedAt: user.emailVerifiedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Verify email error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error verifying email',
+      error: error.message
+    });
+  }
+};
+
+const resendEmailVerification = async (req, res) => {
+  try {
+    const { email, storeSlug } = req.body;
+
+    // Validate email
+    if (!email || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Validate storeSlug
+    if (!storeSlug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store slug is required'
+      });
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found with this email'
+      });
+    }
+
+    // Check if email is already verified
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already verified'
+      });
+    }
+
+    // Check if there's a recent OTP request (prevent spam)
+    if (user.emailVerificationExpiry && new Date() < user.emailVerificationExpiry) {
+      const timeLeft = Math.ceil((user.emailVerificationExpiry - new Date()) / 1000 / 60);
+      return res.status(400).json({
+        success: false,
+        message: `Please wait ${timeLeft} minutes before requesting a new verification code`
+      });
+    }
+
+    // Get store information
+    let storeName = 'Our Store';
+    const store = await Store.findOne({ slug: storeSlug });
+    if (store) {
+      storeName = store.nameEn || store.nameAr || storeName;
+    }
+
+    // Generate new 5-digit OTP
+    const otp = Math.floor(10000 + Math.random() * 90000).toString();
+    
+    // Store new OTP with expiration (15 minutes)
+    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
+    
+    user.emailVerificationOTP = otp;
+    user.emailVerificationExpiry = otpExpiry;
+    await user.save();
+
+    // Email content
+    const emailSubject = `Email Verification - ${storeName}`;
+    const emailBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+        <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <h2 style="color: #333; text-align: center; margin-bottom: 30px;">Email Verification</h2>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            Hello ${user.firstName} ${user.lastName},
+          </p>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            You requested a new verification code for your account at <strong>${storeName}</strong>. Please use the following verification code:
+          </p>
+          
+          <div style="background-color: #f0f8ff; border: 2px solid #007bff; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;">
+            <h1 style="color: #007bff; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 0;">${otp}</h1>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+            <strong>Important:</strong>
+          </p>
+          <ul style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+            <li>This code will expire in 15 minutes</li>
+            <li>Do not share this code with anyone</li>
+            <li>If you didn't request this verification, please ignore this email</li>
+          </ul>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            If you have any questions, please contact our support team.
+          </p>
+          
+          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <p style="color: #999; font-size: 12px;">
+              Best regards,<br>
+              <strong>${storeName}</strong> Team
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Send email (you'll need to configure your email service)
+    // For now, we'll just log the OTP
+    console.log(`📧 Resend email verification OTP for ${email}: ${otp}`);
+    console.log(`📧 Store: ${storeName}`);
+    console.log(`📧 Email content: ${emailBody}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'New verification code sent successfully',
+      data: {
+        email: user.email,
+        expiresIn: '15 minutes'
+      }
+    });
+
+  } catch (error) {
+    console.error('Resend email verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error sending verification code',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createUser,
   getAllUsers,
@@ -1046,5 +1421,8 @@ module.exports = {
   updateCurrentUserProfile,
   deleteUser,
   getCustomers,
-  getStoreStaff
+  getStoreStaff,
+  sendEmailVerification,
+  verifyEmail,
+  resendEmailVerification
 }; 

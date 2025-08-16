@@ -82,7 +82,15 @@ const productSchema = new mongoose.Schema({
     default: null,
     validate: {
       validator: function(videoUrl) {
-        if (!videoUrl) return true; // Allow null/empty values
+        // Allow null, undefined, empty string, or valid URLs
+        if (videoUrl === null || videoUrl === undefined || videoUrl === '' || videoUrl === 'null' || videoUrl === 'undefined') {
+          return true;
+        }
+        
+        // If it's a string, check if it's empty after trimming
+        if (typeof videoUrl === 'string' && videoUrl.trim() === '') {
+          return true;
+        }
         
         // YouTube URL patterns
         const youtubePatterns = [
@@ -148,16 +156,39 @@ const productSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product'
   }],
-  attributes: [{
-    name: {
-      type: String,
-      required: true
-    },
-    value: {
-      type: String,
-      required: true
+  attributes: {
+    type: [{
+      name: {
+        type: String,
+        required: true
+      },
+      value: {
+        type: String,
+        required: true
+      }
+    }],
+    default: [],
+    validate: {
+      validator: function(attributes) {
+        // Allow empty arrays
+        if (!attributes || attributes.length === 0) return true;
+        
+        // If it's a string, it's invalid but we'll handle it in pre-save
+        if (typeof attributes === 'string') return false;
+        
+        // Must be an array
+        if (!Array.isArray(attributes)) return false;
+        
+        // Each item must be an object with name and value
+        return attributes.every(attr => 
+          attr && typeof attr === 'object' && 
+          typeof attr.name === 'string' && 
+          typeof attr.value === 'string'
+        );
+      },
+      message: 'Attributes must be an array of objects with name and value properties'
     }
-  }],
+  },
   specifications: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ProductSpecification'
@@ -279,6 +310,43 @@ const productSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Number of reviews cannot be negative']
   },
+  reviews: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    guestId: {
+      type: String,
+      default: null
+    },
+    userName: {
+      type: String,
+      required: true
+    },
+    userEmail: {
+      type: String,
+      required: true
+    },
+    rating: {
+      type: Number,
+      required: true,
+      min: [1, 'Rating must be at least 1'],
+      max: [5, 'Rating cannot exceed 5']
+    },
+    comment: {
+      type: String,
+      maxlength: [1000, 'Comment cannot exceed 1000 characters']
+    },
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   views: {
     type: Number,
     default: 0,
@@ -439,6 +507,34 @@ productSchema.virtual('totalSpecificationQuantities').get(function() {
   return this.specificationValues.reduce((total, spec) => total + (spec.quantity || 0), 0);
 });
 
+// Virtual for average rating from reviews
+productSchema.virtual('averageRating').get(function() {
+  if (!this.reviews || this.reviews.length === 0) {
+    return 0;
+  }
+  const totalRating = this.reviews.reduce((sum, review) => sum + review.rating, 0);
+  return Math.round((totalRating / this.reviews.length) * 10) / 10; // Round to 1 decimal place
+});
+
+// Virtual for verified reviews count
+productSchema.virtual('verifiedReviewsCount').get(function() {
+  if (!this.reviews) return 0;
+  return this.reviews.filter(review => review.isVerified).length;
+});
+
+// Virtual for user's review (if exists)
+productSchema.methods.getUserReview = function(userId, guestId = null) {
+  if (!this.reviews) return null;
+  
+  if (userId) {
+    return this.reviews.find(review => review.userId.toString() === userId.toString());
+  } else if (guestId) {
+    return this.reviews.find(review => review.guestId === guestId);
+  }
+  
+  return null;
+};
+
 // Virtual for specification stock status
 productSchema.virtual('specificationStockStatus').get(function() {
   if (!this.specificationValues || !Array.isArray(this.specificationValues)) {
@@ -546,6 +642,40 @@ productSchema.pre('save', function(next) {
     this.colors = JSON.stringify(this.colors);
   }
   
+  // Handle productVideo field - migrate to videoUrl if needed
+  if (this.productVideo && !this.videoUrl) {
+    this.videoUrl = this.productVideo;
+    delete this.productVideo;
+  }
+  
+  // Validate and fix videoUrl field
+  if (this.videoUrl === null || this.videoUrl === undefined || this.videoUrl === '' || this.videoUrl === 'null' || this.videoUrl === 'undefined') {
+    this.videoUrl = null;
+  } else if (this.videoUrl && typeof this.videoUrl === 'string' && this.videoUrl.trim() === '') {
+    this.videoUrl = null;
+  }
+  
+  // Validate and fix attributes field
+  if (this.attributes && typeof this.attributes === 'string') {
+    console.warn(`⚠️ Found invalid attributes format for product ${this._id}:`, this.attributes);
+    this.attributes = []; // Reset to empty array if it's a string
+  }
+  
+  // Ensure attributes is always an array
+  if (!Array.isArray(this.attributes)) {
+    this.attributes = [];
+  }
+  
+  // تحديث التقييم المتوسط وعدد التقييمات
+  if (this.reviews && this.reviews.length > 0) {
+    const totalRating = this.reviews.reduce((sum, review) => sum + review.rating, 0);
+    this.rating = Math.round((totalRating / this.reviews.length) * 10) / 10;
+    this.numReviews = this.reviews.length;
+  } else {
+    this.rating = 0;
+    this.numReviews = 0;
+  }
+  
   next();
 });
 
@@ -575,6 +705,30 @@ productSchema.pre('findOneAndUpdate', function(next) {
   // تحويل colors إلى JSON إذا كان array
   if (this._update.colors && Array.isArray(this._update.colors)) {
     this._update.colors = JSON.stringify(this._update.colors);
+  }
+  
+  // Handle productVideo field - migrate to videoUrl if needed
+  if (this._update.productVideo && !this._update.videoUrl) {
+    this._update.videoUrl = this._update.productVideo;
+    delete this._update.productVideo;
+  }
+  
+  // Validate and fix videoUrl field
+  if (this._update.videoUrl === null || this._update.videoUrl === undefined || this._update.videoUrl === '' || this._update.videoUrl === 'null' || this._update.videoUrl === 'undefined') {
+    this._update.videoUrl = null;
+  } else if (this._update.videoUrl && typeof this._update.videoUrl === 'string' && this._update.videoUrl.trim() === '') {
+    this._update.videoUrl = null;
+  }
+  
+  // Validate and fix attributes field
+  if (this._update.attributes && typeof this._update.attributes === 'string') {
+    console.warn(`⚠️ Found invalid attributes format in update for product:`, this._update.attributes);
+    this._update.attributes = []; // Reset to empty array if it's a string
+  }
+  
+  // Ensure attributes is always an array in updates
+  if (this._update.attributes && !Array.isArray(this._update.attributes)) {
+    this._update.attributes = [];
   }
   
   next();
