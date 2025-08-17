@@ -103,8 +103,7 @@ const advertisementData = [
     startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
     endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // 60 days from now
   },
-  {
-    
+  {   
     title: 'عرض العودة للمدارس',
     description: 'أقلام ودفاتر بأسعار منافسة',
     htmlContent: `
