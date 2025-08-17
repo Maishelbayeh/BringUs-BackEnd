@@ -1103,9 +1103,11 @@ const sendEmailVerification = async (req, res) => {
 
     // Get store information
     let storeName = 'Our Store';
+    let storeEmail = 'info@bringus.com';
     const store = await Store.findOne({ slug: storeSlug });
     if (store) {
       storeName = store.nameEn || store.nameAr || storeName;
+      storeEmail = store.contact.email || storeEmail;
     }
 
     // Generate 5-digit OTP
@@ -1166,50 +1168,21 @@ const sendEmailVerification = async (req, res) => {
     console.log(`📧 Store: ${storeName}`);
     console.log(`📧 Email content: ${emailBody}`);
 
-    // Try to send email using Resend first, then fallback to SMTP
+    // Try to send email using Resend
     try {
-      if (process.env.RESEND_API_KEY) {
-        // Use Resend API
-        const { Resend } = require('resend');
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        
-        await resend.emails.send({
-          from: process.env.RESEND_FROM_EMAIL || 'maishelbayeh@icloud.com',
-          to: email,
-          subject: emailSubject,
-          html: emailBody
-        });
-        
-        console.log(`✅ Email sent successfully via Resend to ${email}`);
-      } else if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-        // Fallback to SMTP
-        const transporter = nodemailer.createTransporter({
-          host: process.env.SMTP_HOST,
-          port: process.env.SMTP_PORT || 587,
-          secure: process.env.SMTP_SECURE === 'true',
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-          }
-        });
-        
-        await transporter.sendMail({
-          from: process.env.SMTP_FROM || process.env.SMTP_USER,
-          to: email,
-          subject: emailSubject,
-          html: emailBody
-        });
-        
-        console.log(`✅ Email sent successfully via SMTP to ${email}`);
-      } else {
-        console.log('⚠️ No email service configured');
-        console.log('💡 To enable email sending, configure either:');
-        console.log('   Option 1 - Resend (Recommended):');
-        console.log('     - RESEND_API_KEY (get from https://resend.com)');
-        console.log('     - RESEND_FROM_EMAIL=maishelbayeh@icloud.com');
-        console.log('   Option 2 - SMTP:');
-        console.log('     - SMTP_HOST, SMTP_USER, SMTP_PASS, etc.');
-      }
+      const { Resend } = require('resend');
+      const resend = new Resend("re_Xq863joq_7xQ9AmRmUuqVpB2HTqamyx22");
+      
+      const resendResponse = await resend.emails.send({
+        from: "onboarding@resend.dev",
+        to: email,
+        subject: emailSubject,
+        html: emailBody
+      });
+      
+      console.log(`✅ Email sent successfully via Resend to ${email}`);
+      console.log(`📧 Email ID: ${resendResponse.id || 'N/A'}`);
+      
     } catch (emailError) {
       console.log('⚠️ Failed to send email:', emailError.message);
       console.log('📧 OTP is still available in logs for testing');
@@ -1360,11 +1333,14 @@ const resendEmailVerification = async (req, res) => {
       });
     }
 
+
     // Get store information
     let storeName = 'Our Store';
-    const store = await Store.findOne({ slug: storeSlug });
+    let storeEmail = 'info@bringus.com';
+    const store = await Store.findOne({ slug: storeSlug }); // get store by slug
     if (store) {
       storeName = store.nameEn || store.nameAr || storeName;
+      storeEmail = store.contact.email || storeEmail;
     }
 
     // Generate new 5-digit OTP
@@ -1424,7 +1400,28 @@ const resendEmailVerification = async (req, res) => {
     console.log(`📧 Resend email verification OTP for ${email}: ${otp}`);
     console.log(`📧 Store: ${storeName}`);
     console.log(`📧 Email content: ${emailBody}`);
+    
+    // Try to send email using Resend
+    try {
+      const { Resend } = require('resend');
+      const resend = new Resend("re_Xq863joq_7xQ9AmRmUuqVpB2HTqamyx22");
+      
+      const resendResponse = await resend.emails.send({
+        from: "onboarding@resend.dev",
+        to: email,
+        subject: emailSubject,
+        html: emailBody
+      });
+      
+      console.log(`✅ Email sent successfully via Resend to ${email}`);
+      console.log(`📧 Email ID: ${resendResponse.id || 'N/A'}`);
+      
+    } catch (emailError) {
+      console.log('⚠️ Failed to send email:', emailError.message);
+      console.log('📧 OTP is still available in logs for testing');
+    }
 
+   
     res.status(200).json({
       success: true,
       message: 'New verification code sent successfully',
@@ -1434,6 +1431,7 @@ const resendEmailVerification = async (req, res) => {
       }
     });
 
+
   } catch (error) {
     console.error('Resend email verification error:', error);
     res.status(500).json({
@@ -1442,6 +1440,7 @@ const resendEmailVerification = async (req, res) => {
       error: error.message
     });
   }
+
 };
 
 module.exports = {

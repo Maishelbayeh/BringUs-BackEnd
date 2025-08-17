@@ -429,7 +429,13 @@ router.post('/login', [
       });
     }
 
-    // Update last login
+    if(user.isEmailVerified == false){
+      return res.status(401).json({
+        success: false,
+        message: 'Email is not verified'
+      });
+    }
+
     user.lastLogin = new Date();
     await user.save();
 
@@ -596,8 +602,11 @@ router.post('/login', [
         avatar: user.avatar,
         store: userStore, // Default store for admin
         stores: userStores, // All stores for admin
-        isOwner: isOwner // Flag indicating if user is an owner
+        isOwner: isOwner, // Flag indicating if user is an owner
+        isEmailVerified: user.isEmailVerified
       },
+      isEmailVerified: user.isEmailVerified,  
+      isActive: user.isActive,
       storeId: storeIdForToken, // أضف هذا الحقل لسهولة الوصول من الفرونت
       isOwner: isOwner, // Flag indicating if user is an owner
       userStatus: user.status

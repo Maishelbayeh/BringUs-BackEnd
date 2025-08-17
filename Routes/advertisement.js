@@ -19,7 +19,43 @@ const upload = multer(); // In-memory storage
 
 const router = express.Router();
 
-// Apply authentication and store access middleware to all routes
+/**
+ * @swagger
+ * /api/advertisements/stores/{storeId}/advertisements/active:
+ *   get:
+ *     summary: Get active advertisement for a store (Public)
+ *     description: Retrieve the currently active advertisement for a store - No authentication required
+ *     tags: [Advertisements]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Advertisement'
+ *                 message:
+ *                   type: string
+ *                   example: "Active advertisement retrieved successfully"
+ *       404:
+ *         description: No active advertisement found
+ */
+// Public route for active advertisement (no authentication required)
+router.get('/stores/:storeId/advertisements/active', getActiveAdvertisement);
+
+// Apply authentication and store access middleware to all other routes
 router.use(protect);
 router.use('/stores/:storeId', verifyStoreAccess);
 
@@ -119,29 +155,7 @@ const validateAdvertisement = [
  */
 router.get('/stores/:storeId/advertisements', getAllAdvertisements);
 
-/**
- * @swagger
- * /api/advertisements/stores/{storeId}/advertisements/active:
- *   get:
- *     summary: Get active advertisement for a store
- *     description: Retrieve the currently active advertisement for a store
- *     tags: [Advertisements]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: storeId
- *         required: true
- *         schema:
- *           type: string
- *         description: Store ID
- *     responses:
- *       200:
- *         description: Success
- *       404:
- *         description: No active advertisement found
- */
-router.get('/stores/:storeId/advertisements/active', getActiveAdvertisement);
+
 
 /**
  * @swagger
