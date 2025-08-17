@@ -1166,23 +1166,54 @@ const sendEmailVerification = async (req, res) => {
     console.log(`📧 Store: ${storeName}`);
     console.log(`📧 Email content: ${emailBody}`);
 
-    // TODO: Configure nodemailer and send actual email
-    // const transporter = nodemailer.createTransporter({
-    //   host: process.env.SMTP_HOST,
-    //   port: process.env.SMTP_PORT,
-    //   secure: true,
-    //   auth: {
-    //     user: process.env.SMTP_USER,
-    //     pass: process.env.SMTP_PASS
-    //   }
-    // });
-    
-    // await transporter.sendMail({
-    //   from: process.env.SMTP_FROM,
-    //   to: email,
-    //   subject: emailSubject,
-    //   html: emailBody
-    // });
+    // Try to send email using Resend first, then fallback to SMTP
+    try {
+      if (process.env.RESEND_API_KEY) {
+        // Use Resend API
+        const { Resend } = require('resend');
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        
+        await resend.emails.send({
+          from: process.env.RESEND_FROM_EMAIL || 'maishelbayeh@icloud.com',
+          to: email,
+          subject: emailSubject,
+          html: emailBody
+        });
+        
+        console.log(`✅ Email sent successfully via Resend to ${email}`);
+      } else if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+        // Fallback to SMTP
+        const transporter = nodemailer.createTransporter({
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT || 587,
+          secure: process.env.SMTP_SECURE === 'true',
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          }
+        });
+        
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM || process.env.SMTP_USER,
+          to: email,
+          subject: emailSubject,
+          html: emailBody
+        });
+        
+        console.log(`✅ Email sent successfully via SMTP to ${email}`);
+      } else {
+        console.log('⚠️ No email service configured');
+        console.log('💡 To enable email sending, configure either:');
+        console.log('   Option 1 - Resend (Recommended):');
+        console.log('     - RESEND_API_KEY (get from https://resend.com)');
+        console.log('     - RESEND_FROM_EMAIL=maishelbayeh@icloud.com');
+        console.log('   Option 2 - SMTP:');
+        console.log('     - SMTP_HOST, SMTP_USER, SMTP_PASS, etc.');
+      }
+    } catch (emailError) {
+      console.log('⚠️ Failed to send email:', emailError.message);
+      console.log('📧 OTP is still available in logs for testing');
+    }
 
     res.status(200).json({
       success: true,

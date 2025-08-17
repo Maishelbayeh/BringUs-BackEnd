@@ -682,7 +682,7 @@ exports.createOrder = async (req, res) => {
         subtotal,
         tax:0,
         shipping: deliveryCost,
-        discount:Finaldiscount,
+        discount:wholesalerDiscount,
         total
       },
       notes,
