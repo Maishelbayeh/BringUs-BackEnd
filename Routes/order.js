@@ -70,7 +70,7 @@ router.post('/', [
   body('items.*.quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
   body('shippingAddress').isObject().withMessage('Shipping address is required'),
   body('billingAddress').isObject().withMessage('Billing address is required'),
-  body('paymentInfo.method').isIn(['credit_card', 'debit_card', 'paypal', 'stripe', 'cash_on_delivery']).withMessage('Valid payment method is required'),
+  body('paymentInfo.method').isIn(['credit_card', 'debit_card', 'paypal', 'stripe', 'cash_on_delivery','store']).withMessage('Valid payment method is required'),
   body('shippingInfo.method').notEmpty().withMessage('Shipping method is required'),
   body('shippingInfo.cost').isFloat({ min: 0 }).withMessage('Shipping cost must be a positive number')
 ], async (req, res) => {
