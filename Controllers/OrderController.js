@@ -995,6 +995,7 @@ exports.updateOrderStatus = async (req, res) => {
         message: 'Status is required' 
       });
     }
+    
 
     // Validate status
     const validStatuses = ['pending', 'shipped', 'delivered', 'cancelled'];
