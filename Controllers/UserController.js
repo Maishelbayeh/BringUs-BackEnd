@@ -1113,8 +1113,8 @@ const sendEmailVerification = async (req, res) => {
     // Generate 5-digit OTP
     const otp = Math.floor(10000 + Math.random() * 90000).toString();
     
-    // Store OTP in user document with expiration (15 minutes)
-    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    // Store OTP in user document with expiration (1 minute)
+    const otpExpiry = new Date(Date.now() + 1 * 60 * 1000); // 1 minute
     
     user.emailVerificationOTP = otp;
     user.emailVerificationExpiry = otpExpiry;
@@ -1143,7 +1143,7 @@ const sendEmailVerification = async (req, res) => {
             <strong>Important:</strong>
           </p>
           <ul style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-            <li>This code will expire in 15 minutes</li>
+            <li>This code will expire in 1 minute</li>
             <li>Do not share this code with anyone</li>
             <li>If you didn't request this verification, please ignore this email</li>
           </ul>
@@ -1162,30 +1162,12 @@ const sendEmailVerification = async (req, res) => {
       </div>
     `;
 
-    // Send email (you'll need to configure your email service)
-    // For now, we'll just log the OTP
-    console.log(`📧 Email verification OTP for ${email}: ${otp}`);
-    console.log(`📧 Store: ${storeName}`);
-    console.log(`📧 Email content: ${emailBody}`);
-
-    // Try to send email using Resend
-    try {
-      const { Resend } = require('resend');
-      const resend = new Resend("re_Xq863joq_7xQ9AmRmUuqVpB2HTqamyx22");
-      
-      const resendResponse = await resend.emails.send({
-        from: "onboarding@resend.dev",
-        to: email,
-        subject: emailSubject,
-        html: emailBody
-      });
-      
-      console.log(`✅ Email sent successfully via Resend to ${email}`);
-      console.log(`📧 Email ID: ${resendResponse.id || 'N/A'}`);
-      
-    } catch (emailError) {
-      console.log('⚠️ Failed to send email:', emailError.message);
-      console.log('📧 OTP is still available in logs for testing');
+    // Send email using Mailtrap service
+    const emailService = require('../services/emailService');
+    const emailResult = await emailService.sendVerificationEmail(email, otp, storeName, storeEmail);
+    
+    if (!emailResult.success) {
+      console.log('⚠️ Email sending failed, but OTP is available in logs for testing');
     }
 
     res.status(200).json({
@@ -1193,7 +1175,7 @@ const sendEmailVerification = async (req, res) => {
       message: 'Verification code sent successfully',
       data: {
         email: user.email,
-        expiresIn: '15 minutes'
+        expiresIn: '1 minute'
       }
     });
 
@@ -1346,8 +1328,8 @@ const resendEmailVerification = async (req, res) => {
     // Generate new 5-digit OTP
     const otp = Math.floor(10000 + Math.random() * 90000).toString();
     
-    // Store new OTP with expiration (15 minutes)
-    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
+    // Store new OTP with expiration (1 minute)
+    const otpExpiry = new Date(Date.now() + 1 * 60 * 1000);
     
     user.emailVerificationOTP = otp;
     user.emailVerificationExpiry = otpExpiry;
@@ -1376,7 +1358,7 @@ const resendEmailVerification = async (req, res) => {
             <strong>Important:</strong>
           </p>
           <ul style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-            <li>This code will expire in 15 minutes</li>
+            <li>This code will expire in 1 minute</li>
             <li>Do not share this code with anyone</li>
             <li>If you didn't request this verification, please ignore this email</li>
           </ul>
@@ -1395,30 +1377,12 @@ const resendEmailVerification = async (req, res) => {
       </div>
     `;
 
-    // Send email (you'll need to configure your email service)
-    // For now, we'll just log the OTP
-    console.log(`📧 Resend email verification OTP for ${email}: ${otp}`);
-    console.log(`📧 Store: ${storeName}`);
-    console.log(`📧 Email content: ${emailBody}`);
+    // Send email using Mailtrap service
+    const emailService = require('../services/emailService');
+    const emailResult = await emailService.sendVerificationEmail(email, otp, storeName, storeEmail);
     
-    // Try to send email using Resend
-    try {
-      const { Resend } = require('resend');
-      const resend = new Resend("re_Xq863joq_7xQ9AmRmUuqVpB2HTqamyx22");
-      
-      const resendResponse = await resend.emails.send({
-        from: "onboarding@resend.dev",
-        to: email,
-        subject: emailSubject,
-        html: emailBody
-      });
-      
-      console.log(`✅ Email sent successfully via Resend to ${email}`);
-      console.log(`📧 Email ID: ${resendResponse.id || 'N/A'}`);
-      
-    } catch (emailError) {
-      console.log('⚠️ Failed to send email:', emailError.message);
-      console.log('📧 OTP is still available in logs for testing');
+    if (!emailResult.success) {
+      console.log('⚠️ Email sending failed, but OTP is available in logs for testing');
     }
 
    
@@ -1427,7 +1391,7 @@ const resendEmailVerification = async (req, res) => {
       message: 'New verification code sent successfully',
       data: {
         email: user.email,
-        expiresIn: '15 minutes'
+        expiresIn: '1 minute'
       }
     });
 
@@ -1443,6 +1407,191 @@ const resendEmailVerification = async (req, res) => {
 
 };
 
+// Check email verification status
+const checkEmailVerificationStatus = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Validate email
+    if (!email || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found with this email'
+      });
+    }
+
+    // Check verification status
+    const isVerified = user.isEmailVerified;
+    const hasPendingOTP = user.emailVerificationOTP && user.emailVerificationExpiry && new Date() < user.emailVerificationExpiry;
+    const otpExpired = user.emailVerificationOTP && user.emailVerificationExpiry && new Date() > user.emailVerificationExpiry;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        email: user.email,
+        isEmailVerified: isVerified,
+        emailVerifiedAt: user.emailVerifiedAt,
+        hasPendingVerification: hasPendingOTP,
+        otpExpired: otpExpired,
+        status: isVerified ? 'verified' : (hasPendingOTP ? 'pending' : 'not_verified')
+      }
+    });
+
+  } catch (error) {
+    console.error('Check email verification status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error checking email verification status',
+      error: error.message
+    });
+  }
+};
+
+// Forgot password - send reset email
+const forgotPassword = async (req, res) => {
+  try {
+    const { email, storeSlug, baseUrl } = req.body;
+
+    // Validate email
+    if (!email || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found with this email'
+      });
+    }
+
+    // Get store information
+    let storeName = 'Our Store';
+    let storeEmail = 'info@bringus.com';
+    
+    if (storeSlug) {
+      const Store = require('../Models/Store');
+      const store = await Store.findOne({ slug: storeSlug });
+      if (store) {
+        storeName = store.nameEn || store.nameAr || storeName;
+        storeEmail = store.contact.email || storeEmail;
+      }
+    }
+
+    // Generate reset token
+    const resetToken = user.getResetPasswordToken();
+    await user.save({ validateBeforeSave: false });
+
+    // Send password reset email
+    const emailService = require('../services/emailService');
+    const emailResult = await emailService.sendPasswordResetEmail(
+      email, 
+      resetToken, 
+      storeName, 
+      storeEmail, 
+      baseUrl
+    );
+
+    if (!emailResult.success) {
+      console.log('⚠️ Password reset email sending failed, but token is available in logs for testing');
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset email sent successfully',
+      data: {
+        email: user.email,
+        expiresIn: '10 minutes'
+      }
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error sending password reset email',
+      error: error.message
+    });
+  }
+};
+
+// Reset password using token
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    // Validate input
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token and new password are required'
+      });
+    }
+
+    // Validate password length
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long'
+      });
+    }
+
+    // Hash the token to compare with stored token
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    // Find user with valid token and not expired
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token'
+      });
+    }
+
+    // Set new password
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully',
+      data: {
+        email: user.email
+      }
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error resetting password',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createUser,
   getAllUsers,
@@ -1454,5 +1603,8 @@ module.exports = {
   getStoreStaff,
   sendEmailVerification,
   verifyEmail,
-  resendEmailVerification
+  resendEmailVerification,
+  checkEmailVerificationStatus,
+  forgotPassword,
+  resetPassword
 }; 

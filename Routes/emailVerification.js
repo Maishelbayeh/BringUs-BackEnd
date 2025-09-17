@@ -51,7 +51,7 @@ const UserController = require('../Controllers/UserController');
  *                       example: "user@example.com"
  *                     expiresIn:
  *                       type: string
- *                       example: "15 minutes"
+ *                       example: "1 minute"
  *       400:
  *         description: Bad request - validation errors
  *       404:
@@ -192,7 +192,7 @@ router.post('/verify', [
  *                       example: "user@example.com"
  *                     expiresIn:
  *                       type: string
- *                       example: "15 minutes"
+ *                       example: "1 minute"
  *       400:
  *         description: Bad request - validation errors or too frequent requests
  *       404:
@@ -211,6 +211,75 @@ router.post('/resend', [
     .isString()
     .withMessage('Store slug must be a string')
 ], UserController.resendEmailVerification);
+
+/**
+ * @swagger
+ * /api/email-verification/status:
+ *   post:
+ *     summary: Check email verification status
+ *     description: Check if user's email is verified and get verification status details
+ *     tags: [Email Verification]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: User's email address
+ *                 example: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: Email verification status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     email:
+ *                       type: string
+ *                       example: "user@example.com"
+ *                     isEmailVerified:
+ *                       type: boolean
+ *                       example: true
+ *                     emailVerifiedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-01-15T10:30:00.000Z"
+ *                     hasPendingVerification:
+ *                       type: boolean
+ *                       example: false
+ *                     otpExpired:
+ *                       type: boolean
+ *                       example: false
+ *                     status:
+ *                       type: string
+ *                       enum: [verified, pending, not_verified]
+ *                       example: "verified"
+ *       400:
+ *         description: Bad request - validation errors
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/status', [
+  body('email')
+    .isEmail()
+    .withMessage('Please enter a valid email address')
+    .normalizeEmail()
+], UserController.checkEmailVerificationStatus);
 
 module.exports = router;
 

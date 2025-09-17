@@ -181,37 +181,36 @@ router.post('/register', [
         if (storeData) {
           console.log(`📧 Store found: ${storeData.nameEn || storeData.nameAr} (${storeData.slug})`);
           
-          // Import and call the email verification function
-          const UserController = require('../Controllers/UserController');
+          // Generate 5-digit OTP
+          const otp = Math.floor(10000 + Math.random() * 90000).toString();
           
-          // Create a mock request object for the email verification
-          const mockReq = {
-            body: {
-              email: user.email,
-              storeSlug: storeData.slug
-            }
-          };
+          // Store OTP in user document with expiration (1 minute)
+          const otpExpiry = new Date(Date.now() + 1 * 60 * 1000); // 1 minute
           
-          // Create a mock response object to capture the result
-          const mockRes = {
-            status: (code) => ({
-              json: (data) => {
-                if (code === 200) {
-                  emailVerificationSent = true;
-                  console.log('✅ Email verification OTP sent successfully');
-                  console.log(`   Email: ${user.email}`);
-                  console.log(`   Store: ${storeData.nameEn || storeData.nameAr}`);
-                } else {
-                  emailVerificationError = data.message;
-                  console.log('⚠️ Email verification failed:', data.message);
-                }
-              }
-            })
-          };
+          user.emailVerificationOTP = otp;
+          user.emailVerificationExpiry = otpExpiry;
+          await user.save();
           
-          // Send email verification
-          console.log('📤 Sending email verification OTP...');
-          await UserController.sendEmailVerification(mockReq, mockRes);
+          // Send email using our email service
+          const emailService = require('../services/emailService');
+          const emailResult = await emailService.sendVerificationEmail(
+            user.email, 
+            otp, 
+            storeData.nameEn || storeData.nameAr || 'Our Store',
+            storeData.contact?.email || 'info@bringus.com'
+          );
+          
+          if (emailResult.success) {
+            emailVerificationSent = true;
+            console.log('✅ Email verification OTP sent successfully via Mailtrap');
+            console.log(`   Email: ${user.email}`);
+            console.log(`   Store: ${storeData.nameEn || storeData.nameAr}`);
+            console.log(`   OTP: ${otp}`);
+          } else {
+            emailVerificationError = emailResult.error;
+            console.log('⚠️ Email verification failed:', emailResult.error);
+            console.log(`   OTP for testing: ${otp}`);
+          }
         } else {
           console.log('⚠️ Store not found for email verification');
           emailVerificationError = 'Store not found';
