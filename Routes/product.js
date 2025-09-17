@@ -1128,6 +1128,135 @@ router.get('/:storeId/:productId/variants/:variantId', ProductController.getVari
  */
 router.get('/by-store/:storeId', ProductController.getByStoreId);
 
+// Get almost sold products
+/**
+ * @swagger
+ * /api/products/{storeId}/almost-sold:
+ *   get:
+ *     summary: Get almost sold products
+ *     description: Retrieve products that are almost sold out (stock or available quantity <= lowStockThreshold). Excludes products with stock = 0 (sold out).
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID (MongoDB ObjectId)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Number of items per page
+ *       - in: query
+ *         name: threshold
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *         description: Custom threshold for almost sold (overrides lowStockThreshold)
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [stock, availableQuantity, nameEn, nameAr, price, createdAt]
+ *           default: stock
+ *         description: Field to sort by
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort order
+ *       - in: query
+ *         name: specification
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Filter by specific product specification ID (MongoDB ObjectId)
+ *     responses:
+ *       200:
+ *         description: Almost sold products retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     allOf:
+ *                       - $ref: '#/components/schemas/Product'
+ *                       - type: object
+ *                         properties:
+ *                           isAlmostSold:
+ *                             type: boolean
+ *                             example: true
+ *                           stockDifference:
+ *                             type: integer
+ *                             example: -2
+ *                             description: Difference between current stock and threshold
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 3
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 45
+ *                     itemsPerPage:
+ *                       type: integer
+ *                       example: 20
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                 summary:
+ *                   type: object
+ *                   properties:
+ *                     totalAlmostSold:
+ *                       type: integer
+ *                       example: 45
+ *                     threshold:
+ *                       type: string
+ *                       example: "lowStockThreshold"
+ *                     message:
+ *                       type: string
+ *                       example: "Found 45 products that are almost sold out"
+ *       400:
+ *         description: Bad request - storeId missing or invalid
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:storeId/almost-sold', [
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+  query('threshold').optional().isInt({ min: 0 }).withMessage('Threshold must be a non-negative integer'),
+  query('sortBy').optional().isIn(['stock', 'availableQuantity', 'nameEn', 'nameAr', 'price', 'createdAt']).withMessage('Invalid sortBy field'),
+  query('sortOrder').optional().isIn(['asc', 'desc']).withMessage('Sort order must be asc or desc'),
+  query('specification').optional().isMongoId().withMessage('Specification must be a valid MongoDB ObjectId')
+], ProductController.getAlmostSoldProducts);
+
 /**
  * @swagger
  * /api/products/{id}:

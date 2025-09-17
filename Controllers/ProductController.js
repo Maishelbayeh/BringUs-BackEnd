@@ -2956,4 +2956,130 @@ exports.verifyReview = async (req, res) => {
       error: error.message
     });
   }
+};
+
+// Get almost sold products
+exports.getAlmostSoldProducts = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { 
+      page = 1, 
+      limit = 20, 
+      threshold = null,
+      sortBy = 'stock',
+      sortOrder = 'asc',
+      specification = null
+    } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required'
+      });
+    }
+
+    // Build filter for almost sold products
+    const filter = { 
+      store: storeId,
+      isActive: true,
+      // Exclude sold out products (stock > 0)
+      stock: { $gt: 0 },
+      $or: [
+        // Products with stock <= lowStockThreshold
+        { 
+          $expr: { 
+            $lte: ['$stock', '$lowStockThreshold'] 
+          } 
+        },
+        // Products with availableQuantity <= lowStockThreshold
+        { 
+          $expr: { 
+            $lte: ['$availableQuantity', '$lowStockThreshold'] 
+          } 
+        }
+      ]
+    };
+
+    // If custom threshold is provided, use it instead
+    if (threshold && !isNaN(parseInt(threshold))) {
+      const customThreshold = parseInt(threshold);
+      filter.$or = [
+        { stock: { $lte: customThreshold } },
+        { availableQuantity: { $lte: customThreshold } }
+      ];
+    }
+
+    // Add specification filter if provided
+    if (specification) {
+      filter.specifications = specification;
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build sort object
+    const sortObj = {};
+    sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    // Execute query
+    const products = await Product.find(filter)
+      .populate('category', 'nameAr nameEn')
+      .populate('categories', 'nameAr nameEn')
+      .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'descriptionAr descriptionEn')
+      .populate('unit', 'nameAr nameEn symbol')
+      .populate('store', 'name domain')
+      .populate('variants', '_id')
+      .sort(sortObj)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get total count
+    const total = await Product.countDocuments(filter);
+
+    // Process products to add stock status information
+    const processedProducts = products.map(product => {
+      const productObj = parseProductColors(product);
+      
+      // Add stock status information
+      productObj.stockStatus = product.stockStatus;
+      productObj.isAlmostSold = true;
+      productObj.stockDifference = Math.min(
+        product.stock - product.lowStockThreshold,
+        product.availableQuantity - product.lowStockThreshold
+      );
+      
+      return productObj;
+    });
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / parseInt(limit));
+    const hasNextPage = parseInt(page) < totalPages;
+    const hasPrevPage = parseInt(page) > 1;
+
+    res.json({
+      success: true,
+      data: processedProducts,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: total,
+        itemsPerPage: parseInt(limit),
+        hasNextPage,
+        hasPrevPage
+      },
+      summary: {
+        totalAlmostSold: total,
+        threshold: threshold || 'lowStockThreshold',
+        message: `Found ${total} products that are almost sold out`
+      }
+    });
+  } catch (error) {
+    console.error('Get almost sold products error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching almost sold products',
+      error: error.message
+    });
+  }
 }; 

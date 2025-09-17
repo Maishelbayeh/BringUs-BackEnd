@@ -232,10 +232,32 @@ router.get('/', authenticateToken, async (req, res) => {
  * /api/orders/my-orders:
  *   get:
  *     summary: Get all orders for the authenticated user
- *     description: Retrieve all orders for the currently authenticated user
+ *     description: Retrieve all orders for the currently authenticated user with pagination support
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *           minimum: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Number of orders per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, processing, shipped, delivered, cancelled]
+ *         description: Filter orders by status
  *     responses:
  *       200:
  *         description: Orders retrieved successfully
@@ -246,6 +268,7 @@ router.get('/', authenticateToken, async (req, res) => {
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 data:
  *                   type: array
  *                   items:
@@ -289,6 +312,31 @@ router.get('/', authenticateToken, async (req, res) => {
  *                               type: number
  *                 count:
  *                   type: number
+ *                   description: Number of orders in current page
+ *                 total:
+ *                   type: number
+ *                   description: Total number of orders
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 5
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 50
+ *                     itemsPerPage:
+ *                       type: integer
+ *                       example: 10
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
  *       401:
  *         description: Access denied. No token provided.
  *       500:

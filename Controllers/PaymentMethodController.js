@@ -604,12 +604,12 @@ const createPaymentMethodWithFiles = async (req, res) => {
       });
     }
 
-    const validMethodTypes = ['cash', 'card', 'digital_wallet', 'bank_transfer', 'qr_code', 'other'];
+    const validMethodTypes = ['lahza','cash', 'card', 'digital_wallet', 'bank_transfer', 'qr_code', 'other' ];
     if (!methodType || !validMethodTypes.includes(methodType)) {
       return res.status(400).json({
         success: false,
-        message: 'Method type must be one of: cash, card, digital_wallet, bank_transfer, qr_code, other',
-        errors: [{ field: 'methodType', message: 'Method type must be one of: cash, card, digital_wallet, bank_transfer, qr_code, other' }]
+        message: 'Method type must be one of: lahza, cash, card, digital_wallet, bank_transfer, qr_code, other',
+        errors: [{ field: 'methodType', message: 'Method type must be one of: lahza, cash, card, digital_wallet, bank_transfer, qr_code, other' }]
       });
     }
 
