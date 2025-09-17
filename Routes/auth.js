@@ -311,6 +311,9 @@ router.post('/register', [
  *                     email:
  *                       type: string
  *                       example: "john@example.com"
+ *                     phone:
+ *                       type: string
+ *                       example: "+1234567890"
  *                     role:
  *                       type: string
  *                       example: "admin"
@@ -598,6 +601,7 @@ router.post('/login', [
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         avatar: user.avatar,
         store: userStore, // Default store for admin
