@@ -40,7 +40,7 @@ const paymentMethodSchema = new mongoose.Schema({
   methodType: {
     type: String,
     required: [true, 'Method type is required'],
-    enum: ['cash', 'card', 'digital_wallet', 'bank_transfer', 'qr_code', 'other'],
+    enum: [ 'lahza','cash', 'card', 'digital_wallet', 'bank_transfer', 'qr_code', 'other' ],
     default: 'other'
   },
   

@@ -1324,9 +1324,11 @@ exports.getMyOrders = async (req, res) => {
   try {
     const userId = req.user._id; // Get user ID from token
     const storeId = req.user.storeId || req.user.store; // Get storeId from token
+    const { page = 1, limit = 10, status } = req.query; // Get pagination parameters
     
     console.log('🔍 getMyOrders - userId from token:', userId);
     console.log('🔍 getMyOrders - storeId from token:', storeId);
+    console.log('🔍 getMyOrders - pagination params:', { page, limit, status });
     console.log('🔍 getMyOrders - req.user:', req.user);
     
     if (!userId) {
@@ -1365,15 +1367,29 @@ exports.getMyOrders = async (req, res) => {
       }
     }
 
+    // Add status filter if provided
+    if (status) {
+      query.status = status;
+    }
+
     console.log('🔍 getMyOrders - query:', query);
     
-    // Get orders
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Get total count for pagination
+    const total = await Order.countDocuments(query);
+    
+    // Get orders with pagination
     let orders = await Order.find(query)
       .populate('store', 'nameAr nameEn whatsappNumber slug')
       .populate('deliveryArea', 'locationAr locationEn price estimatedDays')
-      .sort({ createdAt: -1 }); // Latest orders first
+      .sort({ createdAt: -1 }) // Latest orders first
+      .skip(skip)
+      .limit(parseInt(limit));
     
     console.log('🔍 getMyOrders - found orders count:', orders.length);
+    console.log('🔍 getMyOrders - total orders:', total);
 
     // If no orders found, create a test order for the current user (for testing purposes)
     if (orders.length === 0) {
@@ -1452,10 +1468,24 @@ exports.getMyOrders = async (req, res) => {
       updatedAt: order.updatedAt
     }));
 
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / parseInt(limit));
+    const hasNextPage = parseInt(page) < totalPages;
+    const hasPrevPage = parseInt(page) > 1;
+
     res.json({ 
       success: true, 
       data: shapedOrders, 
-      count: shapedOrders.length 
+      count: shapedOrders.length,
+      total,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: total,
+        itemsPerPage: parseInt(limit),
+        hasNextPage,
+        hasPrevPage
+      }
     });
   } catch (error) {
     console.error('Get my orders error:', error);
