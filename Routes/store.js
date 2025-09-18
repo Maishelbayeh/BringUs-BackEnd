@@ -249,7 +249,9 @@ router.get('/slug/:slug', StoreController.getStoreBySlug);
  */
 router.post('/', upload.single('logo'), StoreController.createStore);
 
+
 /**
+ 
  * @swagger
  * /api/stores/upload-image:
  *   post:
