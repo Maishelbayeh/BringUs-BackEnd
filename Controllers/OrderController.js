@@ -114,7 +114,7 @@ const validateProductStock = (product, quantity, selectedSpecifications = []) =>
  * @param {Number} quantity - Quantity to reduce
  * @param {Array} selectedSpecifications - Array of selected specifications
  */
-const reduceProductStock = async (product, quantity, selectedSpecifications = []) => {
+exports.reduceProductStock = async (product, quantity, selectedSpecifications = []) => {
   try {
     // التحقق من أن الكمية موجبة
     if (quantity <= 0) {

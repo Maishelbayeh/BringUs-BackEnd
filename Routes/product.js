@@ -219,9 +219,11 @@ router.get('/', [
 
     // 4. فلترة الألوان (في قاعدة البيانات)
     if (colors && Array.isArray(colors) && colors.length > 0) {
-      // إنشاء regex patterns للألوان
-      const colorPatterns = colors.map(color => new RegExp(color, 'i'));
-      filter.colors = { $regex: { $in: colorPatterns } };
+      // البحث في JSON string للألوان - استخدام regex للبحث في النص
+      const colorRegex = colors.map(color => 
+        new RegExp(color.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+      );
+      filter.colors = { $regex: { $in: colorRegex } };
       console.log('🎨 Applied colors filter:', colors);
     }
 

@@ -1141,13 +1141,13 @@ exports.getWithoutVariants = async (req, res) => {
 
     // 2. فلترة السعر
     if (minPrice || maxPrice) {
-      filter.finalPrice = {};
+      filter.price = {};
       if (minPrice) {
-        filter.finalPrice.$gte = parseFloat(minPrice);
+        filter.price.$gte = parseFloat(minPrice);
         console.log('💰 Applied min price filter:', minPrice);
       }
       if (maxPrice) {
-        filter.finalPrice.$lte = parseFloat(maxPrice);
+        filter.price.$lte = parseFloat(maxPrice);
         console.log('💰 Applied max price filter:', maxPrice);
       }
     }
@@ -1160,9 +1160,11 @@ exports.getWithoutVariants = async (req, res) => {
 
     // 4. فلترة الألوان (في قاعدة البيانات)
     if (colors && Array.isArray(colors) && colors.length > 0) {
-      // إنشاء regex patterns للألوان
-      const colorPatterns = colors.map(color => new RegExp(color, 'i'));
-      filter.colors = { $regex: { $in: colorPatterns } };
+      // البحث في JSON string للألوان - استخدام regex للبحث في النص
+      const colorRegex = colors.map(color => 
+        new RegExp(color.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+      );
+      filter.colors = { $regex: { $in: colorRegex } };
       console.log('🎨 Applied colors filter:', colors);
     }
 
@@ -1178,10 +1180,10 @@ exports.getWithoutVariants = async (req, res) => {
     let sortObj = {};
     switch (sort) {
       case 'price_asc':
-        sortObj = { finalPrice: 1 };
+        sortObj = { price: 1 };
         break;
       case 'price_desc':
-        sortObj = { finalPrice: -1 };
+        sortObj = { price: -1 };
         break;
       case 'name_asc':
         sortObj = { nameEn: 1 };
@@ -1204,8 +1206,14 @@ exports.getWithoutVariants = async (req, res) => {
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
+    // Add filter to exclude variant products (products that are variants of other products)
+    // We'll use a more efficient approach by checking if the product ID exists in any other product's variants array
+    filter._id = { 
+      $nin: await Product.distinct('variants', { store: storeId }) 
+    };
+
     // Execute query
-    const allProducts = await Product.find(filter)
+    const products = await Product.find(filter)
       .populate('category', 'nameAr nameEn')
       .populate('categories', 'nameAr nameEn')
       .populate('productLabels', 'nameAr nameEn color')
@@ -1215,28 +1223,14 @@ exports.getWithoutVariants = async (req, res) => {
       .populate('variants', '_id') // Only populate variant IDs
       .sort(sortObj);
 
-    // Filter out variant products (products that are variants of other products)
-    let products = allProducts.filter(product => {
-      // Check if this product is a variant by looking at all other products
-      const isVariant = allProducts.some(otherProduct => 
-        otherProduct.variants && 
-        otherProduct.variants.some(variant => 
-          variant._id && variant._id.toString() === product._id.toString()
-        )
-      );
-      
-      // Return true if it's NOT a variant
-      return !isVariant;
-    });
-
     // تم دمج الفلاتر الإضافية في الفلتر الأساسي لتحسين الأداء
     console.log('✅ All filters applied at database level for better performance');
 
-    // Apply pagination after filtering
-    const paginatedProducts = products.slice(skip, skip + parseInt(limit));
+    // Get total count for pagination
+    const total = await Product.countDocuments(filter);
 
-    // Get total count after filtering
-    const total = products.length;
+    // Apply pagination
+    const paginatedProducts = products.slice(skip, skip + parseInt(limit));
 
     // Calculate pagination info
     const totalPages = Math.ceil(total / parseInt(limit));
