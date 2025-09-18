@@ -140,6 +140,7 @@ const storeInfoRoutes = require('./Routes/storeInfo');
 const subscriptionRenewalRoutes = require('./Routes/subscriptionRenewal');
 const emailVerificationRoutes = require('./Routes/emailVerification');
 const passwordResetRoutes = require('./Routes/passwordReset');
+const posCartRoutes = require('./Routes/posCart');
 
 // Route middleware
 app.use('/api/auth', authRoutes);
@@ -168,6 +169,7 @@ app.use('/api/store-info', storeInfoRoutes);
 app.use('/api/subscription-renewal', subscriptionRenewalRoutes);
 app.use('/api/email-verification', emailVerificationRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
+app.use('/api/pos-cart', posCartRoutes);
 
 /**
  * @swagger
