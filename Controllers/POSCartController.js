@@ -540,7 +540,7 @@ exports.completePOSCart = async (req, res) => {
         total: cart.total
       },
       paymentStatus: 'paid', // Automatically set as paid for POS orders
-      status: 'confirmed',
+      status: 'delivered',
       notes: {
         admin: `Market POS Order - ${cart.notes?.admin || ''}`,
         customer: ''
