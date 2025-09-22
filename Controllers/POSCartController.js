@@ -539,6 +539,7 @@ exports.completePOSCart = async (req, res) => {
         discount: cart.discount?.type === 'percentage' ? (cart.subtotal * cart.discount.value / 100) : (cart.discount?.value || 0),
         total: cart.total
       },
+      
       paymentStatus: 'paid', // Automatically set as paid for POS orders
       status: 'delivered',
       notes: {
