@@ -148,8 +148,32 @@ router.get('/', [
   query('maxPrice').optional().isFloat({ min: 0 }).withMessage('Max price must be a positive number'),
   query('sort').optional().isIn(['price_asc', 'price_desc', 'name_asc', 'name_desc', 'rating_desc', 'newest', 'oldest']).withMessage('Invalid sort option'),
   query('search').optional().isString().withMessage('Search must be a string'),
-  query('colors').optional().isArray().withMessage('Colors must be an array'),
-  query('productLabels').optional().isArray().withMessage('Product labels must be an array'),
+  query('colors').optional().custom((value) => {
+    if (typeof value === 'string') {
+      try {
+        // Try to parse as JSON array
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed);
+      } catch {
+        // If not JSON, treat as single color
+        return true;
+      }
+    }
+    return Array.isArray(value);
+  }).withMessage('Colors must be an array or valid JSON string'),
+  query('productLabels').optional().custom((value) => {
+    if (typeof value === 'string') {
+      try {
+        // Try to parse as JSON array
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed);
+      } catch {
+        // If not JSON, treat as single label
+        return true;
+      }
+    }
+    return Array.isArray(value);
+  }).withMessage('Product labels must be an array or valid JSON string'),
   query('storeId').optional().isMongoId().withMessage('Invalid store ID')
 ], async (req, res) => {
   try {
@@ -962,8 +986,32 @@ router.get('/:storeId/without-variants', [
   query('maxPrice').optional().isFloat({ min: 0 }).withMessage('Max price must be a positive number'),
   query('sort').optional().isIn(['price_asc', 'price_desc', 'name_asc', 'name_desc', 'rating_desc', 'newest', 'oldest']).withMessage('Invalid sort option'),
   query('search').optional().isString().withMessage('Search must be a string'),
-  query('colors').optional().isArray().withMessage('Colors must be an array'),
-  query('productLabels').optional().isArray().withMessage('Product labels must be an array')
+  query('colors').optional().custom((value) => {
+    if (typeof value === 'string') {
+      try {
+        // Try to parse as JSON array
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed);
+      } catch {
+        // If not JSON, treat as single color
+        return true;
+      }
+    }
+    return Array.isArray(value);
+  }).withMessage('Colors must be an array or valid JSON string'),
+  query('productLabels').optional().custom((value) => {
+    if (typeof value === 'string') {
+      try {
+        // Try to parse as JSON array
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed);
+      } catch {
+        // If not JSON, treat as single label
+        return true;
+      }
+    }
+    return Array.isArray(value);
+  }).withMessage('Product labels must be an array or valid JSON string')
 ], ProductController.getWithoutVariants);
 
 // Get product details with variants

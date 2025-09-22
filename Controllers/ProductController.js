@@ -1159,19 +1159,66 @@ exports.getWithoutVariants = async (req, res) => {
     }
 
     // 4. فلترة الألوان (في قاعدة البيانات)
-    if (colors && Array.isArray(colors) && colors.length > 0) {
-      // البحث في JSON string للألوان - استخدام regex للبحث في النص
-      const colorRegex = colors.map(color => 
-        new RegExp(color.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
-      );
-      filter.colors = { $regex: { $in: colorRegex } };
-      console.log('🎨 Applied colors filter:', colors);
+    if (colors) {
+      let colorsArray = colors;
+      
+      // Handle string input (JSON or single color)
+      if (typeof colors === 'string') {
+        try {
+          // Try to parse as JSON array
+          colorsArray = JSON.parse(colors);
+        } catch {
+          // If not JSON, treat as single color
+          colorsArray = [colors];
+        }
+      }
+      
+      if (Array.isArray(colorsArray) && colorsArray.length > 0) {
+        // البحث في JSON string للألوان - استخدام regex للبحث في النص
+        const colorRegex = colorsArray.map(color => 
+          new RegExp(color.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+        );
+        
+        // Create color filter conditions
+        const colorConditions = colorRegex.map(regex => ({ colors: { $regex: regex } }));
+        
+        // If we already have $or conditions, combine them
+        if (filter.$or) {
+          // Combine existing $or with color conditions
+          const existingOr = filter.$or;
+          delete filter.$or;
+          filter.$and = [
+            { $or: existingOr },
+            { $or: colorConditions }
+          ];
+        } else {
+          // Use $or for color conditions
+          filter.$or = colorConditions;
+        }
+        
+        console.log('🎨 Applied colors filter:', colorsArray);
+      }
     }
 
     // 5. فلترة العلامات (في قاعدة البيانات)
-    if (productLabels && Array.isArray(productLabels) && productLabels.length > 0) {
-      filter.productLabels = { $in: productLabels };
-      console.log('🏷️ Applied product labels filter:', productLabels);
+    if (productLabels) {
+      let labelsArray = productLabels;
+      
+      // Handle string input (JSON or single label)
+      if (typeof productLabels === 'string') {
+        try {
+          // Try to parse as JSON array
+          labelsArray = JSON.parse(productLabels);
+        } catch {
+          // If not JSON, treat as single label
+          labelsArray = [productLabels];
+        }
+      }
+      
+      if (Array.isArray(labelsArray) && labelsArray.length > 0) {
+        filter.productLabels = { $in: labelsArray };
+        console.log('🏷️ Applied product labels filter:', labelsArray);
+      }
     }
 
     console.log('✅ Final filter object:', JSON.stringify(filter, null, 2));
