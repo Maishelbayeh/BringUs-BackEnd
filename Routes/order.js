@@ -2117,4 +2117,254 @@ router.get('/guest/:guestId', async (req, res) => {
   }
 });
 
+// Analytics Routes
+
+/**
+ * @swagger
+ * /api/orders/analytics/order-percentage:
+ *   get:
+ *     summary: Get order percentage (guest vs logged users)
+ *     description: Get the percentage of orders from guest users vs logged users
+ *     tags: [Orders, Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Order percentage retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalOrders:
+ *                       type: integer
+ *                       example: 150
+ *                     guestOrders:
+ *                       type: integer
+ *                       example: 45
+ *                     loggedUserOrders:
+ *                       type: integer
+ *                       example: 105
+ *                     percentages:
+ *                       type: object
+ *                       properties:
+ *                         guest:
+ *                           type: number
+ *                           example: 30.0
+ *                         loggedUsers:
+ *                           type: number
+ *                           example: 70.0
+ *       401:
+ *         description: Access denied. No token provided.
+ *       500:
+ *         description: Server error
+ */
+router.get('/analytics/order-percentage', authenticateToken, async (req, res) => {
+  try {
+    await OrderController.getOrderPercentage(req, res);
+  } catch (error) {
+    console.error('Get order percentage route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching order percentage',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/orders/analytics/top-users:
+ *   get:
+ *     summary: Get top 10 users by products sold
+ *     description: Get the top 10 users who have sold the most products
+ *     tags: [Orders, Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Top users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       userId:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       phone:
+ *                         type: string
+ *                       totalProductsSold:
+ *                         type: integer
+ *                         example: 150
+ *                       orderCount:
+ *                         type: integer
+ *                         example: 25
+ *                       totalRevenue:
+ *                         type: number
+ *                         example: 5000.50
+ *       401:
+ *         description: Access denied. No token provided.
+ *       500:
+ *         description: Server error
+ */
+router.get('/analytics/top-users', authenticateToken, async (req, res) => {
+  try {
+    await OrderController.getTopUsersByProductsSold(req, res);
+  } catch (error) {
+    console.error('Get top users route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching top users',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/orders/analytics/categories-revenue:
+ *   get:
+ *     summary: Get categories with money earned
+ *     description: Get revenue statistics by product categories
+ *     tags: [Orders, Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Categories revenue retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       categoryNameAr:
+ *                         type: string
+ *                       categoryNameEn:
+ *                         type: string
+ *                       totalRevenue:
+ *                         type: number
+ *                         example: 2500.75
+ *                       totalQuantity:
+ *                         type: integer
+ *                         example: 100
+ *                       orderCount:
+ *                         type: integer
+ *                         example: 15
+ *       401:
+ *         description: Access denied. No token provided.
+ *       500:
+ *         description: Server error
+ */
+router.get('/analytics/categories-revenue', authenticateToken, async (req, res) => {
+  try {
+    await OrderController.getCategoriesRevenue(req, res);
+  } catch (error) {
+    console.error('Get categories revenue route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching categories revenue',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/orders/analytics/top-products:
+ *   get:
+ *     summary: Get top 10 sold products
+ *     description: Get the top 10 products by quantity sold
+ *     tags: [Orders, Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Top products retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       productName:
+ *                         type: string
+ *                       productNameAr:
+ *                         type: string
+ *                       productSku:
+ *                         type: string
+ *                       mainImage:
+ *                         type: string
+ *                       totalQuantitySold:
+ *                         type: integer
+ *                         example: 150
+ *                       totalRevenue:
+ *                         type: number
+ *                         example: 5000.50
+ *                       averagePrice:
+ *                         type: number
+ *                         example: 33.33
+ *                       orderCount:
+ *                         type: integer
+ *                         example: 25
+ *                       categories:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *       401:
+ *         description: Access denied. No token provided.
+ *       500:
+ *         description: Server error
+ */
+router.get('/analytics/top-products', authenticateToken, async (req, res) => {
+  try {
+    await OrderController.getTopProducts(req, res);
+  } catch (error) {
+    console.error('Get top products route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching top products',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router; 

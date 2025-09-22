@@ -2858,3 +2858,309 @@ const checkWholesalerStatus = async (userId, storeId) => {
     return { isWholesaler: false, reason: 'Error checking status' };
   }
 };
+
+/**
+ * Get order percentage (guest vs logged users)
+ * @route GET /api/orders/analytics/order-percentage
+ */
+exports.getOrderPercentage = async (req, res) => {
+  try {
+    const storeId = req.user.storeId || req.user.store;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Store ID not found in user token' 
+      });
+    }
+
+    // Get total orders for the store
+    const totalOrders = await Order.countDocuments({ 'store.id': storeId });
+    
+    // Get guest orders (where user.id is null or user is guest)
+    const guestOrders = await Order.countDocuments({ 
+      'store.id': storeId,
+      $or: [
+        { 'user.id': null },
+        { 'user.id': { $exists: false } },
+        { 'user.role': 'guest' }
+      ]
+    });
+    
+    // Get logged user orders
+    const loggedUserOrders = totalOrders - guestOrders;
+    
+    // Calculate percentages
+    const guestPercentage = totalOrders > 0 ? ((guestOrders / totalOrders) * 100).toFixed(2) : 0;
+    const loggedUserPercentage = totalOrders > 0 ? ((loggedUserOrders / totalOrders) * 100).toFixed(2) : 0;
+
+    res.json({
+      success: true,
+      data: {
+        totalOrders,
+        guestOrders,
+        loggedUserOrders,
+        percentages: {
+          guest: parseFloat(guestPercentage),
+          loggedUsers: parseFloat(loggedUserPercentage)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get order percentage error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching order percentage',
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * Get top 10 users by products sold
+ * @route GET /api/orders/analytics/top-users
+ */
+exports.getTopUsersByProductsSold = async (req, res) => {
+  try {
+    const storeId = req.user.storeId || req.user.store;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Store ID not found in user token' 
+      });
+    }
+
+    // Aggregate to get top users by products sold
+    const topUsers = await Order.aggregate([
+      {
+        $match: {
+          'store.id': new mongoose.Types.ObjectId(storeId),
+          'user.id': { $exists: true, $ne: null }
+        }
+      },
+      {
+        $unwind: '$items'
+      },
+      {
+        $group: {
+          _id: '$user.id',
+          totalProductsSold: { $sum: '$items.quantity' },
+          totalOrders: { $addToSet: '$_id' },
+          totalRevenue: { $sum: '$pricing.total' }
+        }
+      },
+      {
+        $addFields: {
+          orderCount: { $size: '$totalOrders' }
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'userInfo'
+        }
+      },
+      {
+        $unwind: '$userInfo'
+      },
+      {
+        $project: {
+          userId: '$_id',
+          firstName: '$userInfo.firstName',
+          lastName: '$userInfo.lastName',
+          email: '$userInfo.email',
+          phone: '$userInfo.phone',
+          totalProductsSold: 1,
+          orderCount: 1,
+          totalRevenue: 1
+        }
+      },
+      {
+        $sort: { totalProductsSold: -1 }
+      },
+      {
+        $limit: 10
+      }
+    ]);
+
+    res.json({
+      success: true,
+      data: topUsers
+    });
+
+  } catch (error) {
+    console.error('Get top users error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching top users',
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * Get categories with money earned
+ * @route GET /api/orders/analytics/categories-revenue
+ */
+exports.getCategoriesRevenue = async (req, res) => {
+  try {
+    const storeId = req.user.storeId || req.user.store;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Store ID not found in user token' 
+      });
+    }
+
+    console.log('🔍 Categories Revenue - Store ID:', storeId);
+
+    // First, let's check if we have any orders
+    const totalOrders = await Order.countDocuments({ 'store.id': storeId });
+    console.log('🔍 Total orders in store:', totalOrders);
+
+    if (totalOrders === 0) {
+      return res.json({
+        success: true,
+        data: [],
+        message: 'No orders found for this store'
+      });
+    }
+
+    // Aggregate to get revenue by categories
+    const categoriesRevenue = await Order.aggregate([
+      {
+        $match: {
+          'store.id': new mongoose.Types.ObjectId(storeId)
+        }
+      },
+      {
+        $unwind: '$items'
+      },
+      {
+        $unwind: '$items.productSnapshot.categories'
+      },
+      {
+        $group: {
+          _id: '$items.productSnapshot.categories._id',
+          categoryNameAr: { $first: '$items.productSnapshot.categories.nameAr' },
+          categoryNameEn: { $first: '$items.productSnapshot.categories.nameEn' },
+          totalRevenue: { $sum: '$items.totalPrice' },
+          totalQuantity: { $sum: '$items.quantity' },
+          orderCount: { $addToSet: '$_id' }
+        }
+      },
+      {
+        $addFields: {
+          orderCount: { $size: '$orderCount' }
+        }
+      },
+      {
+        $sort: { totalRevenue: -1 }
+      }
+    ]);
+
+    console.log('🔍 Categories Revenue Result:', categoriesRevenue.length);
+
+    res.json({
+      success: true,
+      data: categoriesRevenue
+    });
+
+  } catch (error) {
+    console.error('Get categories revenue error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching categories revenue',
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * Get top 10 sold products
+ * @route GET /api/orders/analytics/top-products
+ */
+exports.getTopProducts = async (req, res) => {
+  try {
+    const storeId = req.user.storeId || req.user.store;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Store ID not found in user token' 
+      });
+    }
+
+    console.log('🔍 Top Products - Store ID:', storeId);
+
+    // First, let's check if we have any orders
+    const totalOrders = await Order.countDocuments({ 'store.id': storeId });
+    console.log('🔍 Total orders in store:', totalOrders);
+
+    if (totalOrders === 0) {
+      return res.json({
+        success: true,
+        data: [],
+        message: 'No orders found for this store'
+      });
+    }
+
+    // Aggregate to get top products by quantity sold
+    const topProducts = await Order.aggregate([
+      {
+        $match: {
+          'store.id': new mongoose.Types.ObjectId(storeId)
+        }
+      },
+      {
+        $unwind: '$items'
+      },
+      {
+        $group: {
+          _id: '$items.productId',
+          productName: { $first: '$items.productSnapshot.nameEn' },
+          productNameAr: { $first: '$items.productSnapshot.nameAr' },
+          productSku: { $first: '$items.sku' },
+          productImage: { $first: '$items.productSnapshot.images' },
+          totalQuantitySold: { $sum: '$items.quantity' },
+          totalRevenue: { $sum: '$items.totalPrice' },
+          averagePrice: { $avg: '$items.price' },
+          orderCount: { $addToSet: '$_id' },
+          categories: { $first: '$items.productSnapshot.categories' }
+        }
+      },
+      {
+        $addFields: {
+          orderCount: { $size: '$orderCount' },
+          mainImage: { $arrayElemAt: ['$productImage', 0] }
+        }
+      },
+      {
+        $sort: { totalQuantitySold: -1 }
+      },
+      {
+        $limit: 10
+      }
+    ]);
+
+    console.log('🔍 Top Products Result:', topProducts.length);
+
+    res.json({
+      success: true,
+      data: topProducts
+    });
+
+  } catch (error) {
+    console.error('Get top products error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching top products',
+      error: error.message 
+    });
+  }
+};
