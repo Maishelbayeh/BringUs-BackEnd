@@ -2240,6 +2240,7 @@ router.get('/analytics/top-users', authenticateToken, async (req, res) => {
   }
 });
 
+
 /**
  * @swagger
  * /api/orders/analytics/categories-revenue:
