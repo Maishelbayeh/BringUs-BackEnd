@@ -652,7 +652,7 @@ exports.createOrder = async (req, res) => {
         selectedColors: cartItem ? cartItem.selectedColors || [] : []
       });
       // Update product stock from both general stock and specification quantities
-      await reduceProductStock(product, item.quantity, cartItem ? cartItem.selectedSpecifications || [] : []);
+      await exports.reduceProductStock(product, item.quantity, cartItem ? cartItem.selectedSpecifications || [] : []);
       
       // Update sold count
       product.soldCount += item.quantity;
@@ -910,7 +910,7 @@ exports.createOrderFromCart = async (req, res) => {
       });
       
       // Update product stock from both general stock and specification quantities
-      await reduceProductStock(product, cartItem.quantity, cartItem.selectedSpecifications || []);
+      await exports.reduceProductStock(product, cartItem.quantity, cartItem.selectedSpecifications || []);
       
       // Update sold count
       product.soldCount += cartItem.quantity;
@@ -1986,7 +1986,7 @@ exports.createGuestOrder = async (req, res) => {
         selectedColors: cartItem ? cartItem.selectedColors || [] : []
       });
       // Update product stock from both general stock and specification quantities
-      await reduceProductStock(product, item.quantity, cartItem ? cartItem.selectedSpecifications || [] : []);
+      await exports.reduceProductStock(product, item.quantity, cartItem ? cartItem.selectedSpecifications || [] : []);
       
       // Update sold count
       product.soldCount += item.quantity;

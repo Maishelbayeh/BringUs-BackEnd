@@ -305,48 +305,7 @@ const productSchema = new mongoose.Schema({
     min: [0, 'Rating cannot be negative'],
     max: [5, 'Rating cannot exceed 5']
   },
-  numReviews: {
-    type: Number,
-    default: 0,
-    min: [0, 'Number of reviews cannot be negative']
-  },
-  reviews: [{
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    guestId: {
-      type: String,
-      default: null
-    },
-    userName: {
-      type: String,
-      required: true
-    },
-    userEmail: {
-      type: String,
-      required: true
-    },
-    rating: {
-      type: Number,
-      required: true,
-      min: [1, 'Rating must be at least 1'],
-      max: [5, 'Rating cannot exceed 5']
-    },
-    comment: {
-      type: String,
-      maxlength: [1000, 'Comment cannot exceed 1000 characters']
-    },
-    isVerified: {
-      type: Boolean,
-      default: false
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
+
   views: {
     type: Number,
     default: 0,
@@ -507,33 +466,33 @@ productSchema.virtual('totalSpecificationQuantities').get(function() {
   return this.specificationValues.reduce((total, spec) => total + (spec.quantity || 0), 0);
 });
 
-// Virtual for average rating from reviews
-productSchema.virtual('averageRating').get(function() {
-  if (!this.reviews || this.reviews.length === 0) {
-    return 0;
-  }
-  const totalRating = this.reviews.reduce((sum, review) => sum + review.rating, 0);
-  return Math.round((totalRating / this.reviews.length) * 10) / 10; // Round to 1 decimal place
-});
+// // Virtual for average rating from reviews
+// productSchema.virtual('averageRating').get(function() {
+//   if (!this.reviews || this.reviews.length === 0) {
+//     return 0;
+//   }
+//   const totalRating = this.reviews.reduce((sum, review) => sum + review.rating, 0);
+//   return Math.round((totalRating / this.reviews.length) * 10) / 10; // Round to 1 decimal place
+// });
 
-// Virtual for verified reviews count
-productSchema.virtual('verifiedReviewsCount').get(function() {
-  if (!this.reviews) return 0;
-  return this.reviews.filter(review => review.isVerified).length;
-});
+// // Virtual for verified reviews count
+// productSchema.virtual('verifiedReviewsCount').get(function() {
+//   if (!this.reviews) return 0;
+//   return this.reviews.filter(review => review.isVerified).length;
+// });
 
-// Virtual for user's review (if exists)
-productSchema.methods.getUserReview = function(userId, guestId = null) {
-  if (!this.reviews) return null;
+// // Virtual for user's review (if exists)
+// productSchema.methods.getUserReview = function(userId, guestId = null) {
+//   if (!this.reviews) return null;
   
-  if (userId) {
-    return this.reviews.find(review => review.userId.toString() === userId.toString());
-  } else if (guestId) {
-    return this.reviews.find(review => review.guestId === guestId);
-  }
+//   if (userId) {
+//     return this.reviews.find(review => review.userId.toString() === userId.toString());
+//   } else if (guestId) {
+//     return this.reviews.find(review => review.guestId === guestId);
+//   }
   
-  return null;
-};
+//   return null;
+// };
 
 // Virtual for specification stock status
 productSchema.virtual('specificationStockStatus').get(function() {
@@ -666,15 +625,7 @@ productSchema.pre('save', function(next) {
     this.attributes = [];
   }
   
-  // تحديث التقييم المتوسط وعدد التقييمات
-  if (this.reviews && this.reviews.length > 0) {
-    const totalRating = this.reviews.reduce((sum, review) => sum + review.rating, 0);
-    this.rating = Math.round((totalRating / this.reviews.length) * 10) / 10;
-    this.numReviews = this.reviews.length;
-  } else {
-    this.rating = 0;
-    this.numReviews = 0;
-  }
+
   
   next();
 });

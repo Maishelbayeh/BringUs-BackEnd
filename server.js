@@ -141,6 +141,7 @@ const subscriptionRenewalRoutes = require('./Routes/subscriptionRenewal');
 const emailVerificationRoutes = require('./Routes/emailVerification');
 const passwordResetRoutes = require('./Routes/passwordReset');
 const posCartRoutes = require('./Routes/posCart');
+const lahzaPaymentRoutes = require('./Routes/lahzaPayment');
 
 // Route middleware
 app.use('/api/auth', authRoutes);
@@ -170,6 +171,7 @@ app.use('/api/subscription-renewal', subscriptionRenewalRoutes);
 app.use('/api/email-verification', emailVerificationRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/pos-cart', posCartRoutes);
+app.use('/api/lahza-payment', lahzaPaymentRoutes);
 
 /**
  * @swagger
@@ -720,7 +722,6 @@ const swaggerOptions = {
             isOnSale: { type: 'boolean', example: false },
             salePercentage: { type: 'number', example: 10 },
             rating: { type: 'number', example: 4.5 },
-            numReviews: { type: 'number', example: 25 },
             views: { type: 'number', example: 150 },
             soldCount: { type: 'number', example: 50 },
             seo: {
@@ -938,6 +939,7 @@ const swaggerOptions = {
       { name: 'Subscription Plans', description: 'Subscription plan management endpoints' },
       { name: 'Store Info', description: 'Store information extraction endpoints' },
       { name: 'Subscription Renewal', description: 'Automatic subscription renewal endpoints' },
+      { name: 'Lahza Payment', description: 'Lahza payment gateway integration endpoints' },
       { name: 'Health', description: 'Health check endpoints' }
     ]
   },

@@ -444,7 +444,7 @@ exports.create = async (req, res) => {
       availableQuantity = 0, stock = 0, productLabels = [], colors = [], barcodes = [],
       compareAtPrice, costPrice, productOrder = 0, visibility = true, isActive = true,
       isFeatured = false, isOnSale = false, salePercentage = 0, attributes = [],
-      specifications = [], tags = [], weight, dimensions, rating = 0, numReviews = 0,
+      specifications = [], tags = [], weight, dimensions, rating = 0,
       views = 0, soldCount = 0, seo, videoUrl, productVideo,
       specificationValues = [],
       lowStockThreshold = 5
@@ -536,7 +536,7 @@ exports.create = async (req, res) => {
       unit, store: storeId,
       availableQuantity, stock, productLabels, colors: finalColors, images: imagesUrls, mainImage: mainImageUrl,
       compareAtPrice, costPrice, productOrder, visibility, isActive, isFeatured, isOnSale, salePercentage,
-      attributes: finalAttributes, specifications, tags, weight, dimensions, rating, numReviews, views, soldCount, seo,
+      attributes: finalAttributes, specifications, tags, weight, dimensions, rating, views, soldCount, seo,
       specificationValues: finalSpecificationValues,
       barcodes, videoUrl: finalVideoUrl,
       lowStockThreshold
@@ -2594,109 +2594,109 @@ exports.incrementViews = async (req, res) => {
   }
 };
 
-// Add review to product
-exports.addReview = async (req, res) => {
-  try {
-    const { productId } = req.params;
-    const { storeId, rating, comment, guestId, guestName, guestEmail } = req.body;
+// // Add review to product
+// exports.addReview = async (req, res) => {
+//   try {
+//     const { productId } = req.params;
+//     const { storeId, rating, comment, guestId, guestName, guestEmail } = req.body;
     
-    if (!storeId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Store ID is required'
-      });
-    }
+//     if (!storeId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Store ID is required'
+//       });
+//     }
 
-    if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({
-        success: false,
-        message: 'Rating must be between 1 and 5'
-      });
-    }
+//     if (!rating || rating < 1 || rating > 5) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Rating must be between 1 and 5'
+//       });
+//     }
 
-    // Check if product exists and belongs to store
-    const product = await Product.findOne({ _id: productId, store: storeId });
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
+//     // Check if product exists and belongs to store
+//     const product = await Product.findOne({ _id: productId, store: storeId });
+//     if (!product) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Product not found'
+//       });
+//     }
 
-    // Get user info
-    let userId = null;
-    let userName = '';
-    let userEmail = '';
+//     // Get user info
+//     let userId = null;
+//     let userName = '';
+//     let userEmail = '';
 
-    if (req.user) {
-      // Authenticated user
-      userId = req.user._id;
-      userName = `${req.user.firstName} ${req.user.lastName}`;
-      userEmail = req.user.email;
-    } else if (guestId && guestName && guestEmail) {
-      // Guest user
-      userName = guestName;
-      userEmail = guestEmail;
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: 'User authentication or guest information is required'
-      });
-    }
+//     if (req.user) {
+//       // Authenticated user
+//       userId = req.user._id;
+//       userName = `${req.user.firstName} ${req.user.lastName}`;
+//       userEmail = req.user.email;
+//     } else if (guestId && guestName && guestEmail) {
+//       // Guest user
+//       userName = guestName;
+//       userEmail = guestEmail;
+//     } else {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'User authentication or guest information is required'
+//       });
+//     }
 
-    // Check if user already reviewed this product
-    const existingReview = product.getUserReview(userId, guestId);
-    if (existingReview) {
-      return res.status(400).json({
-        success: false,
-        message: 'You have already reviewed this product'
-      });
-    }
+//     // Check if user already reviewed this product
+//     const existingReview = product.getUserReview(userId, guestId);
+//     if (existingReview) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'You have already reviewed this product'
+//       });
+//     }
 
-    // Add review
-    const newReview = {
-      userId: userId,
-      guestId: guestId,
-      userName: userName,
-      userEmail: userEmail,
-      rating: rating,
-      comment: comment || '',
-      isVerified: false,
-      createdAt: new Date()
-    };
+//     // Add review
+//     const newReview = {
+//       userId: userId,
+//       guestId: guestId,
+//       userName: userName,
+//       userEmail: userEmail,
+//       rating: rating,
+//       comment: comment || '',
+//       isVerified: false,
+//       createdAt: new Date()
+//     };
 
-    product.reviews.push(newReview);
-    await product.save();
+//     product.reviews.push(newReview);
+//     await product.save();
 
-    // Get updated product with populated data
-    const updatedProduct = await Product.findById(productId)
-      .populate('category', 'nameAr nameEn')
-      .populate('categories', 'nameAr nameEn')
-      .populate('productLabels', 'nameAr nameEn color')
-      .populate('specifications', 'descriptionAr descriptionEn')
-      .populate('unit', 'nameAr nameEn symbol')
-      .populate('store', 'name domain');
+//     // Get updated product with populated data
+//     const updatedProduct = await Product.findById(productId)
+//       .populate('category', 'nameAr nameEn')
+//       .populate('categories', 'nameAr nameEn')
+//       .populate('productLabels', 'nameAr nameEn color')
+//       .populate('specifications', 'descriptionAr descriptionEn')
+//       .populate('unit', 'nameAr nameEn symbol')
+//       .populate('store', 'name domain');
 
-    // تحويل الألوان من JSON string إلى array
-    const processedProduct = parseProductColors(updatedProduct);
+//     // تحويل الألوان من JSON string إلى array
+//     const processedProduct = parseProductColors(updatedProduct);
 
-    res.status(201).json({
-      success: true,
-      message: 'Review added successfully',
-      data: {
-        product: processedProduct,
-        review: newReview
-      }
-    });
-  } catch (error) {
-    console.error('Add review error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error adding review',
-      error: error.message
-    });
-  }
-};
+//     res.status(201).json({
+//       success: true,
+//       message: 'Review added successfully',
+//       data: {
+//         product: processedProduct,
+//         review: newReview
+//       }
+//     });
+//   } catch (error) {
+//     console.error('Add review error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error adding review',
+//       error: error.message
+//     });
+//   }
+// };
 
 // Update review
 exports.updateReview = async (req, res) => {
@@ -2818,14 +2818,7 @@ exports.deleteReview = async (req, res) => {
       });
     }
 
-    // Remove review
-    product.reviews = product.reviews.filter(review => {
-      if (userId) {
-        return review.userId.toString() !== userId.toString();
-      } else {
-        return review.guestId !== guestId;
-      }
-    });
+
 
     await product.save();
 
@@ -2858,101 +2851,7 @@ exports.deleteReview = async (req, res) => {
   }
 };
 
-// Get product reviews
-exports.getProductReviews = async (req, res) => {
-  try {
-    const { productId } = req.params;
-    const { storeId, page = 1, limit = 10, sort = 'newest' } = req.query;
-    
-    if (!storeId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Store ID is required'
-      });
-    }
 
-    // Check if product exists and belongs to store
-    const product = await Product.findOne({ _id: productId, store: storeId });
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    if (!product.reviews || product.reviews.length === 0) {
-      return res.json({
-        success: true,
-        data: {
-          reviews: [],
-          pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total: 0,
-            pages: 0
-          },
-          summary: {
-            averageRating: 0,
-            totalReviews: 0,
-            verifiedReviews: 0
-          }
-        }
-      });
-    }
-
-    // Sort reviews
-    let sortedReviews = [...product.reviews];
-    switch (sort) {
-      case 'oldest':
-        sortedReviews.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        break;
-      case 'rating_high':
-        sortedReviews.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'rating_low':
-        sortedReviews.sort((a, b) => a.rating - b.rating);
-        break;
-      case 'newest':
-      default:
-        sortedReviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        break;
-    }
-
-    // Pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const paginatedReviews = sortedReviews.slice(skip, skip + parseInt(limit));
-
-    // Calculate summary
-    const totalReviews = product.reviews.length;
-    const verifiedReviews = product.reviews.filter(review => review.isVerified).length;
-    const averageRating = product.rating;
-
-    res.json({
-      success: true,
-      data: {
-        reviews: paginatedReviews,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total: totalReviews,
-          pages: Math.ceil(totalReviews / parseInt(limit))
-        },
-        summary: {
-          averageRating: averageRating,
-          totalReviews: totalReviews,
-          verifiedReviews: verifiedReviews
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Get product reviews error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching product reviews',
-      error: error.message
-    });
-  }
-};
 
 // Verify review (Admin only)
 exports.verifyReview = async (req, res) => {
@@ -2976,14 +2875,7 @@ exports.verifyReview = async (req, res) => {
       });
     }
 
-    // Find review
-    const review = product.reviews.id(reviewId);
-    if (!review) {
-      return res.status(404).json({
-        success: false,
-        message: 'Review not found'
-      });
-    }
+
 
     // Toggle verification status
     review.isVerified = !review.isVerified;
