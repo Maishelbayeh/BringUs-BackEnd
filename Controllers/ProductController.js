@@ -1221,6 +1221,7 @@ exports.getWithoutVariants = async (req, res) => {
       }
     }
 
+    
     console.log('✅ Final filter object:', JSON.stringify(filter, null, 2));
 
     // Build sort object
