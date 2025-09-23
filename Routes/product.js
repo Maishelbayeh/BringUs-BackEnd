@@ -56,9 +56,9 @@ const router = express.Router();
  *         name: sort
  *         schema:
  *           type: string
- *           enum: [price_asc, price_desc, name_asc, name_desc, rating_desc, newest]
+ *           enum: [price_asc, price_desc, name_asc, name_desc, name_ar_asc, name_ar_desc, rating_desc, newest, oldest]
  *           default: newest
- *         description: Sort order
+ *         description: Sort order - price_asc (price ascending), price_desc (price descending), name_asc (English name ascending), name_desc (English name descending), name_ar_asc (Arabic name ascending), name_ar_desc (Arabic name descending), rating_desc (rating descending), newest (newest first), oldest (oldest first)
  *       - in: query
  *         name: search
  *         schema:
@@ -908,9 +908,9 @@ router.get('/:storeId/variants-only', ProductController.getVariantsOnly);
  *         name: sort
  *         schema:
  *           type: string
- *           enum: [price_asc, price_desc, name_asc, name_desc, rating_desc, newest]
+ *           enum: [price_asc, price_desc, name_asc, name_desc, name_ar_asc, name_ar_desc, rating_desc, newest, oldest]
  *           default: newest
- *         description: Sort order
+ *         description: Sort order - price_asc (price ascending), price_desc (price descending), name_asc (English name ascending), name_desc (English name descending), name_ar_asc (Arabic name ascending), name_ar_desc (Arabic name descending), rating_desc (rating descending), newest (newest first), oldest (oldest first)
  *       - in: query
  *         name: search
  *         schema:
@@ -984,7 +984,7 @@ router.get('/:storeId/without-variants', [
   }).withMessage('Invalid category ID(s). Use format: categoryId1||categoryId2||categoryId3'),
   query('minPrice').optional().isFloat({ min: 0 }).withMessage('Min price must be a positive number'),
   query('maxPrice').optional().isFloat({ min: 0 }).withMessage('Max price must be a positive number'),
-  query('sort').optional().isIn(['price_asc', 'price_desc', 'name_asc', 'name_desc', 'rating_desc', 'newest', 'oldest']).withMessage('Invalid sort option'),
+  query('sort').optional().isIn(['price_asc', 'price_desc', 'name_asc', 'name_desc', 'name_ar_asc', 'name_ar_desc', 'newest', 'oldest']).withMessage('Invalid sort option'),
   query('search').optional().isString().withMessage('Search must be a string'),
   query('colors').optional().custom((value) => {
     if (typeof value === 'string') {
@@ -1228,7 +1228,7 @@ router.get('/by-store/:storeId', ProductController.getByStoreId);
  *           type: string
  *           enum: [asc, desc]
  *           default: asc
- *         description: Sort order
+ *         description: Sort order - price_asc (price ascending), price_desc (price descending), name_asc (English name ascending), name_desc (English name descending), name_ar_asc (Arabic name ascending), name_ar_desc (Arabic name descending), rating_desc (rating descending), newest (newest first), oldest (oldest first)
  *       - in: query
  *         name: specification
  *         schema:
@@ -2838,7 +2838,7 @@ router.delete('/:productId/reviews', ProductController.deleteReview);
  *           type: string
  *           enum: [newest, oldest, rating_high, rating_low]
  *           default: newest
- *         description: Sort order for reviews
+ *         description: Sort order - price_asc (price ascending), price_desc (price descending), name_asc (English name ascending), name_desc (English name descending), name_ar_asc (Arabic name ascending), name_ar_desc (Arabic name descending), rating_desc (rating descending), newest (newest first), oldest (oldest first) for reviews
  *     responses:
  *       200:
  *         description: Product reviews retrieved successfully
