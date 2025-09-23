@@ -1238,6 +1238,12 @@ exports.getWithoutVariants = async (req, res) => {
       case 'name_desc':
         sortObj = { nameEn: -1 };
         break;
+      case 'name_ar_asc':
+        sortObj = { nameAr: 1 };
+        break;
+      case 'name_ar_desc':
+        sortObj = { nameAr: -1 };
+        break;
       case 'rating_desc':
         sortObj = { rating: -1 };
         break;
