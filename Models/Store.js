@@ -196,6 +196,10 @@ const storeSchema = new mongoose.Schema({
       type: String,
       default: null
     },
+    lahzaSecretKey:{
+      type: String,
+      default: null
+    },
 
     storeSocials: {
       facebook: String,
