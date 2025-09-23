@@ -71,7 +71,16 @@ router.put('/profile', [
   authenticateToken,
   body('firstName').optional().trim().isLength({ min: 2, max: 50 }).withMessage('First name must be between 2 and 50 characters'),
   body('lastName').optional().trim().isLength({ min: 2, max: 50 }).withMessage('Last name must be between 2 and 50 characters'),
-  body('phone').optional().matches(/^[\+]?[1-9][\d]{0,15}$/).withMessage('Please enter a valid phone number')
+  body('phone').optional().matches(/^[\+]?[1-9][\d]{0,15}$/).withMessage('Please enter a valid phone number'),
+  body('email').optional().isEmail().normalizeEmail().withMessage('Please enter a valid email'),
+  body('addresses').optional().isArray().withMessage('Addresses must be an array'),
+  body('addresses.*.type').optional().isIn(['home', 'work', 'other']).withMessage('Address type must be home, work, or other'),
+  body('addresses.*.street').optional().trim().notEmpty().withMessage('Street address cannot be empty'),
+  body('addresses.*.city').optional().trim().notEmpty().withMessage('City cannot be empty'),
+  body('addresses.*.state').optional().trim().notEmpty().withMessage('State cannot be empty'),
+  body('addresses.*.zipCode').optional().trim().notEmpty().withMessage('Zip code cannot be empty'),
+  body('addresses.*.country').optional().trim().notEmpty().withMessage('Country cannot be empty'),
+  body('addresses.*.isDefault').optional().isBoolean().withMessage('isDefault must be a boolean')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -82,12 +91,35 @@ router.put('/profile', [
       });
     }
 
-    const { firstName, lastName, phone } = req.body;
+    const { firstName, lastName, phone, email, addresses } = req.body;
     const updateFields = {};
 
-    if (firstName) updateFields.firstName = firstName;
-    if (lastName) updateFields.lastName = lastName;
+    // Check if email is being changed and if it already exists
+    if (email) {
+      const emailExists = await User.findOne({ email, _id: { $ne: req.user._id } });
+      if (emailExists) {
+        return res.status(409).json({
+          success: false,
+          message: 'Email already exists'
+        });
+      }
+      updateFields.email = email.trim().toLowerCase();
+    }
+
+    if (firstName) updateFields.firstName = firstName.trim();
+    if (lastName) updateFields.lastName = lastName.trim();
     if (phone) updateFields.phone = phone;
+
+    // Handle addresses - filter out addresses with empty required fields
+    if (addresses && Array.isArray(addresses)) {
+      updateFields.addresses = addresses.filter(addr => 
+        addr.street && addr.street.trim() && 
+        addr.city && addr.city.trim() && 
+        addr.state && addr.state.trim() && 
+        addr.zipCode && addr.zipCode.trim() && 
+        addr.country && addr.country.trim()
+      );
+    }
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
@@ -101,7 +133,7 @@ router.put('/profile', [
       user
     });
   } catch (error) {
-    //CONSOLE.error('Update profile error:', error);
+    console.error('Update profile error:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating profile',
