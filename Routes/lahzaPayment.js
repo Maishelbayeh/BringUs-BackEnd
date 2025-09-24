@@ -27,8 +27,6 @@ const router = express.Router();
  *             type: object
  *             required:
  *               - amount
- *               - email
- *               - customerName
  *             properties:
  *               amount:
  *                 type: number
@@ -44,13 +42,13 @@ const router = express.Router();
  *                 type: string
  *                 format: email
  *                 example: "customer@example.com"
- *                 description: Customer email address
+ *                 description: Customer email address (optional - will use token data or default if not provided)
  *               customerName:
  *                 type: string
  *                 minLength: 2
  *                 maxLength: 100
  *                 example: "أحمد محمد"
- *                 description: Customer full name
+ *                 description: Customer full name (optional - will use token data or default if not provided)
  *               customerPhone:
  *                 type: string
  *                 example: "+972501234567"
@@ -131,8 +129,8 @@ const router = express.Router();
 router.post('/:storeId/initialize', [
   param('storeId').isMongoId().withMessage('Invalid store ID'),
   body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be a positive number'),
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('customerName').isLength({ min: 2, max: 100 }).withMessage('Customer name must be between 2 and 100 characters'),
+  body('email').optional().isEmail().withMessage('Valid email is required'),
+  body('customerName').optional().isLength({ min: 2, max: 100 }).withMessage('Customer name must be between 2 and 100 characters'),
   body('customerPhone').optional().isString().withMessage('Customer phone must be a string'),
   body('description').optional().isLength({ max: 500 }).withMessage('Description cannot exceed 500 characters'),
   body('currency').optional().isString().withMessage('Currency must be a string'),

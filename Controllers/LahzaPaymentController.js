@@ -1,14 +1,68 @@
 const { validationResult } = require('express-validator');
 const LahzaPaymentService = require('../services/LahzaPaymentService');
+const jwt = require('jsonwebtoken');
+const User = require('../Models/User');
+const Store = require('../Models/Store');
+
+/**
+ * Get user info from token
+ */
+const getUserFromToken = async (req) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return null;
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const user = await User.findById(decoded.id).select('nameAr nameEn email phone');
+    
+    return user;
+  } catch (error) {
+    console.error('Error getting user from token:', error);
+    return null;
+  }
+};
+
+/**
+ * Get store info for payment
+ */
+const getStoreInfo = async (storeId) => {
+  try {
+    const store = await Store.findById(storeId).select('nameAr nameEn contact settings');
+    
+    if (!store) {
+      return null;
+    }
+
+    return {
+      nameAr: store.nameAr,
+      nameEn: store.nameEn,
+      email: store.contact?.email,
+      phone: store.contact?.phone,
+      currency: store.settings?.currency || 'ILS',
+      mainColor: store.settings?.mainColor || '#000000',
+      language: store.settings?.language || 'en'
+    };
+  } catch (error) {
+    console.error('Error getting store info:', error);
+    return null;
+  }
+};
 
 /**
  * Initialize payment with Lahza
  */
 exports.initializePayment = async (req, res) => {
   try {
+    // Print request body for debugging
+    console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('📋 Request headers:', req.headers);
+
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         errors: errors.array()
@@ -16,17 +70,55 @@ exports.initializePayment = async (req, res) => {
     }
 
     const { storeId } = req.params;
-    const { amount, currency = 'ILS', email, customerName, customerPhone, description, metadata = {} } = req.body;
+    const { amount, currency, email, customerName, customerPhone, description, metadata = {} } = req.body;
+
+    // Get store info
+    const storeInfo = await getStoreInfo(storeId);
+    console.log('🏪 Store info:', storeInfo);
+
+    // Get user info from token
+    const user = await getUserFromToken(req);
+    console.log('👤 User from token:', user);
+
+    // Use data in priority: body > user token > store info > defaults
+    const finalEmail = email || (user ? user.email : null) || (storeInfo ? storeInfo.email : null) || 'customer@example.com';
+    const finalCustomerName = customerName || (user ? (user.nameAr || user.nameEn) : null) || (storeInfo ? storeInfo.nameAr : null) || 'Customer';
+    const finalCustomerPhone = customerPhone || (user ? user.phone : null) || (storeInfo ? storeInfo.phone : null) || '+1234567890';
+    const finalCurrency = currency || (storeInfo ? storeInfo.currency : null) || 'ILS';
+
+    // Prepare metadata with store and user info
+    const finalMetadata = {
+      storeId: storeId,
+      storeName: storeInfo ? storeInfo.nameAr : 'Unknown Store',
+      storeEmail: storeInfo ? storeInfo.email : null,
+      ...metadata
+    };
+
+    // Add user info to metadata if available
+    if (user) {
+      finalMetadata.userId = user._id;
+      finalMetadata.userName = user.nameAr || user.nameEn;
+    }
+
+    console.log('📝 Final payment data:', {
+      amount,
+      currency: finalCurrency,
+      email: finalEmail,
+      customerName: finalCustomerName,
+      customerPhone: finalCustomerPhone,
+      description,
+      metadata: finalMetadata
+    });
 
     // Use LahzaPaymentService to initialize payment
     const result = await LahzaPaymentService.initializePayment(storeId, {
       amount,
-      currency,
-      email,
-      customerName,
-      customerPhone,
+      currency: finalCurrency,
+      email: finalEmail,
+      customerName: finalCustomerName,
+      customerPhone: finalCustomerPhone,
       description,
-      metadata
+      metadata: finalMetadata
     });
 
     if (result.success) {
