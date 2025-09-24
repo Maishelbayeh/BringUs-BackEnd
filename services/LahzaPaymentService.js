@@ -79,18 +79,25 @@ class LahzaPaymentService {
       // Convert amount to smallest unit
       const convertedAmount = this.convertToSmallestUnit(amount, currency);
 
+      // Split customer name into first and last name
+      const nameParts = customerName ? customerName.trim().split(' ') : ['', ''];
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      // Prepare metadata as JSON string
+      const metadataString = JSON.stringify({
+        storeId: storeId,
+        ...metadata
+      });
+
       const payload = {
         amount: convertedAmount.toString(),
-        currency: currency,
         email: email,
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        description: description || 'Payment via BringUs',
+        currency: currency,
+        first_name: firstName,
+        last_name: lastName,
         callback_url: this.callbackUrl,
-        metadata: {
-          store_id: storeId,
-          ...metadata
-        }
+        metadata: metadataString
       };
 
       console.log('🚀 Initializing Lahza payment:', payload);
@@ -292,10 +299,15 @@ class LahzaPaymentService {
       // Test with a minimal amount
       const testData = {
         amount: '100', // 1 ILS in cents
-        currency: 'ILS',
         email: 'test@example.com',
-        customer_name: 'Test Customer',
-        description: 'Connection test'
+        currency: 'ILS',
+        first_name: 'Test',
+        last_name: 'Customer',
+        callback_url: this.callbackUrl,
+        metadata: JSON.stringify({
+          storeId: storeId,
+          test: true
+        })
       };
 
       const response = await axios.post(
