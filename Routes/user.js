@@ -63,8 +63,6 @@ router.get('/profile', authenticateToken, async (req, res) => {
     });
   }
 });
-
-
 // @desc    Update user profile
 // @route   PUT /api/users/profile
 // @access  Private
