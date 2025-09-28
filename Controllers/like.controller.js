@@ -100,7 +100,13 @@ exports.getLikesByGuestId = async (req, res) => {
     const likes = await Like.find({ 
       guestId: guestId, 
       store: storeId 
-    }).populate('product');
+    }).populate({
+      path: 'product',
+      populate: {
+        path: 'productLabels',
+        select: 'nameAr nameEn color'
+      }
+    });
 
     const products = likes.map(like => like.product).filter(Boolean);
 
@@ -141,7 +147,13 @@ exports.getUserWishlists = async (req, res) => {
     const allLikes = await Like.find({ 
       user: req.user._id, 
       store: storeId 
-    }).populate('product');
+    }).populate({
+      path: 'product',
+      populate: {
+        path: 'productLabels',
+        select: 'nameAr nameEn color'
+      }
+    });
 
     // تجميع الـ likes حسب wishlistUserId
     const wishlists = {};
@@ -257,7 +269,13 @@ exports.getLikedProducts = async (req, res) => {
       query.wishlistUserId = wishlistUserId;
     }
     
-    const likes = await Like.find(query).populate('product');
+    const likes = await Like.find(query).populate({
+      path: 'product',
+      populate: {
+        path: 'productLabels',
+        select: 'nameAr nameEn color'
+      }
+    });
     const products = likes.map(like => like.product).filter(Boolean);
     
     return res.json({ 
