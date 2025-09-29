@@ -78,6 +78,7 @@ async function testLahzaWithStoreData() {
     // Test 4: Test the exact format you want
     console.log('4️⃣ Testing exact format you requested...');
     try {
+      
       const response = await axios.post(
         `${BASE_URL}/lahza-payment/${TEST_STORE_ID}/initialize`,
         {
