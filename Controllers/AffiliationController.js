@@ -606,7 +606,7 @@ const createAffiliate = async (req, res) => {
     
     const domain = store.slug;
     console.log('domain', domain);
-    // Check if email already exists in both Affiliation and User models
+    // Check if email already exists in the current store only
     const existingAffiliate = await Affiliation.findOne({
       email: req.body.email,
       store: storeId
@@ -620,7 +620,7 @@ const createAffiliate = async (req, res) => {
     if (existingAffiliate || existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'Email already exists'
+        message: 'Email already exists in this store'
       });
     }
 
@@ -633,7 +633,8 @@ const createAffiliate = async (req, res) => {
       phone: req.body.mobile,
       role: 'affiliate',
       status: 'active',
-      isActive: true
+      isActive: true,
+      store: storeId // Add store reference to user
     };
 
     const user = await User.create(userData);
@@ -761,13 +762,14 @@ const updateAffiliate = async (req, res) => {
 
       const existingUser = await User.findOne({
         email: req.body.email,
+        store: storeId,
         _id: { $ne: affiliate.userId }
       });
 
       if (existingAffiliate || existingUser) {
         return res.status(400).json({
           success: false,
-          message: 'Email already exists'
+          message: 'Email already exists in this store'
         });
       }
     }
