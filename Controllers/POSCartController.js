@@ -281,6 +281,18 @@ exports.addToPOSCart = async (req, res) => {
             );
           }
           
+          // If still not found, try matching by specification ID and value (for cases where valueId format differs)
+          if (!specExists && selectedSpec.value) {
+            specExists = productData.specificationValues.find(spec => 
+              spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+              spec.value === selectedSpec.value
+            );
+            
+            if (specExists) {
+              console.log(`✅ POS Cart - Found specification by value match: ${selectedSpec.specificationId}:${selectedSpec.value} -> ${specExists.valueId}`);
+            }
+          }
+          
           if (specExists) {
             console.log(`✅ POS Cart - Specification validated: ${selectedSpec.specificationId}:${selectedSpec.valueId}`);
             validationResults.push({ valid: true, spec: selectedSpec });
@@ -304,7 +316,13 @@ exports.addToPOSCart = async (req, res) => {
                 .filter(spec => spec.specificationId.toString() === invalid.spec.specificationId.toString())
                 .map(spec => ({ valueId: spec.valueId, value: spec.value, title: spec.title }));
               
-              return `Spec ID ${invalid.spec.specificationId}: Invalid value ID ${invalid.spec.valueId}. Available: ${availableValues.map(v => `${v.valueId} (${v.value})`).join(', ')}`;
+              // Check if the value matches any available value
+              const valueMatch = availableValues.find(v => v.value === invalid.spec.value);
+              if (valueMatch) {
+                return `Spec ID ${invalid.spec.specificationId}: Value ID mismatch. Use valueId "${valueMatch.valueId}" for value "${invalid.spec.value}" instead of "${invalid.spec.valueId}". Available: ${availableValues.map(v => `${v.valueId} (${v.value})`).join(', ')}`;
+              } else {
+                return `Spec ID ${invalid.spec.specificationId}: Invalid value ID ${invalid.spec.valueId}. Available: ${availableValues.map(v => `${v.valueId} (${v.value})`).join(', ')}`;
+              }
             } else {
               const availableSpecIds = [...new Set(productData.specificationValues.map(spec => spec.specificationId.toString()))];
               return `Spec ID ${invalid.spec.specificationId} not found. Available spec IDs: ${availableSpecIds.join(', ')}`;
