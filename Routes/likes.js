@@ -10,7 +10,7 @@ const {
   getLikesByGuestId,
   getUserWishlists,
   createWishlist
-} = require('../controllers/like.controller');
+} = require('../Controllers/like.controller');
 
 const router = express.Router();
 

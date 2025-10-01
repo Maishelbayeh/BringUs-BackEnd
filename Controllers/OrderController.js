@@ -668,6 +668,10 @@ exports.createOrder = async (req, res) => {
     const total = subtotal + deliveryCost - Finaldiscount;
     console.log('total',total);
 
+    // Calculate final amount paid by customer (after wholesaler discount, before shipping)
+    const finalAmountPaid = subtotal - Finaldiscount;
+    console.log('finalAmountPaid for affiliate commission:', finalAmountPaid);
+
     const order = await Order.create({
       guestId: guestId,
       totalPrice:total,
@@ -699,11 +703,16 @@ exports.createOrder = async (req, res) => {
       const Affiliation = require('../Models/Affiliation');
       const affiliateDoc = await Affiliation.findById(affiliateId);
       if (affiliateDoc) {
-        // استخدم الميثود الجاهز - العمولة من مجموع أسعار المنتجات فقط (بدون التوصيل)
-        await affiliateDoc.updateSales(subtotal, order._id);
+        // استخدم الميثود الجاهز - العمولة من المبلغ النهائي الذي دفعه العميل (بعد خصم الجملة، بدون التوصيل)
+        await affiliateDoc.updateSales(finalAmountPaid, order._id);
         
-        // تحديث معلومات التتبع في الطلب
-        const commissionEarned = (subtotal * affiliateDoc.percent / 100);
+        // تحديث معلومات التتبع في الطلب - العمولة من المبلغ النهائي
+        const commissionEarned = (finalAmountPaid * affiliateDoc.percent / 100);
+        console.log('Affiliate commission calculation:', {
+          finalAmountPaid,
+          affiliatePercent: affiliateDoc.percent,
+          commissionEarned
+        });
         order.affiliateTracking = {
           isAffiliateOrder: true,
           affiliateId: affiliateDoc._id,
@@ -923,6 +932,10 @@ exports.createOrderFromCart = async (req, res) => {
     const discount = coupon ? (subtotal * coupon.discount / 100) : 0;
     const total = subtotal + tax + deliveryCost - discount;
 
+    // Calculate final amount paid by customer (after coupon discount, before shipping and tax)
+    const finalAmountPaid = subtotal - discount;
+    console.log('finalAmountPaid for affiliate commission (cart):', finalAmountPaid);
+
     const order = await Order.create({
       store: storeSnapshot,
       user: userSnapshot,
@@ -952,8 +965,31 @@ exports.createOrderFromCart = async (req, res) => {
       const Affiliation = require('../Models/Affiliation');
       const affiliateDoc = await Affiliation.findById(affiliateId);
       if (affiliateDoc) {
-        // استخدم الميثود الجاهز - العمولة من مجموع أسعار المنتجات فقط (بدون التوصيل)
-        await affiliateDoc.updateSales(subtotal, order._id);
+        // استخدم الميثود الجاهز - العمولة من المبلغ النهائي الذي دفعه العميل (بعد الخصم، بدون التوصيل والضريبة)
+        await affiliateDoc.updateSales(finalAmountPaid, order._id);
+        
+        // تحديث معلومات التتبع في الطلب - العمولة من المبلغ النهائي
+        const commissionEarned = (finalAmountPaid * affiliateDoc.percent / 100);
+        console.log('Affiliate commission calculation (cart):', {
+          finalAmountPaid,
+          affiliatePercent: affiliateDoc.percent,
+          commissionEarned
+        });
+        order.affiliateTracking = {
+          isAffiliateOrder: true,
+          affiliateId: affiliateDoc._id,
+          referralSource: req.body.referralSource || 'direct_link',
+          utmSource: req.body.utmSource,
+          utmMedium: req.body.utmMedium,
+          utmCampaign: req.body.utmCampaign,
+          clickTimestamp: req.body.clickTimestamp ? new Date(req.body.clickTimestamp) : null,
+          orderTimestamp: new Date(),
+          conversionTime: req.body.clickTimestamp ? 
+            Math.round((new Date() - new Date(req.body.clickTimestamp)) / (1000 * 60)) : null, // بالدقائق
+          commissionEarned: commissionEarned,
+          commissionPercentage: affiliateDoc.percent
+        };
+        await order.save();
       }
     }
 
@@ -2001,6 +2037,10 @@ exports.createGuestOrder = async (req, res) => {
     console.log('subtotal',subtotal);
     const total = subtotal   + deliveryCost - Finaldiscount;
 
+    // Calculate final amount paid by customer (after discount, before shipping)
+    const finalAmountPaid = subtotal - Finaldiscount;
+    console.log('finalAmountPaid for affiliate commission (guest):', finalAmountPaid);
+
     const order = await Order.create({
       store: storeSnapshot,
       user: userSnapshot,
@@ -2031,8 +2071,31 @@ exports.createGuestOrder = async (req, res) => {
       const Affiliation = require('../Models/Affiliation');
       const affiliateDoc = await Affiliation.findById(affiliateId);
       if (affiliateDoc) {
-        // استخدم الميثود الجاهز - العمولة من مجموع أسعار المنتجات فقط (بدون التوصيل)
-        await affiliateDoc.updateSales(subtotal, order._id);
+        // استخدم الميثود الجاهز - العمولة من المبلغ النهائي الذي دفعه العميل (بعد الخصم، بدون التوصيل)
+        await affiliateDoc.updateSales(finalAmountPaid, order._id);
+        
+        // تحديث معلومات التتبع في الطلب - العمولة من المبلغ النهائي
+        const commissionEarned = (finalAmountPaid * affiliateDoc.percent / 100);
+        console.log('Affiliate commission calculation (guest):', {
+          finalAmountPaid,
+          affiliatePercent: affiliateDoc.percent,
+          commissionEarned
+        });
+        order.affiliateTracking = {
+          isAffiliateOrder: true,
+          affiliateId: affiliateDoc._id,
+          referralSource: req.body.referralSource || 'direct_link',
+          utmSource: req.body.utmSource,
+          utmMedium: req.body.utmMedium,
+          utmCampaign: req.body.utmCampaign,
+          clickTimestamp: req.body.clickTimestamp ? new Date(req.body.clickTimestamp) : null,
+          orderTimestamp: new Date(),
+          conversionTime: req.body.clickTimestamp ? 
+            Math.round((new Date() - new Date(req.body.clickTimestamp)) / (1000 * 60)) : null, // بالدقائق
+          commissionEarned: commissionEarned,
+          commissionPercentage: affiliateDoc.percent
+        };
+        await order.save();
       }
     }
 
