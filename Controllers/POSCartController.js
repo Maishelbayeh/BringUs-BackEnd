@@ -249,30 +249,114 @@ exports.addToPOSCart = async (req, res) => {
     // Validate specifications if provided
     if (selectedSpecifications && selectedSpecifications.length > 0) {
       console.log(`🔍 POS Cart - Validating ${selectedSpecifications.length} specifications for ${productData.nameEn}`);
+      console.log(`🔍 POS Cart - Selected specifications:`, JSON.stringify(selectedSpecifications, null, 2));
       
       if (productData.specificationValues && productData.specificationValues.length > 0) {
+        console.log(`🔍 POS Cart - Product has ${productData.specificationValues.length} specification values`);
+        console.log(`🔍 POS Cart - Available specifications:`, productData.specificationValues.map(s => ({
+          specificationId: s.specificationId.toString(),
+          valueId: s.valueId,
+          title: s.title,
+          value: s.value
+        })));
+        
+        // Track validation results
+        const validationResults = [];
+        let hasInvalidSpecs = false;
+        
         for (const selectedSpec of selectedSpecifications) {
-          const specExists = productData.specificationValues.find(spec => 
+          console.log(`🔍 POS Cart - Validating spec: ${selectedSpec.specificationId}:${selectedSpec.valueId}`);
+          
+          // Try multiple validation approaches
+          let specExists = productData.specificationValues.find(spec => 
             spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
             spec.valueId === selectedSpec.valueId
           );
           
+          // If not found, try case-insensitive comparison
           if (!specExists) {
-            console.warn(`⚠️ POS Cart - Specification not found in product: ${selectedSpec.specificationId}:${selectedSpec.valueId}`);
-            console.warn(`⚠️ Available specifications:`, productData.specificationValues.map(s => `${s.specificationId}:${s.valueId}`));
+            specExists = productData.specificationValues.find(spec => 
+              spec.specificationId.toString().toLowerCase() === selectedSpec.specificationId.toLowerCase() &&
+              spec.valueId.toLowerCase() === selectedSpec.valueId.toLowerCase()
+            );
+          }
+          
+          if (specExists) {
+            console.log(`✅ POS Cart - Specification validated: ${selectedSpec.specificationId}:${selectedSpec.valueId}`);
+            validationResults.push({ valid: true, spec: selectedSpec });
+          } else {
+            console.warn(`⚠️ POS Cart - Specification not found: ${selectedSpec.specificationId}:${selectedSpec.valueId}`);
+            validationResults.push({ valid: false, spec: selectedSpec });
+            hasInvalidSpecs = true;
+          }
+        }
+        
+        // If there are invalid specifications, handle based on configuration
+        if (hasInvalidSpecs) {
+          const invalidSpecs = validationResults.filter(r => !r.valid);
+          const errorDetails = invalidSpecs.map(invalid => {
+            const specIdMatch = productData.specificationValues.find(spec => 
+              spec.specificationId.toString() === invalid.spec.specificationId.toString()
+            );
             
+            if (specIdMatch) {
+              const availableValues = productData.specificationValues
+                .filter(spec => spec.specificationId.toString() === invalid.spec.specificationId.toString())
+                .map(spec => ({ valueId: spec.valueId, value: spec.value, title: spec.title }));
+              
+              return `Spec ID ${invalid.spec.specificationId}: Invalid value ID ${invalid.spec.valueId}. Available: ${availableValues.map(v => `${v.valueId} (${v.value})`).join(', ')}`;
+            } else {
+              const availableSpecIds = [...new Set(productData.specificationValues.map(spec => spec.specificationId.toString()))];
+              return `Spec ID ${invalid.spec.specificationId} not found. Available spec IDs: ${availableSpecIds.join(', ')}`;
+            }
+          });
+          
+          // Check if we should allow invalid specifications (fallback mode)
+          const allowInvalidSpecs = process.env.POS_ALLOW_INVALID_SPECS === 'true' || req.body.allowInvalidSpecs === true;
+          
+          if (allowInvalidSpecs) {
+            console.warn(`⚠️ POS Cart - Allowing invalid specifications in fallback mode for ${productData.nameEn}`);
+            console.warn(`⚠️ Invalid specs:`, errorDetails.join('; '));
+            
+            // Filter out invalid specifications and continue with valid ones
+            const validSpecs = validationResults
+              .filter(r => r.valid)
+              .map(r => r.spec);
+            
+            console.log(`⚠️ POS Cart - Using ${validSpecs.length} valid specifications out of ${selectedSpecifications.length} total`);
+            
+            // Update the selectedSpecifications to only include valid ones
+            selectedSpecifications.length = 0;
+            selectedSpecifications.push(...validSpecs);
+          } else {
             return res.status(400).json({
               success: false,
-              message: `Specification not found for product ${productData.nameEn}. Specification ID: ${selectedSpec.specificationId}, Value ID: ${selectedSpec.valueId}`
+              message: `Invalid specifications for product ${productData.nameEn}. ${errorDetails.join('; ')}`,
+              details: {
+                productName: productData.nameEn,
+                invalidSpecifications: invalidSpecs.map(r => r.spec),
+                availableSpecifications: productData.specificationValues.map(s => ({
+                  specificationId: s.specificationId.toString(),
+                  valueId: s.valueId,
+                  title: s.title,
+                  value: s.value
+                })),
+                suggestion: "Set allowInvalidSpecs=true in request body or POS_ALLOW_INVALID_SPECS=true environment variable to enable fallback mode"
+              }
             });
           }
         }
+        
         console.log(`✅ POS Cart - All specifications validated for ${productData.nameEn}`);
       } else {
         console.warn(`⚠️ POS Cart - Product ${productData.nameEn} has no specification values but specifications were provided`);
         return res.status(400).json({
           success: false,
-          message: `Product ${productData.nameEn} does not support specifications`
+          message: `Product ${productData.nameEn} does not support specifications`,
+          details: {
+            productName: productData.nameEn,
+            hasSpecificationValues: false
+          }
         });
       }
     }
