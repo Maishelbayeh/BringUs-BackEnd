@@ -164,6 +164,20 @@ const createUser = async (req, res) => {
       });
     }
 
+    // For admin and superadmin roles, check if email already exists with these roles globally
+    if (role === 'admin' || role === 'superadmin') {
+      const existingAdminUser = await User.findOne({ 
+        email: email,
+        role: role
+      });
+      if (existingAdminUser) {
+        return res.status(409).json({
+          success: false,
+          message: `User with ${role} role already exists with this email`
+        });
+      }
+    }
+
     // Prepare user data
     const userData = {
       firstName,

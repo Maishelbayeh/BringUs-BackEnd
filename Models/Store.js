@@ -41,6 +41,10 @@ const storeSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
+  url: {
+    type: String,
+    trim: true
+  },
   status: {
     type: String,
     enum: ['active', 'inactive', 'suspended'],
@@ -282,6 +286,18 @@ storeSchema.virtual('daysUntilSubscriptionExpires').get(function() {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays > 0 ? diffDays : 0;
 });
+
+// Virtual for store URL
+storeSchema.virtual('storeUrl').get(function() {
+  const baseDomain = 'https://bringus-main.onrender.com';
+  return `${baseDomain}/${this.slug}`;
+});
+
+// Method to generate store URL
+storeSchema.methods.generateStoreUrl = function() {
+  const baseDomain = 'https://bringus-main.onrender.com';
+  return `${baseDomain}/${this.slug}`;
+};
 
 // Method to check if store should be deactivated
 storeSchema.methods.shouldBeDeactivated = function() {

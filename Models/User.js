@@ -143,7 +143,13 @@ userSchema.methods.comparePassword = async function(enteredPassword) {
 userSchema.methods.getJwtToken = function(storeId) {
   const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
   const jwtExpire = process.env.JWT_EXPIRE || '7d';
-  const payload = { id: this._id, role: this.role };
+  const payload = { 
+    id: this._id, 
+    role: this.role,
+    redirectUrl: this.role === 'admin' || this.role === 'superadmin' 
+      ? 'https://bringus.onrender.com/' 
+      : 'https://bringus-main.onrender.com/'
+  };
   if (storeId) payload.storeId = storeId;
   return jwt.sign(payload, jwtSecret, {
     expiresIn: jwtExpire
@@ -171,5 +177,19 @@ userSchema.methods.getResetPasswordToken = function() {
 userSchema.index({ store: 1 });
 userSchema.index({ store: 1, role: 1 });
 userSchema.index({ store: 1, status: 1 });
+
+// Create compound unique index for admin and superadmin roles (email + role must be unique for these roles)
+// This prevents duplicate admin/superadmin roles for the same email globally
+userSchema.index({ email: 1, role: 1 }, { 
+  unique: true, 
+  partialFilterExpression: { role: { $in: ['admin', 'superadmin'] } }
+});
+
+// Create compound unique index for client roles (email + store + role must be unique)
+// This prevents duplicate client roles for the same email in the same store
+userSchema.index({ email: 1, store: 1, role: 1 }, { 
+  unique: true, 
+  partialFilterExpression: { role: 'client' }
+});
 
 module.exports = mongoose.model('User', userSchema); 

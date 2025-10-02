@@ -94,6 +94,10 @@ class StoreController {
         }
       }
 
+      // Generate store URL
+      const baseDomain = 'https://bringus-main.onrender.com';
+      const storeUrl = `${baseDomain}/${slug}`;
+
       // Create store data
       const storeData = {
         nameAr,
@@ -101,6 +105,7 @@ class StoreController {
         descriptionAr,
         descriptionEn,
         slug,
+        url: storeUrl,
         contact,
         settings: settings || {},
         whatsappNumber,
@@ -127,7 +132,14 @@ class StoreController {
       // });
 
       await store.populate('contact');
-      return success(res, { data: store, message: 'Store created successfully', statusCode: 201 });
+      
+      // Add the generated URL to the response
+      const storeResponse = {
+        ...store.toObject(),
+        storeUrl: store.generateStoreUrl()
+      };
+      
+      return success(res, { data: storeResponse, message: 'Store created successfully', statusCode: 201 });
     } catch (err) {
       //CONSOLE.error('Create store error:', err);
       return error(res, { message: 'Create store error', error: err });

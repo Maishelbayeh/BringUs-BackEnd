@@ -605,6 +605,7 @@ const createAffiliate = async (req, res) => {
     }
     
     const domain = store.slug;
+    const baseDomain = 'https://bringus-main.onrender.com';
     console.log('domain', domain);
     // Check if email already exists in the current store only
     const existingAffiliate = await Affiliation.findOne({
@@ -642,7 +643,7 @@ const createAffiliate = async (req, res) => {
     // Generate unique affiliate code
     const affiliateCode = await Affiliation.generateUniqueAffiliateCode();
 
-    const affiliateLink = `http://localhost:5174/${domain}/affiliate/${affiliateCode}`;
+    const affiliateLink = `${baseDomain}/${domain}/affiliate/${affiliateCode}`;
 
     // Add store and userId to the request body
     const affiliateData = {
