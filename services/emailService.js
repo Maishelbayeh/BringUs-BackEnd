@@ -6,8 +6,8 @@ const createMailtrapTransport = () => {
     host: "sandbox.smtp.mailtrap.io",
     port: 2525,
     auth: {
-      user: "02c915e9155556",
-      pass: "83d7f33b801299"
+      user: "e8f0f4883569b6",
+      pass: "fc10bc372ea30c"
     }
   });
 };
