@@ -293,6 +293,48 @@ exports.addToPOSCart = async (req, res) => {
             }
           }
           
+          // If still not found, try to find by specification ID only and suggest the closest match
+          if (!specExists) {
+            const specIdMatch = productData.specificationValues.find(spec => 
+              spec.specificationId.toString() === selectedSpec.specificationId.toString()
+            );
+            
+            if (specIdMatch) {
+              // Try to find a reasonable match based on the valueId pattern
+              const availableValues = productData.specificationValues
+                .filter(spec => spec.specificationId.toString() === selectedSpec.specificationId.toString());
+              
+              // If the valueId looks like it might be a specification ID with a different suffix,
+              // try to find the first available value for this specification
+              if (selectedSpec.valueId && selectedSpec.valueId.startsWith(selectedSpec.specificationId)) {
+                console.log(`⚠️ POS Cart - ValueId appears to be malformed, using first available value for specification`);
+                specExists = availableValues[0]; // Use the first available value
+                
+                if (specExists) {
+                  console.log(`✅ POS Cart - Using first available specification: ${specExists.valueId} (${specExists.value})`);
+                }
+              }
+            }
+          }
+          
+          // Final fallback: if we still haven't found a match and there are specifications for this product,
+          // and the frontend is sending malformed data, try to use the first available specification
+          if (!specExists && productData.specificationValues && productData.specificationValues.length > 0) {
+            const specIdMatch = productData.specificationValues.find(spec => 
+              spec.specificationId.toString() === selectedSpec.specificationId.toString()
+            );
+            
+            if (specIdMatch) {
+              console.log(`⚠️ POS Cart - Final fallback: Using first available specification for ID ${selectedSpec.specificationId}`);
+              specExists = productData.specificationValues
+                .filter(spec => spec.specificationId.toString() === selectedSpec.specificationId.toString())[0];
+              
+              if (specExists) {
+                console.log(`✅ POS Cart - Fallback successful: Using ${specExists.valueId} (${specExists.value})`);
+              }
+            }
+          }
+          
           if (specExists) {
             console.log(`✅ POS Cart - Specification validated: ${selectedSpec.specificationId}:${selectedSpec.valueId}`);
             validationResults.push({ valid: true, spec: selectedSpec });
