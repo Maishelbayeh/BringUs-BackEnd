@@ -419,6 +419,26 @@ router.post('/login', [
     }
     
     if (!user) {
+      // If no user found and storeSlug was provided, check if user exists in other stores
+      if (storeSlug) {
+        const allUsers = await User.find({ email }).populate('store', 'nameAr nameEn slug status');
+        if (allUsers.length > 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'User not found in this store',
+            availableAccounts: allUsers.map(u => ({
+              role: u.role,
+              storeId: u.store ? u.store._id : null,
+              storeName: u.store ? (u.store.nameEn || u.store.nameAr) : null,
+              storeSlug: u.store ? u.store.slug : null,
+              redirectUrl: u.role === 'admin' || u.role === 'superadmin' 
+                ? 'https://bringus.onrender.com/' 
+                : 'https://bringus-main.onrender.com/'
+            }))
+          });
+        }
+      }
+      
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -796,6 +816,177 @@ router.post('/check-email', [
     res.status(500).json({
       success: false,
       message: 'Error checking email',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/login-any:
+ *   post:
+ *     summary: Login user with any available account
+ *     description: Login with email and password, returns all available accounts for the user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "moon95@gmail.com"
+ *               password:
+ *                 type: string
+ *                 example: "123123"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Login successful"
+ *                 accounts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       role:
+ *                         type: string
+ *                         example: "admin"
+ *                       storeId:
+ *                         type: string
+ *                         example: "507f1f77bcf86cd799439011"
+ *                       storeName:
+ *                         type: string
+ *                         example: "My Store"
+ *                       storeSlug:
+ *                         type: string
+ *                         example: "my-store"
+ *                       redirectUrl:
+ *                         type: string
+ *                         example: "https://bringus.onrender.com/"
+ *                       token:
+ *                         type: string
+ *                         example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post('/login-any', [
+  body('email').isEmail().normalizeEmail().withMessage('Please enter a valid email'),
+  body('password').notEmpty().withMessage('Password is required')
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { email, password } = req.body;
+    
+    console.log(`🔍 Login-any attempt for email: ${email}`);
+    
+    // Find all users with this email
+    const users = await User.find({ email }).select('+password').populate('store', 'nameAr nameEn slug status');
+    
+    if (users.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Check password against the first user (all users should have same password)
+    const firstUser = users[0];
+    const isPasswordCorrect = await firstUser.comparePassword(password);
+    
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Check if any user is active
+    const activeUsers = users.filter(user => user.isActive && user.isEmailVerified);
+    
+    if (activeUsers.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'No active accounts found'
+      });
+    }
+
+    // Generate tokens for all active accounts
+    const accounts = activeUsers.map(user => {
+      let redirectUrl;
+      if (user.role === 'admin' || user.role === 'superadmin') {
+        redirectUrl = 'https://bringus.onrender.com/';
+      } else {
+        redirectUrl = 'https://bringus-main.onrender.com/';
+      }
+
+      const token = user.getJwtToken(user.store ? user.store._id : null);
+
+      return {
+        role: user.role,
+        storeId: user.store ? user.store._id : null,
+        storeName: user.store ? (user.store.nameEn || user.store.nameAr) : null,
+        storeSlug: user.store ? user.store.slug : null,
+        redirectUrl,
+        token,
+        isActive: user.isActive,
+        status: user.status,
+        userId: user._id
+      };
+    });
+
+    // Update last login for all users
+    await User.updateMany(
+      { _id: { $in: activeUsers.map(u => u._id) } },
+      { lastLogin: new Date() }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      email,
+      accounts,
+      totalAccounts: accounts.length
+    });
+
+  } catch (error) {
+    console.error('Login-any error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error logging in',
       error: error.message
     });
   }

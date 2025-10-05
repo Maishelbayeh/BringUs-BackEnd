@@ -56,21 +56,14 @@ class StoreController {
       //CONSOLE.log('Parsed settings:', settings);
 
       // Validate required fields
-      if (!nameAr || !nameEn || !slug || !contact?.email) {
+      if (!nameAr || !nameEn  || !contact?.email) {
         return error(res, { 
-          message: 'Missing required fields: nameAr, nameEn, slug, and contact.email are required', 
+          message: 'Missing required fields: nameAr, nameEn, and contact.email are required', 
           statusCode: 400 
         });
       }
 
-      // Check if slug already exists
-      const existingStore = await Store.findOne({ slug });
-      if (existingStore) {
-        return error(res, { 
-          message: 'Store slug already exists', 
-          statusCode: 400 
-        });
-      }
+      // Slug will be automatically generated from nameEn in the model's pre-save hook
 
       // Handle logo upload if provided
       let logoData = null;
@@ -94,18 +87,12 @@ class StoreController {
         }
       }
 
-      // Generate store URL
-      const baseDomain = 'https://bringus-main.onrender.com';
-      const storeUrl = `${baseDomain}/${slug}`;
-
-      // Create store data
+      // Create store data (slug will be generated automatically)
       const storeData = {
         nameAr,
         nameEn,
         descriptionAr,
         descriptionEn,
-        slug,
-        url: storeUrl,
         contact,
         settings: settings || {},
         whatsappNumber,
@@ -132,6 +119,14 @@ class StoreController {
       // });
 
       await store.populate('contact');
+      
+      // Generate store URL after slug is created
+      const baseDomain = 'https://bringus-main.onrender.com';
+      const storeUrl = `${baseDomain}/${store.slug}`;
+      
+      // Update the store with the generated URL
+      store.url = storeUrl;
+      await store.save();
       
       // Add the generated URL to the response
       const storeResponse = {
