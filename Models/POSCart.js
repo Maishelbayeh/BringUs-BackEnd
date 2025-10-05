@@ -106,6 +106,12 @@ const posCartSchema = new mongoose.Schema({
     name: { type: String },
     phone: { type: String },
     email: { type: String },
+    type: { 
+      type: String, 
+      enum: ['regular', 'wholesaler'], 
+      default: 'regular' 
+    },
+    wholesalerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Wholesaler' },
     address: {
       street: { type: String },
       city: { type: String },

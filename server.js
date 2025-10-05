@@ -142,6 +142,7 @@ const emailVerificationRoutes = require('./Routes/emailVerification');
 const passwordResetRoutes = require('./Routes/passwordReset');
 const posCartRoutes = require('./Routes/posCart');
 const lahzaPaymentRoutes = require('./Routes/lahzaPayment');
+const connectPlusRoutes = require('./Routes/connectPlus');
 
 // Route middleware
 app.use('/api/auth', authRoutes);
@@ -172,6 +173,7 @@ app.use('/api/email-verification', emailVerificationRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/pos-cart', posCartRoutes);
 app.use('/api/lahza-payment', lahzaPaymentRoutes);
+app.use('/api/connect-plus', connectPlusRoutes);
 
 /**
  * @swagger
@@ -940,6 +942,7 @@ const swaggerOptions = {
       { name: 'Store Info', description: 'Store information extraction endpoints' },
       { name: 'Subscription Renewal', description: 'Automatic subscription renewal endpoints' },
       { name: 'Lahza Payment', description: 'Lahza payment gateway integration endpoints' },
+      { name: 'Connect Plus', description: 'Connect Plus delivery service integration endpoints' },
       { name: 'Health', description: 'Health check endpoints' }
     ]
   },

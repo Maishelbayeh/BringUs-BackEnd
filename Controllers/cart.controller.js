@@ -301,10 +301,38 @@ exports.addToCart = async (req, res) => {
     // التحقق من وجود جميع الـ specifications المختارة
     if (selectedSpecifications && selectedSpecifications.length > 0) {
       for (const selectedSpec of selectedSpecifications) {
-        const specValue = prod.specificationValues.find(spec => 
+        // Try multiple validation approaches
+        let specValue = prod.specificationValues.find(spec => 
           spec.specificationId.toString() === selectedSpec.specificationId &&
           spec.valueId === selectedSpec.valueId
         );
+        
+        // If not found, try case-insensitive comparison
+        if (!specValue) {
+          specValue = prod.specificationValues.find(spec => 
+            spec.specificationId.toString().toLowerCase() === selectedSpec.specificationId.toLowerCase() &&
+            spec.valueId.toLowerCase() === selectedSpec.valueId.toLowerCase()
+          );
+        }
+        
+        // If still not found, try matching by specification ID and value
+        if (!specValue && selectedSpec.value) {
+          specValue = prod.specificationValues.find(spec => 
+            spec.specificationId.toString() === selectedSpec.specificationId &&
+            spec.value === selectedSpec.value
+          );
+        }
+        
+        // Final fallback: if valueId looks malformed, use first available specification
+        if (!specValue && selectedSpec.valueId && selectedSpec.valueId.startsWith(selectedSpec.specificationId)) {
+          const availableValues = prod.specificationValues.filter(spec => 
+            spec.specificationId.toString() === selectedSpec.specificationId
+          );
+          if (availableValues.length > 0) {
+            specValue = availableValues[0];
+            console.log(`⚠️ Cart - Using fallback specification: ${specValue.valueId} (${specValue.value})`);
+          }
+        }
         
         if (!specValue) {
           return res.status(400).json({ 
@@ -425,10 +453,38 @@ exports.updateCartItem = async (req, res) => {
       // التحقق من وجود جميع الـ specifications المختارة
       if (selectedSpecifications && selectedSpecifications.length > 0) {
         for (const selectedSpec of selectedSpecifications) {
-          const specValue = product.specificationValues.find(spec => 
+          // Try multiple validation approaches
+          let specValue = product.specificationValues.find(spec => 
             spec.specificationId.toString() === selectedSpec.specificationId &&
             spec.valueId === selectedSpec.valueId
           );
+          
+          // If not found, try case-insensitive comparison
+          if (!specValue) {
+            specValue = product.specificationValues.find(spec => 
+              spec.specificationId.toString().toLowerCase() === selectedSpec.specificationId.toLowerCase() &&
+              spec.valueId.toLowerCase() === selectedSpec.valueId.toLowerCase()
+            );
+          }
+          
+          // If still not found, try matching by specification ID and value
+          if (!specValue && selectedSpec.value) {
+            specValue = product.specificationValues.find(spec => 
+              spec.specificationId.toString() === selectedSpec.specificationId &&
+              spec.value === selectedSpec.value
+            );
+          }
+          
+          // Final fallback: if valueId looks malformed, use first available specification
+          if (!specValue && selectedSpec.valueId && selectedSpec.valueId.startsWith(selectedSpec.specificationId)) {
+            const availableValues = product.specificationValues.filter(spec => 
+              spec.specificationId.toString() === selectedSpec.specificationId
+            );
+            if (availableValues.length > 0) {
+              specValue = availableValues[0];
+              console.log(`⚠️ Cart Update - Using fallback specification: ${specValue.valueId} (${specValue.value})`);
+            }
+          }
           
           if (!specValue) {
             return res.status(400).json({ 

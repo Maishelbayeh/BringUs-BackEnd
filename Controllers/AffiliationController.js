@@ -605,8 +605,9 @@ const createAffiliate = async (req, res) => {
     }
     
     const domain = store.slug;
+    const baseDomain = 'https://bringus-main.onrender.com';
     console.log('domain', domain);
-    // Check if email already exists in both Affiliation and User models
+    // Check if email already exists in the current store only
     const existingAffiliate = await Affiliation.findOne({
       email: req.body.email,
       store: storeId
@@ -620,7 +621,7 @@ const createAffiliate = async (req, res) => {
     if (existingAffiliate || existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'Email already exists'
+        message: 'Email already exists in this store'
       });
     }
 
@@ -633,7 +634,8 @@ const createAffiliate = async (req, res) => {
       phone: req.body.mobile,
       role: 'affiliate',
       status: 'active',
-      isActive: true
+      isActive: true,
+      store: storeId // Add store reference to user
     };
 
     const user = await User.create(userData);
@@ -641,7 +643,7 @@ const createAffiliate = async (req, res) => {
     // Generate unique affiliate code
     const affiliateCode = await Affiliation.generateUniqueAffiliateCode();
 
-    const affiliateLink = `http://localhost:5174/${domain}/affiliate/${affiliateCode}`;
+    const affiliateLink = `${baseDomain}/${domain}/affiliate/${affiliateCode}`;
 
     // Add store and userId to the request body
     const affiliateData = {
@@ -761,13 +763,14 @@ const updateAffiliate = async (req, res) => {
 
       const existingUser = await User.findOne({
         email: req.body.email,
+        store: storeId,
         _id: { $ne: affiliate.userId }
       });
 
       if (existingAffiliate || existingUser) {
         return res.status(400).json({
           success: false,
-          message: 'Email already exists'
+          message: 'Email already exists in this store'
         });
       }
     }

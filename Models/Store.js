@@ -37,9 +37,13 @@ const storeSchema = new mongoose.Schema({
   slug: {
     type: String,
     unique: true,
-    required: [true, 'Domain is required'],
+    required: false, // Will be generated automatically
     trim: true,
     lowercase: true
+  },
+  url: {
+    type: String,
+    trim: true
   },
   status: {
     type: String,
@@ -236,6 +240,39 @@ const storeSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Pre-save middleware to generate slug from nameEn
+storeSchema.pre('save', async function(next) {
+  // Only generate slug if it's not already set or if nameEn has changed
+  if (!this.slug || this.isModified('nameEn')) {
+    // Generate slug from nameEn
+    let generatedSlug = this.nameEn
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+
+    // Ensure slug is not empty
+    if (!generatedSlug) {
+      generatedSlug = 'store-' + Date.now();
+    }
+
+    // Check if slug already exists and make it unique
+    let finalSlug = generatedSlug;
+    let counter = 1;
+    const Store = this.constructor;
+    
+    while (await Store.findOne({ slug: finalSlug, _id: { $ne: this._id } })) {
+      finalSlug = `${generatedSlug}-${counter}`;
+      counter++;
+    }
+
+    this.slug = finalSlug;
+  }
+  next();
+});
+
 // Ensure unique slug
 storeSchema.index({ slug: 1 }, { unique: true });
 
@@ -282,6 +319,18 @@ storeSchema.virtual('daysUntilSubscriptionExpires').get(function() {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays > 0 ? diffDays : 0;
 });
+
+// Virtual for store URL
+storeSchema.virtual('storeUrl').get(function() {
+  const baseDomain = 'https://bringus-main.onrender.com';
+  return `${baseDomain}/${this.slug}`;
+});
+
+// Method to generate store URL
+storeSchema.methods.generateStoreUrl = function() {
+  const baseDomain = 'https://bringus-main.onrender.com';
+  return `${baseDomain}/${this.slug}`;
+};
 
 // Method to check if store should be deactivated
 storeSchema.methods.shouldBeDeactivated = function() {

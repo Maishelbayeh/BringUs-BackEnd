@@ -255,7 +255,7 @@ affiliationSchema.pre('save', function(next) {
   }
   
   if (!this.affiliateLink) {
-    this.affiliateLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/ref/${this.affiliateCode}`;
+    this.affiliateLink = `${'https://bringus-main.onrender.com'}/ref/${this.affiliateCode}`;
   }
   
   // Update balance
