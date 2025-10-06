@@ -1344,6 +1344,7 @@ exports.getOrderDetails = async (req, res) => {
       };
     }
 
+    
     // Add store information if requested
     if (includeStore === 'true' && order.store) {
       response.store = {
