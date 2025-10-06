@@ -28,7 +28,7 @@ class SubscriptionService {
             'subscription.endDate': { $lt: now },
             status: 'active'
           },
-          // Expired trial periods (14 days limit)
+          // Expired trial periods (30 days limit)
           {
             'subscription.isSubscribed': false,
             'subscription.trialEndDate': { $lt: now },

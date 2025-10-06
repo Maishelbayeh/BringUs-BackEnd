@@ -62,6 +62,33 @@ const parseProductColors = (product) => {
     productObj.colors = [];
   }
   
+  // Add bilingual support for product status
+  if (productObj.isActive !== undefined) {
+    productObj.isActiveAr = productObj.isActive ? 'نشط' : 'غير نشط';
+  }
+  
+  if (productObj.isFeatured !== undefined) {
+    productObj.isFeaturedAr = productObj.isFeatured ? 'مميز' : 'عادي';
+  }
+  
+  if (productObj.isOnSale !== undefined) {
+    productObj.isOnSaleAr = productObj.isOnSale ? 'على الخصم' : 'بدون خصم';
+  }
+  
+  if (productObj.visibility !== undefined) {
+    productObj.visibilityAr = productObj.visibility ? 'مرئي' : 'مخفي';
+  }
+  
+  // Add bilingual support for hasVariants
+  if (productObj.hasVariants !== undefined) {
+    productObj.hasVariantsAr = productObj.hasVariants ? 'له متغيرات' : 'بدون متغيرات';
+  }
+  
+  // Add bilingual support for isParent
+  if (productObj.isParent !== undefined) {
+    productObj.isParentAr = productObj.isParent ? 'منتج رئيسي' : 'متغير';
+  }
+  
   return productObj;
 };
 
@@ -281,16 +308,78 @@ exports.getAll = async (req, res) => {
     const query = await addStoreFilter(req);
     
     const products = await Product.find(query)
-      .populate('category')
-      .populate('categories')
-      .populate('productLabels')
-      .populate('unit')
-      .populate('store', 'name domain')
-      .populate('specifications')
+      .populate('category', 'nameAr nameEn fullPath fullPathAr')
+      .populate('categories', 'nameAr nameEn fullPath fullPathAr')
+      .populate('productLabels', 'nameAr nameEn color')
+      .populate('unit', 'nameAr nameEn symbol')
+      .populate('store', 'nameAr nameEn slug domain')
+      .populate('specifications', 'titleAr titleEn descriptionAr descriptionEn')
       .populate('variants', '_id'); // Only populate variant IDs
     
     // تحويل الألوان من JSON string إلى array لكل منتج
-    const processedProducts = products.map(product => parseProductColors(product));
+    const processedProducts = await Promise.all(products.map(async (product) => {
+      const productObj = parseProductColors(product);
+      
+      // Enhance specification values with bilingual support
+      if (productObj.specificationValues && Array.isArray(productObj.specificationValues)) {
+        // Get all specification IDs to populate bilingual data
+        const specIds = productObj.specificationValues.map(spec => spec.specificationId);
+        
+        // Populate specification data with bilingual support
+        const ProductSpecification = require('../Models/ProductSpecification');
+        const specifications = await ProductSpecification.find({ _id: { $in: specIds } });
+        
+        // Create a map for quick lookup
+        const specMap = {};
+        specifications.forEach(spec => {
+          specMap[spec._id.toString()] = spec;
+        });
+        
+        // Map specification values with proper bilingual data
+        productObj.specificationValues = productObj.specificationValues.map(spec => {
+          const specData = specMap[spec.specificationId.toString()];
+          if (specData) {
+            // Find the matching value in the specification
+            const matchingValue = specData.values.find(val => 
+              val.valueAr === spec.value || val.valueEn === spec.value
+            );
+            
+            return {
+              ...spec,
+              titleAr: specData.titleAr || spec.title || '',
+              titleEn: specData.titleEn || spec.title || '',
+              valueAr: matchingValue ? matchingValue.valueAr : spec.value || '',
+              valueEn: matchingValue ? matchingValue.valueEn : spec.value || ''
+            };
+          } else {
+            // Fallback to existing data if specification not found
+            return {
+              ...spec,
+              titleAr: spec.title || '',
+              titleEn: spec.title || '',
+              valueAr: spec.value || '',
+              valueEn: spec.value || ''
+            };
+          }
+        });
+      }
+      
+      // Add bilingual support for stock status
+      if (productObj.stockStatus) {
+        productObj.stockStatusAr = productObj.stockStatus === 'in_stock' ? 'متوفر' : 
+                                 productObj.stockStatus === 'out_of_stock' ? 'غير متوفر' : 
+                                 productObj.stockStatus === 'low_stock' ? 'كمية قليلة' : 'غير محدد';
+      }
+      
+      // Add bilingual support for specification stock status
+      if (productObj.specificationStockStatus) {
+        productObj.specificationStockStatusAr = productObj.specificationStockStatus === 'in_stock' ? 'متوفر' : 
+                                               productObj.specificationStockStatus === 'out_of_stock' ? 'غير متوفر' : 
+                                               productObj.specificationStockStatus === 'low_stock' ? 'كمية قليلة' : 'غير محدد';
+      }
+      
+      return productObj;
+    }));
     
     // Log barcodes for debugging
     processedProducts.forEach((product, index) => {
@@ -307,6 +396,8 @@ exports.getAll = async (req, res) => {
   } catch (err) {
     res.status(500).json({ 
       success: false,
+      message: 'Error fetching products',
+      messageAr: 'خطأ في جلب المنتجات',
       error: err.message 
     });
   }
@@ -317,29 +408,88 @@ exports.getById = async (req, res) => {
     const query = await addStoreFilter(req, { _id: req.params.id });
     
     const product = await Product.findOne(query)
-      .populate('category')
-      .populate('categories')
-      .populate('productLabels')
-      .populate('unit')
+      .populate('category', 'nameAr nameEn fullPath fullPathAr')
+      .populate('categories', 'nameAr nameEn fullPath fullPathAr')
+      .populate('productLabels', 'nameAr nameEn color')
+      .populate('unit', 'nameAr nameEn symbol')
       .populate('costPrice')
       .populate('compareAtPrice')
-      .populate('specifications')
+      .populate('specifications', 'titleAr titleEn descriptionAr descriptionEn')
       .populate('attributes')
       .populate('colors')
       .populate('images')
       .populate('mainImage')
-      .populate('store', 'name domain')
+      .populate('store', 'nameAr nameEn slug domain')
       .populate('variants', '_id'); // Only populate variant IDs
       
     if (!product) {
       return res.status(404).json({ 
         success: false,
-        error: 'Product not found' 
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
     
     // تحويل الألوان من JSON string إلى array
     const productObj = parseProductColors(product);
+    
+    // Enhance specification values with bilingual support
+    if (productObj.specificationValues && Array.isArray(productObj.specificationValues)) {
+      // Get all specification IDs to populate bilingual data
+      const specIds = productObj.specificationValues.map(spec => spec.specificationId);
+      
+      // Populate specification data with bilingual support
+      const ProductSpecification = require('../Models/ProductSpecification');
+      const specifications = await ProductSpecification.find({ _id: { $in: specIds } });
+      
+      // Create a map for quick lookup
+      const specMap = {};
+      specifications.forEach(spec => {
+        specMap[spec._id.toString()] = spec;
+      });
+      
+      // Map specification values with proper bilingual data
+      productObj.specificationValues = productObj.specificationValues.map(spec => {
+        const specData = specMap[spec.specificationId.toString()];
+        if (specData) {
+          // Find the matching value in the specification
+          const matchingValue = specData.values.find(val => 
+            val.valueAr === spec.value || val.valueEn === spec.value
+          );
+          
+          return {
+            ...spec,
+            titleAr: specData.titleAr || spec.title || '',
+            titleEn: specData.titleEn || spec.title || '',
+            valueAr: matchingValue ? matchingValue.valueAr : spec.value || '',
+            valueEn: matchingValue ? matchingValue.valueEn : spec.value || ''
+          };
+        } else {
+          // Fallback to existing data if specification not found
+          return {
+            ...spec,
+            titleAr: spec.title || '',
+            titleEn: spec.title || '',
+            valueAr: spec.value || '',
+            valueEn: spec.value || ''
+          };
+        }
+      });
+    }
+    
+    // Add bilingual support for stock status
+    if (productObj.stockStatus) {
+      productObj.stockStatusAr = productObj.stockStatus === 'in_stock' ? 'متوفر' : 
+                               productObj.stockStatus === 'out_of_stock' ? 'غير متوفر' : 
+                               productObj.stockStatus === 'low_stock' ? 'كمية قليلة' : 'غير محدد';
+    }
+    
+    // Add bilingual support for specification stock status
+    if (productObj.specificationStockStatus) {
+      productObj.specificationStockStatusAr = productObj.specificationStockStatus === 'in_stock' ? 'متوفر' : 
+                                             productObj.specificationStockStatus === 'out_of_stock' ? 'غير متوفر' : 
+                                             productObj.specificationStockStatus === 'low_stock' ? 'كمية قليلة' : 'غير محدد';
+    }
     
     // Log barcodes for debugging
     //CONSOLE.log('🔍 getById - product barcodes:', productObj.barcodes);
@@ -353,6 +503,8 @@ exports.getById = async (req, res) => {
   } catch (err) {
     res.status(500).json({ 
       success: false,
+      message: 'Error fetching product',
+      messageAr: 'خطأ في جلب المنتج',
       error: err.message 
     });
   }
@@ -874,7 +1026,8 @@ exports.getVariants = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Store ID is required',
-        message: 'Please provide storeId in query parameters'
+        message: 'Please provide storeId in query parameters',
+        messageAr: 'معرف المتجر مطلوب'
       });
     }
 
@@ -883,21 +1036,84 @@ exports.getVariants = async (req, res) => {
     if (!product) {
       return res.status(404).json({ 
         success: false,
-        error: 'Product not found' 
+        error: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
 
     // Get variants with full population
     const variants = await Product.find({ _id: { $in: product.variants } })
-      .populate('category')
-      .populate('categories')
-      .populate('productLabels')
-      .populate('specifications')
-      .populate('unit')
-      .populate('store', 'name domain');
+      .populate('category', 'nameAr nameEn fullPath fullPathAr')
+      .populate('categories', 'nameAr nameEn fullPath fullPathAr')
+      .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'titleAr titleEn descriptionAr descriptionEn')
+      .populate('unit', 'nameAr nameEn symbol')
+      .populate('store', 'nameAr nameEn slug domain');
 
     // تحويل الألوان من JSON string إلى array لكل variant
-    const processedVariants = variants.map(variant => parseProductColors(variant));
+    const processedVariants = await Promise.all(variants.map(async (variant) => {
+      const variantObj = parseProductColors(variant);
+      
+      // Enhance specification values with bilingual support
+      if (variantObj.specificationValues && Array.isArray(variantObj.specificationValues)) {
+        // Get all specification IDs to populate bilingual data
+        const specIds = variantObj.specificationValues.map(spec => spec.specificationId);
+        
+        // Populate specification data with bilingual support
+        const ProductSpecification = require('../Models/ProductSpecification');
+        const specifications = await ProductSpecification.find({ _id: { $in: specIds } });
+        
+        // Create a map for quick lookup
+        const specMap = {};
+        specifications.forEach(spec => {
+          specMap[spec._id.toString()] = spec;
+        });
+        
+        // Map specification values with proper bilingual data
+        variantObj.specificationValues = variantObj.specificationValues.map(spec => {
+          const specData = specMap[spec.specificationId.toString()];
+          if (specData) {
+            // Find the matching value in the specification
+            const matchingValue = specData.values.find(val => 
+              val.valueAr === spec.value || val.valueEn === spec.value
+            );
+            
+            return {
+              ...spec,
+              titleAr: specData.titleAr || spec.title || '',
+              titleEn: specData.titleEn || spec.title || '',
+              valueAr: matchingValue ? matchingValue.valueAr : spec.value || '',
+              valueEn: matchingValue ? matchingValue.valueEn : spec.value || ''
+            };
+          } else {
+            // Fallback to existing data if specification not found
+            return {
+              ...spec,
+              titleAr: spec.title || '',
+              titleEn: spec.title || '',
+              valueAr: spec.value || '',
+              valueEn: spec.value || ''
+            };
+          }
+        });
+      }
+      
+      // Add bilingual support for stock status
+      if (variantObj.stockStatus) {
+        variantObj.stockStatusAr = variantObj.stockStatus === 'in_stock' ? 'متوفر' : 
+                                 variantObj.stockStatus === 'out_of_stock' ? 'غير متوفر' : 
+                                 variantObj.stockStatus === 'low_stock' ? 'كمية قليلة' : 'غير محدد';
+      }
+      
+      // Add bilingual support for specification stock status
+      if (variantObj.specificationStockStatus) {
+        variantObj.specificationStockStatusAr = variantObj.specificationStockStatus === 'in_stock' ? 'متوفر' : 
+                                               variantObj.specificationStockStatus === 'out_of_stock' ? 'غير متوفر' : 
+                                               variantObj.specificationStockStatus === 'low_stock' ? 'كمية قليلة' : 'غير محدد';
+      }
+      
+      return variantObj;
+    }));
 
     res.json({
       success: true,
@@ -907,6 +1123,8 @@ exports.getVariants = async (req, res) => {
   } catch (err) {
     res.status(500).json({ 
       success: false,
+      message: 'Error fetching variants',
+      messageAr: 'خطأ في جلب المتغيرات',
       error: err.message 
     });
   }
@@ -2239,19 +2457,82 @@ exports.getByStoreId = async (req, res) => {
     if (!storeId) {
       return res.status(400).json({
         success: false,
-        message: 'storeId is required'
+        message: 'storeId is required',
+        messageAr: 'معرف المتجر مطلوب'
       });
     }
     const products = await Product.find({ store: storeId })
-      .populate('category', 'nameAr nameEn')
-      .populate('categories', 'nameAr nameEn')
+      .populate('category', 'nameAr nameEn fullPath fullPathAr')
+      .populate('categories', 'nameAr nameEn fullPath fullPathAr')
       .populate('productLabels', 'nameAr nameEn color')
-      .populate('specifications', 'descriptionAr descriptionEn')
+      .populate('specifications', 'titleAr titleEn descriptionAr descriptionEn')
       .populate('unit', 'nameAr nameEn symbol')
       .populate('store', 'nameAr nameEn slug');
     
     // تحويل الألوان من JSON string إلى array لكل منتج
-    const processedProducts = products.map(product => parseProductColors(product));
+    const processedProducts = await Promise.all(products.map(async (product) => {
+      const productObj = parseProductColors(product);
+      
+      // Enhance specification values with bilingual support
+      if (productObj.specificationValues && Array.isArray(productObj.specificationValues)) {
+        // Get all specification IDs to populate bilingual data
+        const specIds = productObj.specificationValues.map(spec => spec.specificationId);
+        
+        // Populate specification data with bilingual support
+        const ProductSpecification = require('../Models/ProductSpecification');
+        const specifications = await ProductSpecification.find({ _id: { $in: specIds } });
+        
+        // Create a map for quick lookup
+        const specMap = {};
+        specifications.forEach(spec => {
+          specMap[spec._id.toString()] = spec;
+        });
+        
+        // Map specification values with proper bilingual data
+        productObj.specificationValues = productObj.specificationValues.map(spec => {
+          const specData = specMap[spec.specificationId.toString()];
+          if (specData) {
+            // Find the matching value in the specification
+            const matchingValue = specData.values.find(val => 
+              val.valueAr === spec.value || val.valueEn === spec.value
+            );
+            
+            return {
+              ...spec,
+              titleAr: specData.titleAr || spec.title || '',
+              titleEn: specData.titleEn || spec.title || '',
+              valueAr: matchingValue ? matchingValue.valueAr : spec.value || '',
+              valueEn: matchingValue ? matchingValue.valueEn : spec.value || ''
+            };
+          } else {
+            // Fallback to existing data if specification not found
+            return {
+              ...spec,
+              titleAr: spec.title || '',
+              titleEn: spec.title || '',
+              valueAr: spec.value || '',
+              valueEn: spec.value || ''
+            };
+          }
+        });
+      }
+      
+      // Add bilingual support for stock status
+      if (productObj.stockStatus) {
+        productObj.stockStatusAr = productObj.stockStatus === 'in_stock' ? 'متوفر' : 
+                                 productObj.stockStatus === 'out_of_stock' ? 'غير متوفر' : 
+                                 productObj.stockStatus === 'low_stock' ? 'كمية قليلة' : 'غير محدد';
+      }
+      
+      // Add bilingual support for specification stock status
+      if (productObj.specificationStockStatus) {
+        productObj.specificationStockStatusAr = productObj.specificationStockStatus === 'in_stock' ? 'متوفر' : 
+                                               productObj.specificationStockStatus === 'out_of_stock' ? 'غير متوفر' : 
+                                               productObj.specificationStockStatus === 'low_stock' ? 'كمية قليلة' : 'غير محدد';
+      }
+      
+      return productObj;
+    }));
     
     console.log('Processed products with colors:', processedProducts.map(p => ({ 
       id: p._id, 
@@ -2268,6 +2549,7 @@ exports.getByStoreId = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching products by storeId',
+      messageAr: 'خطأ في جلب المنتجات حسب معرف المتجر',
       error: err.message
     });
   }
@@ -2283,7 +2565,8 @@ exports.getVariantById = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Store ID is required',
-        message: 'Please provide storeId in query parameters'
+        message: 'Please provide storeId in query parameters',
+        messageAr: 'معرف المتجر مطلوب'
       });
     }
 
@@ -2292,23 +2575,25 @@ exports.getVariantById = async (req, res) => {
     if (!parentProduct) {
       return res.status(404).json({
         success: false,
-        error: 'Parent product not found'
+        error: 'Parent product not found',
+        messageAr: 'المنتج الرئيسي غير موجود'
       });
     }
 
     // جلب المتغير
     const variant = await Product.findOne({ _id: variantId, store: storeId })
-      .populate('category')
-      .populate('categories')
-      .populate('productLabels')
-      .populate('specifications')
-      .populate('unit')
-      .populate('store', 'name domain');
+      .populate('category', 'nameAr nameEn fullPath fullPathAr')
+      .populate('categories', 'nameAr nameEn fullPath fullPathAr')
+      .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'titleAr titleEn descriptionAr descriptionEn')
+      .populate('unit', 'nameAr nameEn symbol')
+      .populate('store', 'nameAr nameEn slug domain');
 
     if (!variant) {
       return res.status(404).json({
         success: false,
-        error: 'Variant not found'
+        error: 'Variant not found',
+        messageAr: 'المتغير غير موجود'
       });
     }
 
@@ -2316,12 +2601,71 @@ exports.getVariantById = async (req, res) => {
     if (!parentProduct.variants.includes(variantId)) {
       return res.status(400).json({
         success: false,
-        error: 'Variant does not belong to this parent product'
+        error: 'Variant does not belong to this parent product',
+        messageAr: 'المتغير لا ينتمي إلى هذا المنتج الرئيسي'
       });
     }
 
     // تحويل الألوان من JSON string إلى array
     const processedVariant = parseProductColors(variant);
+    
+    // Enhance specification values with bilingual support
+    if (processedVariant.specificationValues && Array.isArray(processedVariant.specificationValues)) {
+      // Get all specification IDs to populate bilingual data
+      const specIds = processedVariant.specificationValues.map(spec => spec.specificationId);
+      
+      // Populate specification data with bilingual support
+      const ProductSpecification = require('../Models/ProductSpecification');
+      const specifications = await ProductSpecification.find({ _id: { $in: specIds } });
+      
+      // Create a map for quick lookup
+      const specMap = {};
+      specifications.forEach(spec => {
+        specMap[spec._id.toString()] = spec;
+      });
+      
+      // Map specification values with proper bilingual data
+      processedVariant.specificationValues = processedVariant.specificationValues.map(spec => {
+        const specData = specMap[spec.specificationId.toString()];
+        if (specData) {
+          // Find the matching value in the specification
+          const matchingValue = specData.values.find(val => 
+            val.valueAr === spec.value || val.valueEn === spec.value
+          );
+          
+          return {
+            ...spec,
+            titleAr: specData.titleAr || spec.title || '',
+            titleEn: specData.titleEn || spec.title || '',
+            valueAr: matchingValue ? matchingValue.valueAr : spec.value || '',
+            valueEn: matchingValue ? matchingValue.valueEn : spec.value || ''
+          };
+        } else {
+          // Fallback to existing data if specification not found
+          return {
+            ...spec,
+            titleAr: spec.title || '',
+            titleEn: spec.title || '',
+            valueAr: spec.value || '',
+            valueEn: spec.value || ''
+          };
+        }
+      });
+    }
+    
+    // Add bilingual support for stock status
+    if (processedVariant.stockStatus) {
+      processedVariant.stockStatusAr = processedVariant.stockStatus === 'in_stock' ? 'متوفر' : 
+                                     processedVariant.stockStatus === 'out_of_stock' ? 'غير متوفر' : 
+                                     processedVariant.stockStatus === 'low_stock' ? 'كمية قليلة' : 'غير محدد';
+    }
+    
+    // Add bilingual support for specification stock status
+    if (processedVariant.specificationStockStatus) {
+      processedVariant.specificationStockStatusAr = processedVariant.specificationStockStatus === 'in_stock' ? 'متوفر' : 
+                                                   processedVariant.specificationStockStatus === 'out_of_stock' ? 'غير متوفر' : 
+                                                   processedVariant.specificationStockStatus === 'low_stock' ? 'كمية قليلة' : 'غير محدد';
+    }
 
     res.json({
       success: true,
@@ -2330,6 +2674,8 @@ exports.getVariantById = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
+      message: 'Error fetching variant',
+      messageAr: 'خطأ في جلب المتغير',
       error: err.message
     });
   }

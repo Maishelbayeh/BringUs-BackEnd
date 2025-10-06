@@ -105,6 +105,20 @@ class StoreController {
 
       const store = await Store.create(storeData);
 
+      // Ensure store is active for trial period
+      store.status = 'active';
+      
+      // Add trial start to subscription history
+      await store.addSubscriptionHistory(
+        'trial_started',
+        '30-day free trial started for new store',
+        {
+          trialDuration: 30,
+          trialStartDate: new Date(),
+          trialEndDate: store.subscription.trialEndDate
+        }
+      );
+
       // Create owner record
       // await Owner.create({
       //   userId,
@@ -173,7 +187,7 @@ class StoreController {
   static async getStoreBySlug(req, res) {
     try {
       const { slug } = req.params;
-      const store = await Store.findOne({ slug, status: 'active' }).populate('contact', 'email phone address');
+      const store = await Store.findOne({ slug }).populate('contact', 'email phone address');
       if (!store) {
         return error(res, { message: 'Store not found', messageAr: 'المتجر غير موجود', statusCode: 404 });
       }

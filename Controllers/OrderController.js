@@ -122,11 +122,13 @@ exports.reduceProductStock = async (product, quantity, selectedSpecifications = 
       return;
     }
 
-    // Reduce from general stock
+    // Reduce from general stock and available quantity
     if (product.stock >= quantity) {
       product.stock -= quantity;
+      product.availableQuantity -= quantity; // Also reduce available quantity
       product.soldCount += quantity;
       console.log(`✅ Reduced general stock for ${product.nameEn}: ${quantity} units`);
+      console.log(`✅ Reduced available quantity for ${product.nameEn}: ${quantity} units`);
     } else {
       console.error(`❌ Error: Insufficient general stock for ${product.nameEn}. Available: ${product.stock}, Requested: ${quantity}`);
       throw new Error(`Insufficient general stock for ${product.nameEn}`);
@@ -210,10 +212,12 @@ const restoreProductStock = async (product, quantity, selectedSpecifications = [
       return;
     }
 
-    // Restore to general stock
+    // Restore to general stock and available quantity
     product.stock += quantity;
+    product.availableQuantity += quantity; // Also restore available quantity
     product.soldCount = Math.max(0, product.soldCount - quantity);
     console.log(`✅ Restored general stock for ${product.nameEn}: +${quantity} units`);
+    console.log(`✅ Restored available quantity for ${product.nameEn}: +${quantity} units`);
     console.log(`✅ Updated sold count for ${product.nameEn}: -${quantity} units`);
     
     // Restore to specification quantities if specifications are selected

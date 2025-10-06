@@ -125,7 +125,7 @@ const posCartSchema = new mongoose.Schema({
   // Cart status
   status: {
     type: String,
-    enum: ['active', 'completed', 'cancelled'],
+    enum: ['active', 'completed', 'cancelled', 'deleted'],
     default: 'active'
   },
   // Payment information (always cash, no change)
@@ -256,6 +256,12 @@ posCartSchema.methods.clearCart = function() {
 posCartSchema.methods.completeCart = function() {
   this.status = 'completed';
   this.completedAt = new Date();
+  return this.save();
+};
+
+// Method to mark cart as deleted (soft delete)
+posCartSchema.methods.deleteCart = function() {
+  this.status = 'deleted';
   return this.save();
 };
 
