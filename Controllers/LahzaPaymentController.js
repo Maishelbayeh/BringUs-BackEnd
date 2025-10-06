@@ -65,6 +65,8 @@ exports.initializePayment = async (req, res) => {
       console.log('❌ Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -131,6 +133,7 @@ exports.initializePayment = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: result.error || 'Failed to initialize payment',
+        messageAr: result.error || 'فشل في تهيئة الدفع',
         error: result.error,
         details: result.details
       });
@@ -142,6 +145,7 @@ exports.initializePayment = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error initializing payment',
+      messageAr: 'خطأ في تهيئة الدفع',
       error: error.message
     });
   }
@@ -157,6 +161,8 @@ exports.verifyPayment = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -177,6 +183,7 @@ exports.verifyPayment = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: result.error || 'Payment verification failed',
+        messageAr: result.error || 'فشل في التحقق من الدفع',
         error: result.error,
         details: result.details
       });
@@ -188,6 +195,7 @@ exports.verifyPayment = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error verifying payment',
+      messageAr: 'خطأ في التحقق من الدفع',
       error: error.message
     });
   }
@@ -213,6 +221,7 @@ exports.getPaymentStatus = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: result.error || 'Failed to get payment status',
+        messageAr: result.error || 'فشل في الحصول على حالة الدفع',
         error: result.error,
         details: result.details
       });
@@ -224,6 +233,7 @@ exports.getPaymentStatus = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error getting payment status',
+      messageAr: 'خطأ في الحصول على حالة الدفع',
       error: error.message
     });
   }
@@ -249,6 +259,7 @@ exports.testConnection = async (req, res) => {
       return res.status(500).json({
         success: false,
         message: result.error || 'Lahza connection test failed',
+        messageAr: result.error || 'فشل في اختبار الاتصال بـ Lahza',
         error: result.error,
         details: result.details
       });
@@ -260,6 +271,7 @@ exports.testConnection = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Lahza connection test failed',
+      messageAr: 'فشل في اختبار الاتصال بـ Lahza',
       error: error.message
     });
   }

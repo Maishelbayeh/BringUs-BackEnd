@@ -10,7 +10,8 @@ const requireSuperAdmin = async (req, res, next) => {
         if (!req.user || req.user.role !== 'superadmin') {
             return res.status(403).json({
                 success: false,
-                message: 'Access denied. Superadmin role required.'
+                message: 'Access denied. Superadmin role required.',
+                messageAr: 'تم رفض الوصول. دور المدير العام مطلوب.'
             });
         }
 
@@ -19,7 +20,8 @@ const requireSuperAdmin = async (req, res, next) => {
         console.error('Superadmin auth error:', error);
         res.status(500).json({
             success: false,
-            message: 'Internal server error during authorization'
+            message: 'Internal server error during authorization',
+            messageAr: 'خطأ داخلي في الخادم أثناء التفويض'
         });
     }
 };

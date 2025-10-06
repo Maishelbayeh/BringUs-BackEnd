@@ -70,7 +70,7 @@ const getAllWholesalers = async (req, res) => {
 
   } catch (err) {
     //CONSOLE.error('Error getting wholesalers:', err);
-    return error(res, { message: 'Failed to get wholesalers', statusCode: 500 });
+    return error(res, { message: 'Failed to get wholesalers', messageAr: 'فشل في جلب تجار الجملة', statusCode: 500 });
   }
 };
 
@@ -87,7 +87,7 @@ const getWholesalerById = async (req, res) => {
     .populate('verifiedBy', 'firstName lastName');
 
     if (!wholesaler) {
-      return error(res, { message: 'Wholesaler not found', statusCode: 404 });
+      return error(res, { message: 'Wholesaler not found', messageAr: 'تاجر الجملة غير موجود', statusCode: 404 });
     }
 
     // Remove password from response if it exists
@@ -98,7 +98,7 @@ const getWholesalerById = async (req, res) => {
 
   } catch (err) {
     //CONSOLE.error('Error getting wholesaler:', err);
-    return error(res, { message: 'Failed to get wholesaler', statusCode: 500 });
+    return error(res, { message: 'Failed to get wholesaler', messageAr: 'فشل في جلب تاجر الجملة', statusCode: 500 });
   }
 };
 
@@ -111,7 +111,7 @@ const createWholesaler = async (req, res) => {
     // Check if store exists
     const store = await Store.findById(storeId);
     if (!store) {
-      return error(res, { message: 'Store not found', statusCode: 404 });
+      return error(res, { message: 'Store not found', messageAr: 'المتجر غير موجود', statusCode: 404 });
     }
 
     // Check if email already exists in both Wholesaler and User models
@@ -125,12 +125,12 @@ const createWholesaler = async (req, res) => {
     });
 
     if (existingWholesaler || existingUser) {
-      return error(res, { message: 'Email already exists', statusCode: 400 });
+      return error(res, { message: 'Email already exists', messageAr: 'البريد الإلكتروني موجود بالفعل', statusCode: 400 });
     }
 
     // Check if password is provided
     if (!wholesalerData.password) {
-      return error(res, { message: 'Password is required', statusCode: 400 });
+      return error(res, { message: 'Password is required', messageAr: 'كلمة المرور مطلوبة', statusCode: 400 });
     }
 
     // Create user record first (password will be hashed by User model's pre-save hook)
@@ -178,7 +178,7 @@ const createWholesaler = async (req, res) => {
       return error(res, { message: errors.join(', '), statusCode: 400 });
     }
     
-    return error(res, { message: 'Failed to create wholesaler', statusCode: 500 });
+    return error(res, { message: 'Failed to create wholesaler', messageAr: 'فشل في إنشاء تاجر الجملة', statusCode: 500 });
   }
 };
 
@@ -195,7 +195,7 @@ const updateWholesaler = async (req, res) => {
     });
 
     if (!wholesaler) {
-      return error(res, { message: 'Wholesaler not found', statusCode: 404 });
+      return error(res, { message: 'Wholesaler not found', messageAr: 'تاجر الجملة غير موجود', statusCode: 404 });
     }
 
     // Check if email is being updated and if it already exists
@@ -212,7 +212,7 @@ const updateWholesaler = async (req, res) => {
       });
 
       if (existingWholesaler || existingUser) {
-        return error(res, { message: 'Email already exists', statusCode: 400 });
+        return error(res, { message: 'Email already exists', messageAr: 'البريد الإلكتروني موجود بالفعل', statusCode: 400 });
       }
     }
 
@@ -256,7 +256,7 @@ const updateWholesaler = async (req, res) => {
       return error(res, { message: errors.join(', '), statusCode: 400 });
     }
     
-    return error(res, { message: 'Failed to update wholesaler', statusCode: 500 });
+    return error(res, { message: 'Failed to update wholesaler', messageAr: 'فشل في تحديث تاجر الجملة', statusCode: 500 });
   }
 };
 
@@ -271,7 +271,7 @@ const deleteWholesaler = async (req, res) => {
     });
 
     if (!wholesaler) {
-      return error(res, { message: 'Wholesaler not found', statusCode: 404 });
+      return error(res, { message: 'Wholesaler not found', messageAr: 'تاجر الجملة غير موجود', statusCode: 404 });
     }
 
     // Delete the wholesaler record
@@ -286,7 +286,7 @@ const deleteWholesaler = async (req, res) => {
 
   } catch (err) {
     //CONSOLE.error('Error deleting wholesaler:', err);
-    return error(res, { message: 'Failed to delete wholesaler', statusCode: 500 });
+    return error(res, { message: 'Failed to delete wholesaler', messageAr: 'فشل في حذف تاجر الجملة', statusCode: 500 });
   }
 };
 
@@ -302,11 +302,11 @@ const verifyWholesaler = async (req, res) => {
     });
 
     if (!wholesaler) {
-      return error(res, { message: 'Wholesaler not found', statusCode: 404 });
+      return error(res, { message: 'Wholesaler not found', messageAr: 'تاجر الجملة غير موجود', statusCode: 404 });
     }
 
     if (wholesaler.isVerified) {
-      return error(res, { message: 'Wholesaler is already verified', statusCode: 400 });
+      return error(res, { message: 'Wholesaler is already verified', messageAr: 'تاجر الجملة محقق بالفعل', statusCode: 400 });
     }
 
     // Verify wholesaler
@@ -320,7 +320,7 @@ const verifyWholesaler = async (req, res) => {
 
   } catch (err) {
     //CONSOLE.error('Error verifying wholesaler:', err);
-    return error(res, { message: 'Failed to verify wholesaler', statusCode: 500 });
+    return error(res, { message: 'Failed to verify wholesaler', messageAr: 'فشل في التحقق من تاجر الجملة', statusCode: 500 });
   }
 };
 
@@ -336,7 +336,7 @@ const updateWholesalerStatus = async (req, res) => {
     });
 
     if (!wholesaler) {
-      return error(res, { message: 'Wholesaler not found', statusCode: 404 });
+      return error(res, { message: 'Wholesaler not found', messageAr: 'تاجر الجملة غير موجود', statusCode: 404 });
     }
 
     // Update status
@@ -350,7 +350,7 @@ const updateWholesalerStatus = async (req, res) => {
 
   } catch (err) {
     //CONSOLE.error('Error updating wholesaler status:', err);
-    return error(res, { message: 'Failed to update wholesaler status', statusCode: 500 });
+    return error(res, { message: 'Failed to update wholesaler status', messageAr: 'فشل في تحديث حالة تاجر الجملة', statusCode: 500 });
   }
 };
 
@@ -377,7 +377,7 @@ const getWholesalerStats = async (req, res) => {
 
   } catch (err) {
     //CONSOLE.error('Error getting wholesaler stats:', err);
-    return error(res, { message: 'Failed to get wholesaler statistics', statusCode: 500 });
+    return error(res, { message: 'Failed to get wholesaler statistics', messageAr: 'فشل في جلب إحصائيات تجار الجملة', statusCode: 500 });
   }
 };
 
@@ -388,11 +388,11 @@ const bulkUpdateStatus = async (req, res) => {
     const { wholesalerIds, status } = req.body;
 
     if (!wholesalerIds || !Array.isArray(wholesalerIds) || wholesalerIds.length === 0) {
-      return error(res, { message: 'Wholesaler IDs array is required', statusCode: 400 });
+      return error(res, { message: 'Wholesaler IDs array is required', messageAr: 'مصفوفة معرفات تجار الجملة مطلوبة', statusCode: 400 });
     }
 
     if (!status) {
-      return error(res, { message: 'Status is required', statusCode: 400 });
+      return error(res, { message: 'Status is required', messageAr: 'الحالة مطلوبة', statusCode: 400 });
     }
 
     const result = await Wholesaler.updateMany(
@@ -412,7 +412,7 @@ const bulkUpdateStatus = async (req, res) => {
 
   } catch (err) {
     //CONSOLE.error('Error bulk updating wholesaler status:', err);
-    return error(res, { message: 'Failed to bulk update wholesaler status', statusCode: 500 });
+    return error(res, { message: 'Failed to bulk update wholesaler status', messageAr: 'فشل في تحديث حالة تجار الجملة بالجملة', statusCode: 500 });
   }
 };
 
@@ -422,7 +422,7 @@ const bulkDelete = async (req, res) => {
     const { wholesalerIds } = req.body;
 
     if (!wholesalerIds || !Array.isArray(wholesalerIds) || wholesalerIds.length === 0) {
-      return error(res, { message: 'Wholesaler IDs array is required', statusCode: 400 });
+      return error(res, { message: 'Wholesaler IDs array is required', messageAr: 'مصفوفة معرفات تجار الجملة مطلوبة', statusCode: 400 });
     }
 
     // Get wholesalers to find their user IDs
@@ -451,7 +451,7 @@ const bulkDelete = async (req, res) => {
 
   } catch (err) {
     //CONSOLE.error('Error bulk deleting wholesalers:', err);
-    return error(res, { message: 'Failed to bulk delete wholesalers', statusCode: 500 });
+    return error(res, { message: 'Failed to bulk delete wholesalers', messageAr: 'فشل في حذف تجار الجملة بالجملة', statusCode: 500 });
   }
 };
 

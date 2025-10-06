@@ -315,6 +315,7 @@ const createDeliveryMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -324,7 +325,9 @@ const createDeliveryMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Cannot create a default delivery method as inactive. Default methods must be active.',
-        error: 'Default method cannot be inactive'
+        messageAr: 'لا يمكن إنشاء طريقة توصيل افتراضية كغير نشطة. الطرق الافتراضية يجب أن تكون نشطة.',
+        error: 'Default method cannot be inactive',
+        errorAr: 'الطريقة الافتراضية لا يمكن أن تكون غير نشطة'
       });
     }
 
@@ -347,7 +350,9 @@ const createDeliveryMethod = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: 'Store ID is required or user must have a default store',
-          error: 'No store context available'
+          messageAr: 'معرف المتجر مطلوب أو يجب أن يكون للمستخدم متجر افتراضي',
+          error: 'No store context available',
+          errorAr: 'لا يوجد سياق متجر متاح'
         });
       }
     }
@@ -373,13 +378,16 @@ const createDeliveryMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Cannot create a default delivery method as inactive. Default methods must be active.',
-        error: 'Default method cannot be inactive'
+        messageAr: 'لا يمكن إنشاء طريقة توصيل افتراضية كغير نشطة. الطرق الافتراضية يجب أن تكون نشطة.',
+        error: 'Default method cannot be inactive',
+        errorAr: 'الطريقة الافتراضية لا يمكن أن تكون غير نشطة'
       });
     }
     
     res.status(500).json({
       success: false,
       message: 'Error creating delivery method',
+      messageAr: 'خطأ في إنشاء طريقة التوصيل',
       error: error.message
     });
   }
@@ -442,6 +450,7 @@ const updateDeliveryMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -453,7 +462,9 @@ const updateDeliveryMethod = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: 'Cannot deactivate the default delivery method. Please set another method as default first.',
-          error: 'Default method cannot be inactive'
+          messageAr: 'لا يمكن إلغاء تفعيل طريقة التوصيل الافتراضية. يرجى تعيين طريقة أخرى كافتراضية أولاً.',
+          error: 'Default method cannot be inactive',
+          errorAr: 'الطريقة الافتراضية لا يمكن أن تكون غير نشطة'
         });
       }
     }
@@ -469,7 +480,8 @@ const updateDeliveryMethod = async (req, res) => {
     if (!deliveryMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Delivery method not found'
+        message: 'Delivery method not found',
+        messageAr: 'طريقة التوصيل غير موجودة'
       });
     }
 
@@ -486,13 +498,16 @@ const updateDeliveryMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Cannot deactivate the default delivery method. Please set another method as default first.',
-        error: 'Default method cannot be inactive'
+        messageAr: 'لا يمكن إلغاء تفعيل طريقة التوصيل الافتراضية. يرجى تعيين طريقة أخرى كافتراضية أولاً.',
+        error: 'Default method cannot be inactive',
+        errorAr: 'الطريقة الافتراضية لا يمكن أن تكون غير نشطة'
       });
     }
     
     res.status(500).json({
       success: false,
       message: 'Error updating delivery method',
+      messageAr: 'خطأ في تحديث طريقة التوصيل',
       error: error.message
     });
   }

@@ -579,6 +579,7 @@ const createAffiliate = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -590,7 +591,8 @@ const createAffiliate = async (req, res) => {
     if (!storeId) {
       return res.status(400).json({
         success: false,
-        message: 'Store ID not found in token'
+        message: 'Store ID not found in token',
+        messageAr: 'معرف المتجر غير موجود في الرمز المميز'
       });
     }
     
@@ -600,7 +602,8 @@ const createAffiliate = async (req, res) => {
     if (!store) {
       return res.status(404).json({
         success: false,
-        message: 'Store not found'
+        message: 'Store not found',
+        messageAr: 'المتجر غير موجود'
       });
     }
     
@@ -621,7 +624,8 @@ const createAffiliate = async (req, res) => {
     if (existingAffiliate || existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'Email already exists in this store'
+        message: 'Email already exists in this store',
+        messageAr: 'البريد الإلكتروني موجود بالفعل في هذا المتجر'
       });
     }
 
@@ -670,6 +674,7 @@ const createAffiliate = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating affiliate',
+      messageAr: 'خطأ في إنشاء الشريك',
       error: error.message
     });
   }
@@ -726,6 +731,7 @@ const updateAffiliate = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -738,7 +744,8 @@ const updateAffiliate = async (req, res) => {
     if (!affiliate) {
       return res.status(404).json({
         success: false,
-        message: 'Affiliate not found'
+        message: 'Affiliate not found',
+        messageAr: 'الشريك غير موجود'
       });
     }
 
@@ -751,7 +758,8 @@ const updateAffiliate = async (req, res) => {
       if (!storeId) {
         return res.status(400).json({
           success: false,
-          message: 'Store ID not found in token'
+          message: 'Store ID not found in token',
+          messageAr: 'معرف المتجر غير موجود في الرمز المميز'
         });
       }
       
@@ -770,7 +778,8 @@ const updateAffiliate = async (req, res) => {
       if (existingAffiliate || existingUser) {
         return res.status(400).json({
           success: false,
-          message: 'Email already exists in this store'
+          message: 'Email already exists in this store',
+          messageAr: 'البريد الإلكتروني موجود بالفعل في هذا المتجر'
         });
       }
     }
@@ -807,6 +816,7 @@ const updateAffiliate = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating affiliate',
+      messageAr: 'خطأ في تحديث الشريك',
       error: error.message
     });
   }

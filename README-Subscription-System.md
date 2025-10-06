@@ -166,9 +166,9 @@ console.log('التجريبيين:', stats.data.trial);
 ## آلية العمل
 
 ### 1. إنشاء متجر جديد
-- يحصل تلقائياً على فترة تجريبية 14 يوم
+- يحصل تلقائياً على فترة تجريبية 30 يوم
 - `isSubscribed: false`
-- `trialEndDate: createdAt + 14 days`
+- `trialEndDate: createdAt + 30 days`
 
 ### 2. الفحص اليومي (12:00 ظهراً)
 - يفحص جميع المتاجر

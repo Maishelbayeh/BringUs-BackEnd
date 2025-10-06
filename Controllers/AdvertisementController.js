@@ -300,15 +300,27 @@ const createAdvertisement = async (req, res) => {
     //CONSOLE.error('Create advertisement error:', err);
     
     if (err.code === 11000) {
-      return error(res, { message: 'Only one active advertisement allowed per store', statusCode: 400 });
+      return error(res, { 
+        message: 'Only one active advertisement allowed per store', 
+        messageAr: 'يُسمح بإعلان نشط واحد فقط لكل متجر',
+        statusCode: 400 
+      });
     }
     
     if (err.name === 'ValidationError') {
       const errors = Object.values(err.errors).map(e => e.message);
-      return error(res, { message: errors.join(', '), statusCode: 400 });
+      return error(res, { 
+        message: errors.join(', '), 
+        messageAr: 'خطأ في التحقق من صحة البيانات',
+        statusCode: 400 
+      });
     }
     
-    return error(res, { message: 'Failed to create advertisement', statusCode: 500 });
+    return error(res, { 
+      message: 'Failed to create advertisement', 
+      messageAr: 'فشل في إنشاء الإعلان',
+      statusCode: 500 
+    });
   }
 };
 
@@ -367,7 +379,11 @@ const updateAdvertisement = async (req, res) => {
     });
 
     if (!advertisement) {
-      return error(res, { message: 'Advertisement not found', statusCode: 404 });
+      return error(res, { 
+        message: 'Advertisement not found', 
+        messageAr: 'الإعلان غير موجود',
+        statusCode: 404 
+      });
     }
 
     // If activating this advertisement, deactivate others
@@ -394,15 +410,27 @@ const updateAdvertisement = async (req, res) => {
     //CONSOLE.error('Update advertisement error:', err);
     
     if (err.code === 11000) {
-      return error(res, { message: 'Only one active advertisement allowed per store', statusCode: 400 });
+      return error(res, { 
+        message: 'Only one active advertisement allowed per store', 
+        messageAr: 'يُسمح بإعلان نشط واحد فقط لكل متجر',
+        statusCode: 400 
+      });
     }
     
     if (err.name === 'ValidationError') {
       const errors = Object.values(err.errors).map(e => e.message);
-      return error(res, { message: errors.join(', '), statusCode: 400 });
+      return error(res, { 
+        message: errors.join(', '), 
+        messageAr: 'خطأ في التحقق من صحة البيانات',
+        statusCode: 400 
+      });
     }
     
-    return error(res, { message: 'Failed to update advertisement', statusCode: 500 });
+    return error(res, { 
+      message: 'Failed to update advertisement', 
+      messageAr: 'فشل في تحديث الإعلان',
+      statusCode: 500 
+    });
   }
 };
 

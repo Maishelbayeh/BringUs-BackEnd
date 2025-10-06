@@ -35,17 +35,26 @@ exports.create = async (req, res) => {
     await label.save();
     res.status(201).json(label);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ 
+      error: err.message,
+      errorAr: 'خطأ في إنشاء تسمية المنتج'
+    });
   }
 };
 
 exports.update = async (req, res) => {
   try {
     const label = await ProductLabel.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    if (!label) return res.status(404).json({ error: 'Product label not found' });
+    if (!label) return res.status(404).json({ 
+      error: 'Product label not found',
+      errorAr: 'تسمية المنتج غير موجودة'
+    });
     res.json(label);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ 
+      error: err.message,
+      errorAr: 'خطأ في تحديث تسمية المنتج'
+    });
   }
 };
 

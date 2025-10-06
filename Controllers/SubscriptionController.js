@@ -18,6 +18,7 @@ const getSubscriptionStats = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -35,7 +36,8 @@ const checkStoreSubscription = async (req, res) => {
         if (!subscriptionInfo) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
         
@@ -48,6 +50,7 @@ const checkStoreSubscription = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -69,6 +72,7 @@ const triggerSubscriptionCheck = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -84,6 +88,7 @@ const activateSubscription = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Validation error',
+                messageAr: 'خطأ في التحقق من صحة البيانات',
                 errors: errors.array()
             });
         }
@@ -104,14 +109,16 @@ const activateSubscription = async (req, res) => {
         if (!plan) {
             return res.status(404).json({
                 success: false,
-                message: 'Subscription plan not found'
+                message: 'Subscription plan not found',
+                messageAr: 'خطة الاشتراك غير موجودة'
             });
         }
 
         if (!plan.isActive) {
             return res.status(400).json({
                 success: false,
-                message: 'This subscription plan is not active'
+                message: 'This subscription plan is not active',
+                messageAr: 'خطة الاشتراك هذه غير نشطة'
             });
         }
 
@@ -120,7 +127,8 @@ const activateSubscription = async (req, res) => {
         if (!currentStore) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -159,7 +167,8 @@ const activateSubscription = async (req, res) => {
             if (subscriptionEndDate <= subscriptionStartDate) {
                 return res.status(400).json({
                     success: false,
-                    message: 'End date must be after start date'
+                    message: 'End date must be after start date',
+                    messageAr: 'تاريخ الانتهاء يجب أن يكون بعد تاريخ البداية'
                 });
             }
         } else {
@@ -192,7 +201,8 @@ const activateSubscription = async (req, res) => {
         if (!updatedStore) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -242,6 +252,7 @@ const activateSubscription = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -257,6 +268,7 @@ const extendTrial = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Validation error',
+                messageAr: 'خطأ في التحقق من صحة البيانات',
                 errors: errors.array()
             });
         }
@@ -267,7 +279,8 @@ const extendTrial = async (req, res) => {
         if (!days || days <= 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Days must be a positive number'
+                message: 'Days must be a positive number',
+                messageAr: 'الأيام يجب أن تكون رقماً موجباً'
             });
         }
 
@@ -276,7 +289,8 @@ const extendTrial = async (req, res) => {
         if (!store) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -321,6 +335,7 @@ const extendTrial = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -336,6 +351,7 @@ const extendFreeTrial = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Validation error',
+                messageAr: 'خطأ في التحقق من صحة البيانات',
                 errors: errors.array()
             });
         }
@@ -346,14 +362,16 @@ const extendFreeTrial = async (req, res) => {
         if (!days || days <= 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Days must be a positive number'
+                message: 'Days must be a positive number',
+                messageAr: 'الأيام يجب أن تكون رقماً موجباً'
             });
         }
 
         if (days > 365) {
             return res.status(400).json({
                 success: false,
-                message: 'Trial extension cannot exceed 365 days'
+                message: 'Trial extension cannot exceed 365 days',
+                messageAr: 'لا يمكن أن تتجاوز فترة التجربة 365 يوماً'
             });
         }
 
@@ -362,7 +380,8 @@ const extendFreeTrial = async (req, res) => {
         if (!store) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -370,7 +389,8 @@ const extendFreeTrial = async (req, res) => {
         if (store.subscription.isSubscribed) {
             return res.status(400).json({
                 success: false,
-                message: 'Cannot extend trial for a store with active subscription'
+                message: 'Cannot extend trial for a store with active subscription',
+                messageAr: 'لا يمكن تمديد فترة التجربة لمتجر له اشتراك نشط'
             });
         }
 
@@ -434,6 +454,7 @@ const extendFreeTrial = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -492,6 +513,7 @@ const getExpiringStores = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -552,6 +574,7 @@ const getDeactivatedStores = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -570,7 +593,8 @@ const cancelSubscription = async (req, res) => {
         if (!currentStore) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -615,6 +639,7 @@ const cancelSubscription = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -633,7 +658,8 @@ const disableAutoRenewal = async (req, res) => {
         if (!currentStore) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -641,7 +667,8 @@ const disableAutoRenewal = async (req, res) => {
         if (!currentStore.subscription.autoRenew) {
             return res.status(400).json({
                 success: false,
-                message: 'Auto-renewal is already disabled'
+                message: 'Auto-renewal is already disabled',
+                messageAr: 'التجديد التلقائي معطل بالفعل'
             });
         }
 
@@ -689,6 +716,7 @@ const disableAutoRenewal = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -707,7 +735,8 @@ const enableAutoRenewal = async (req, res) => {
         if (!currentStore) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -715,7 +744,8 @@ const enableAutoRenewal = async (req, res) => {
         if (currentStore.subscription.autoRenew) {
             return res.status(400).json({
                 success: false,
-                message: 'Auto-renewal is already enabled'
+                message: 'Auto-renewal is already enabled',
+                messageAr: 'التجديد التلقائي مفعل بالفعل'
             });
         }
 
@@ -723,7 +753,8 @@ const enableAutoRenewal = async (req, res) => {
         if (!currentStore.subscription.isSubscribed) {
             return res.status(400).json({
                 success: false,
-                message: 'Cannot enable auto-renewal for inactive subscription'
+                message: 'Cannot enable auto-renewal for inactive subscription',
+                messageAr: 'لا يمكن تفعيل التجديد التلقائي لاشتراك غير نشط'
             });
         }
 
@@ -771,6 +802,7 @@ const enableAutoRenewal = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -849,6 +881,7 @@ const getAllSubscriptions = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -864,6 +897,7 @@ const updateSubscription = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Validation error',
+                messageAr: 'خطأ في التحقق من صحة البيانات',
                 errors: errors.array()
             });
         }
@@ -880,7 +914,8 @@ const updateSubscription = async (req, res) => {
         if (!currentStore) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -927,6 +962,7 @@ const updateSubscription = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -942,6 +978,7 @@ const updateSubscriptionEndDate = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Validation error',
+                messageAr: 'خطأ في التحقق من صحة البيانات',
                 errors: errors.array()
             });
         }
@@ -953,7 +990,8 @@ const updateSubscriptionEndDate = async (req, res) => {
         if (!endDate) {
             return res.status(400).json({
                 success: false,
-                message: 'End date is required'
+                message: 'End date is required',
+                messageAr: 'تاريخ الانتهاء مطلوب'
             });
         }
 
@@ -961,7 +999,8 @@ const updateSubscriptionEndDate = async (req, res) => {
         if (isNaN(newEndDate.getTime())) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid end date format'
+                message: 'Invalid end date format',
+                messageAr: 'تنسيق تاريخ الانتهاء غير صحيح'
             });
         }
 
@@ -970,7 +1009,8 @@ const updateSubscriptionEndDate = async (req, res) => {
         if (!currentStore) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -978,7 +1018,8 @@ const updateSubscriptionEndDate = async (req, res) => {
         if (!currentStore.subscription.isSubscribed) {
             return res.status(400).json({
                 success: false,
-                message: 'Store does not have an active subscription'
+                message: 'Store does not have an active subscription',
+                messageAr: 'المتجر ليس له اشتراك نشط'
             });
         }
 
@@ -1038,6 +1079,7 @@ const updateSubscriptionEndDate = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -1055,7 +1097,8 @@ const getStoreSubscriptionHistory = async (req, res) => {
         if (!store) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -1085,6 +1128,7 @@ const getStoreSubscriptionHistory = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -1101,7 +1145,8 @@ const getStoreSubscriptionStats = async (req, res) => {
         if (!store) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -1122,6 +1167,7 @@ const getStoreSubscriptionStats = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -1180,6 +1226,7 @@ const getAllRecentActivities = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -1196,7 +1243,8 @@ const reactivateStore = async (req, res) => {
         if (!store) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -1204,7 +1252,8 @@ const reactivateStore = async (req, res) => {
         if (store.status === 'active') {
             return res.status(400).json({
                 success: false,
-                message: 'Store is already active'
+                message: 'Store is already active',
+                messageAr: 'المتجر نشط بالفعل'
             });
         }
 
@@ -1226,6 +1275,7 @@ const reactivateStore = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -1242,7 +1292,8 @@ const getStoreStatus = async (req, res) => {
         if (!store) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -1277,6 +1328,7 @@ const getStoreStatus = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -1293,7 +1345,8 @@ const getStoreStatusBySlug = async (req, res) => {
         if (!store) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
 
@@ -1329,6 +1382,7 @@ const getStoreStatusBySlug = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }

@@ -18,7 +18,8 @@ exports.checkStoreStatus = async (req, res, next) => {
     if (!store) {
       return res.status(404).json({
         success: false,
-        message: 'Store not found'
+        message: 'Store not found',
+        messageAr: 'المتجر غير موجود'
       });
     }
 
@@ -31,6 +32,7 @@ exports.checkStoreStatus = async (req, res, next) => {
         return res.status(403).json({
           success: false,
           message: 'Store is currently inactive due to expired subscription/trial',
+          messageAr: 'المتجر غير نشط حالياً بسبب انتهاء صلاحية الاشتراك/الفترة التجريبية',
           storeStatus: 'inactive',
           subscriptionStatus: store.subscription.isSubscribed ? 'expired' : 'trial_expired'
         });
@@ -57,7 +59,8 @@ exports.requireActiveStore = async (req, res, next) => {
     if (!storeId) {
       return res.status(400).json({
         success: false,
-        message: 'Store ID is required'
+        message: 'Store ID is required',
+        messageAr: 'معرف المتجر مطلوب'
       });
     }
 
@@ -65,7 +68,8 @@ exports.requireActiveStore = async (req, res, next) => {
     if (!store) {
       return res.status(404).json({
         success: false,
-        message: 'Store not found'
+        message: 'Store not found',
+        messageAr: 'المتجر غير موجود'
       });
     }
 
@@ -79,6 +83,7 @@ exports.requireActiveStore = async (req, res, next) => {
       return res.status(403).json({
         success: false,
         message: 'Store is currently inactive',
+        messageAr: 'المتجر غير نشط حالياً',
         storeStatus: store.status,
         subscriptionStatus: store.subscription.isSubscribed ? 'expired' : 'trial_expired',
         daysUntilExpiry: store.daysUntilTrialExpires || store.daysUntilSubscriptionExpires
@@ -92,6 +97,7 @@ exports.requireActiveStore = async (req, res, next) => {
     res.status(500).json({
       success: false,
       message: 'Error checking store status',
+      messageAr: 'خطأ في التحقق من حالة المتجر',
       error: error.message
     });
   }

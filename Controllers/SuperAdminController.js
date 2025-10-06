@@ -40,6 +40,7 @@ const getAllStores = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -55,7 +56,8 @@ const getStoreById = async (req, res) => {
         if (!store) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
         
@@ -77,6 +79,7 @@ const getStoreById = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -93,7 +96,8 @@ const updateStoreStatus = async (req, res) => {
         if (!validStatuses.includes(status)) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid status. Must be one of: active, inactive, suspended'
+                message: 'Invalid status. Must be one of: active, inactive, suspended',
+                messageAr: 'حالة غير صحيحة. يجب أن تكون واحدة من: نشط، غير نشط، معلق'
             });
         }
         
@@ -107,7 +111,8 @@ const updateStoreStatus = async (req, res) => {
         if (!updatedStore) {
             return res.status(404).json({
                 success: false,
-                message: 'Store not found'
+                message: 'Store not found',
+                messageAr: 'المتجر غير موجود'
             });
         }
         
@@ -121,6 +126,7 @@ const updateStoreStatus = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -225,6 +231,7 @@ const getSystemStatistics = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }

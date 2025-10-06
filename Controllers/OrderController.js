@@ -122,11 +122,13 @@ exports.reduceProductStock = async (product, quantity, selectedSpecifications = 
       return;
     }
 
-    // Reduce from general stock
+    // Reduce from general stock and available quantity
     if (product.stock >= quantity) {
       product.stock -= quantity;
+      product.availableQuantity -= quantity; // Also reduce available quantity
       product.soldCount += quantity;
       console.log(`✅ Reduced general stock for ${product.nameEn}: ${quantity} units`);
+      console.log(`✅ Reduced available quantity for ${product.nameEn}: ${quantity} units`);
     } else {
       console.error(`❌ Error: Insufficient general stock for ${product.nameEn}. Available: ${product.stock}, Requested: ${quantity}`);
       throw new Error(`Insufficient general stock for ${product.nameEn}`);
@@ -210,10 +212,12 @@ const restoreProductStock = async (product, quantity, selectedSpecifications = [
       return;
     }
 
-    // Restore to general stock
+    // Restore to general stock and available quantity
     product.stock += quantity;
+    product.availableQuantity += quantity; // Also restore available quantity
     product.soldCount = Math.max(0, product.soldCount - quantity);
     console.log(`✅ Restored general stock for ${product.nameEn}: +${quantity} units`);
+    console.log(`✅ Restored available quantity for ${product.nameEn}: +${quantity} units`);
     console.log(`✅ Updated sold count for ${product.nameEn}: -${quantity} units`);
     
     // Restore to specification quantities if specifications are selected
@@ -473,7 +477,11 @@ exports.createOrder = async (req, res) => {
   try {
     const { storeId } = req.params;
     if (!storeId) {
-      return res.status(400).json({ success: false, message: 'storeId is required' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'storeId is required',
+        messageAr: 'معرف المتجر مطلوب'
+      });
     }
     const {
       user, // user id (optional for guests)
@@ -496,7 +504,11 @@ exports.createOrder = async (req, res) => {
     // جلب بيانات المتجر
     const storeDoc = await Store.findById(storeId);
     if (!storeDoc) {
-      return res.status(400).json({ success: false, message: 'Store not found' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Store not found',
+        messageAr: 'المتجر غير موجود'
+      });
     }
     const storeSnapshot = {
       id: storeDoc._id,
@@ -738,7 +750,11 @@ exports.createOrder = async (req, res) => {
       totalCost: total
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      messageAr: 'خطأ في إنشاء الطلب'
+    });
   }
 };
 
@@ -1021,14 +1037,16 @@ exports.updateOrderStatus = async (req, res) => {
     if (!orderId) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Order ID is required' 
+        message: 'Order ID is required',
+        messageAr: 'معرف الطلب مطلوب'
       });
     }
 
     if (!status) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Status is required' 
+        message: 'Status is required',
+        messageAr: 'الحالة مطلوبة'
       });
     }
     
@@ -1038,7 +1056,8 @@ exports.updateOrderStatus = async (req, res) => {
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalid status. Must be one of: pending, shipped, delivered, cancelled' 
+        message: 'Invalid status. Must be one of: pending, shipped, delivered, cancelled',
+        messageAr: 'حالة غير صحيحة. يجب أن تكون واحدة من: معلق، شحن، تم التسليم، ملغي'
       });
     }
 
@@ -1099,6 +1118,7 @@ exports.updateOrderStatus = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Error updating order status',
+      messageAr: 'خطأ في تحديث حالة الطلب',
       error: error.message 
     });
   }

@@ -17,14 +17,16 @@ exports.mergeGuestLikesToUser = async (req, res) => {
     if (!guestId || !storeId) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Guest ID and Store ID are required' 
+        message: 'Guest ID and Store ID are required',
+        messageAr: 'معرف الضيف ومعرف المتجر مطلوبان'
       });
     }
 
     if (!req.user) {
       return res.status(401).json({ 
         success: false, 
-        message: 'User must be authenticated to merge likes' 
+        message: 'User must be authenticated to merge likes',
+        messageAr: 'يجب أن يكون المستخدم مصادقاً لدمج الإعجابات'
       });
     }
 
@@ -80,7 +82,8 @@ exports.mergeGuestLikesToUser = async (req, res) => {
     console.error('Merge guest likes error:', error);
     return res.status(500).json({ 
       success: false, 
-      message: 'Error merging guest likes' 
+      message: 'Error merging guest likes',
+      messageAr: 'خطأ في دمج إعجابات الضيف'
     });
   }
 };
@@ -93,7 +96,8 @@ exports.getLikesByGuestId = async (req, res) => {
     if (!guestId || !storeId) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Guest ID and Store ID are required' 
+        message: 'Guest ID and Store ID are required',
+        messageAr: 'معرف الضيف ومعرف المتجر مطلوبان'
       });
     }
 
@@ -120,7 +124,8 @@ exports.getLikesByGuestId = async (req, res) => {
     console.error('Get likes by guestId error:', error);
     return res.status(500).json({ 
       success: false, 
-      message: 'Error fetching guest likes' 
+      message: 'Error fetching guest likes',
+      messageAr: 'خطأ في جلب إعجابات الضيف'
     });
   }
 };
@@ -131,7 +136,8 @@ exports.getUserWishlists = async (req, res) => {
     if (!req.user) {
       return res.status(401).json({ 
         success: false, 
-        message: 'User must be authenticated to get wishlists' 
+        message: 'User must be authenticated to get wishlists',
+        messageAr: 'يجب أن يكون المستخدم مصادقاً للحصول على قوائم الأمنيات'
       });
     }
 
@@ -139,7 +145,8 @@ exports.getUserWishlists = async (req, res) => {
     if (!storeId) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Store ID is required' 
+        message: 'Store ID is required',
+        messageAr: 'معرف المتجر مطلوب'
       });
     }
 
@@ -190,7 +197,8 @@ exports.getUserWishlists = async (req, res) => {
     console.error('Get user wishlists error:', error);
     return res.status(500).json({ 
       success: false, 
-      message: 'Error fetching user wishlists' 
+      message: 'Error fetching user wishlists',
+      messageAr: 'خطأ في جلب قوائم أمنيات المستخدم'
     });
   }
 };
@@ -201,7 +209,8 @@ exports.createWishlist = async (req, res) => {
     if (!req.user) {
       return res.status(401).json({ 
         success: false, 
-        message: 'User must be authenticated to create wishlist' 
+        message: 'User must be authenticated to create wishlist',
+        messageAr: 'يجب أن يكون المستخدم مصادقاً لإنشاء قائمة أمنيات'
       });
     }
 
@@ -210,7 +219,8 @@ exports.createWishlist = async (req, res) => {
     if (!wishlistName || !storeId) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Wishlist name and store ID are required' 
+        message: 'Wishlist name and store ID are required',
+        messageAr: 'اسم قائمة الأمنيات ومعرف المتجر مطلوبان'
       });
     }
 
@@ -224,7 +234,8 @@ exports.createWishlist = async (req, res) => {
     if (existingWishlist) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Wishlist with this name already exists' 
+        message: 'Wishlist with this name already exists',
+        messageAr: 'قائمة أمنيات بهذا الاسم موجودة بالفعل'
       });
     }
 
@@ -254,7 +265,8 @@ exports.createWishlist = async (req, res) => {
     console.error('Create wishlist error:', error);
     return res.status(500).json({ 
       success: false, 
-      message: 'Error creating wishlist' 
+      message: 'Error creating wishlist',
+      messageAr: 'خطأ في إنشاء قائمة الأمنيات'
     });
   }
 };
@@ -285,7 +297,11 @@ exports.getLikedProducts = async (req, res) => {
       count: products.length
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      messageAr: 'خطأ في جلب المنتجات المعجبة'
+    });
   }
 };
 
@@ -297,12 +313,20 @@ exports.likeProduct = async (req, res) => {
     // Find product
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
+      });
     }
     
     // Enforce store isolation
     if (product.store.toString() !== req.store._id.toString()) {
-      return res.status(403).json({ success: false, message: 'You cannot like products from another store' });
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You cannot like products from another store',
+        messageAr: 'لا يمكنك الإعجاب بمنتجات من متجر آخر'
+      });
     }
     
     // إنشاء بيانات الإعجاب
@@ -325,7 +349,11 @@ exports.likeProduct = async (req, res) => {
         likeData.wishlistUserId = userId;
       }
     } else {
-      return res.status(400).json({ success: false, message: 'No user or guest identification found' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No user or guest identification found',
+        messageAr: 'لم يتم العثور على هوية المستخدم أو الضيف'
+      });
     }
     
     // Check for existing like
@@ -347,7 +375,11 @@ exports.likeProduct = async (req, res) => {
       
     const existing = await Like.findOne(existingQuery);
     if (existing) {
-      return res.status(400).json({ success: false, message: 'Product already liked in this wishlist' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Product already liked in this wishlist',
+        messageAr: 'المنتج معجب به بالفعل في هذه قائمة الأمنيات'
+      });
     }
     
     // Create like
@@ -358,7 +390,11 @@ exports.likeProduct = async (req, res) => {
       wishlistUserId: likeData.wishlistUserId || null
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      messageAr: 'خطأ في الإعجاب بالمنتج'
+    });
   }
 };
 
@@ -386,7 +422,11 @@ exports.unlikeProduct = async (req, res) => {
       
     const like = await Like.findOneAndDelete(deleteQuery);
     if (!like) {
-      return res.status(404).json({ success: false, message: 'Like not found in this wishlist' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Like not found in this wishlist',
+        messageAr: 'الإعجاب غير موجود في هذه قائمة الأمنيات'
+      });
     }
     return res.json({ 
       success: true, 
@@ -394,6 +434,10 @@ exports.unlikeProduct = async (req, res) => {
       wishlistUserId: userId || null
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      messageAr: 'خطأ في إلغاء الإعجاب بالمنتج'
+    });
   }
 }; 

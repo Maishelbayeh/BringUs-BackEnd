@@ -46,10 +46,16 @@ exports.create = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Missing required fields',
+        errorAr: 'حقول مطلوبة مفقودة',
         details: {
           titleAr: !titleAr ? 'Arabic title is required' : null,
           titleEn: !titleEn ? 'English title is required' : null,
           values: !values || !Array.isArray(values) || values.length === 0 ? 'Values array is required and must not be empty' : null
+        },
+        detailsAr: {
+          titleAr: !titleAr ? 'العنوان العربي مطلوب' : null,
+          titleEn: !titleEn ? 'العنوان الإنجليزي مطلوب' : null,
+          values: !values || !Array.isArray(values) || values.length === 0 ? 'مصفوفة القيم مطلوبة ولا يجب أن تكون فارغة' : null
         }
       });
     }
@@ -58,7 +64,9 @@ exports.create = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Store ID is required',
-        message: 'Please provide storeId in request body'
+        errorAr: 'معرف المتجر مطلوب',
+        message: 'Please provide storeId in request body',
+        messageAr: 'يرجى تقديم معرف المتجر في طلب الجسم'
       });
     }
 
@@ -107,13 +115,15 @@ exports.create = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل في التحقق من صحة البيانات',
         details: validationErrors
       });
     }
     
     res.status(400).json({ 
       success: false,
-      error: err.message 
+      error: err.message,
+      errorAr: 'خطأ في إنشاء مواصفات المنتج'
     });
   }
 };
@@ -127,9 +137,10 @@ exports.update = async (req, res) => {
     if (!storeId) {
       return res.status(400).json({ 
         success: false,
-        
         error: 'Store ID is required',
-        message: 'Please provide storeId in request body'
+        errorAr: 'معرف المتجر مطلوب',
+        message: 'Please provide storeId in request body',
+        messageAr: 'يرجى تقديم معرف المتجر في طلب الجسم'
       });
     }
 
@@ -141,9 +152,14 @@ exports.update = async (req, res) => {
           return res.status(400).json({ 
             success: false,
             error: `Value at index ${i} is missing required fields`,
+            errorAr: `القيمة في الفهرس ${i} مفقودة الحقول المطلوبة`,
             details: {
               valueAr: !value.valueAr ? 'Arabic value is required' : null,
               valueEn: !value.valueEn ? 'English value is required' : null
+            },
+            detailsAr: {
+              valueAr: !value.valueAr ? 'القيمة العربية مطلوبة' : null,
+              valueEn: !value.valueEn ? 'القيمة الإنجليزية مطلوبة' : null
             }
           });
         }
@@ -161,7 +177,8 @@ exports.update = async (req, res) => {
     if (!spec) {
       return res.status(404).json({ 
         success: false,
-        error: 'Product specification not found' 
+        error: 'Product specification not found',
+        errorAr: 'مواصفات المنتج غير موجودة'
       });
     }
     
@@ -182,13 +199,15 @@ exports.update = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل في التحقق من صحة البيانات',
         details: validationErrors
       });
     }
     
     res.status(400).json({ 
       success: false,
-      error: err.message 
+      error: err.message,
+      errorAr: 'خطأ في تحديث مواصفات المنتج'
     });
   }
 };

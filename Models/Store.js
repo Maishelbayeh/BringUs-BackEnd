@@ -82,9 +82,9 @@ const storeSchema = new mongoose.Schema({
     trialEndDate: {
       type: Date,
       default: function() {
-        // Default trial period: 14 days from creation
+        // Default trial period: 30 days from creation
         const trialEnd = new Date();
-        trialEnd.setDate(trialEnd.getDate() + 14);
+        trialEnd.setDate(trialEnd.getDate() + 30);
         return trialEnd;
       }
     },
@@ -339,7 +339,7 @@ storeSchema.methods.shouldBeDeactivated = function() {
     return this.subscription.endDate && new Date() > this.subscription.endDate;
   }
   
-  // If not subscribed, check trial end date (14 days limit)
+  // If not subscribed, check trial end date (30 days limit)
   return this.subscription.trialEndDate && new Date() > this.subscription.trialEndDate;
 };
 

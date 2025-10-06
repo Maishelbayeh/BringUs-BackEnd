@@ -86,14 +86,16 @@ exports.mergeGuestCartToUser = async (req, res) => {
     if (!guestId || !storeId) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Guest ID and Store ID are required' 
+        message: 'Guest ID and Store ID are required',
+        messageAr: 'معرف الضيف ومعرف المتجر مطلوبان'
       });
     }
 
     if (!req.user) {
       return res.status(401).json({ 
         success: false, 
-        message: 'User must be authenticated to merge cart' 
+        message: 'User must be authenticated to merge cart',
+        messageAr: 'يجب أن يكون المستخدم مصادقاً لدمج السلة'
       });
     }
 
@@ -168,7 +170,8 @@ exports.mergeGuestCartToUser = async (req, res) => {
     console.error('Merge guest cart error:', error);
     return res.status(500).json({ 
       success: false, 
-      message: 'Error merging guest cart' 
+      message: 'Error merging guest cart',
+      messageAr: 'خطأ في دمج سلة الضيف'
     });
   }
 };
@@ -181,7 +184,8 @@ exports.getCartByGuestId = async (req, res) => {
     if (!guestId || !storeId) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Guest ID and Store ID are required' 
+        message: 'Guest ID and Store ID are required',
+        messageAr: 'معرف الضيف ومعرف المتجر مطلوبان'
       });
     }
 
@@ -208,7 +212,8 @@ exports.getCartByGuestId = async (req, res) => {
     console.error('Get cart by guestId error:', error);
     return res.status(500).json({ 
       success: false, 
-      message: 'Error fetching guest cart' 
+      message: 'Error fetching guest cart',
+      messageAr: 'خطأ في جلب سلة الضيف'
     });
   }
 };

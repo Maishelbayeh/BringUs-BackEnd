@@ -29,7 +29,8 @@ exports.verifyStoreAccess = async (req, res, next) => {
     // For guest users, we need either storeId or storeSlug to be provided
     if (!storeId && !storeSlug) {
       return res.status(400).json({ 
-        error: 'Store ID or Store Slug is required. Please provide storeId or storeSlug in params, body, or query.' 
+        error: 'Store ID or Store Slug is required. Please provide storeId or storeSlug in params, body, or query.',
+        errorAr: 'معرف المتجر أو الرابط المختصر مطلوب. يرجى توفير storeId أو storeSlug في المعاملات أو الجسم أو الاستعلام.'
       });
     }
 
@@ -44,14 +45,16 @@ exports.verifyStoreAccess = async (req, res, next) => {
     
     if (!store) {
       return res.status(404).json({ 
-        error: 'Store not found' 
+        error: 'Store not found',
+        errorAr: 'المتجر غير موجود'
       });
     }
 
     // Check if store is active
     if (store.status !== 'active') {
       return res.status(403).json({ 
-        error: 'Store is not active' 
+        error: 'Store is not active',
+        errorAr: 'المتجر غير نشط'
       });
     }
 
@@ -63,6 +66,7 @@ exports.verifyStoreAccess = async (req, res, next) => {
     console.error('Store verification error:', error);
     res.status(500).json({ 
       error: 'Store verification failed',
+      errorAr: 'فشل في التحقق من المتجر',
       message: error.message
     });
   }
@@ -74,7 +78,8 @@ exports.checkStoreOwnership = async (req, res, next) => {
     // This middleware requires authentication
     if (!req.user) {
       return res.status(401).json({ 
-        error: 'Authentication required' 
+        error: 'Authentication required',
+        errorAr: 'المصادقة مطلوبة'
       });
     }
 
@@ -96,7 +101,8 @@ exports.checkStoreOwnership = async (req, res, next) => {
 
     if (!storeId && !storeSlug) {
       return res.status(400).json({ 
-        error: 'Store ID or Store Slug is required or user must have a default store' 
+        error: 'Store ID or Store Slug is required or user must have a default store',
+        errorAr: 'معرف المتجر أو الرابط المختصر مطلوب أو يجب أن يكون للمستخدم متجر افتراضي'
       });
     }
 
@@ -111,7 +117,8 @@ exports.checkStoreOwnership = async (req, res, next) => {
     
     if (!store) {
       return res.status(404).json({ 
-        error: 'Store not found' 
+        error: 'Store not found',
+        errorAr: 'المتجر غير موجود'
       });
     }
 
@@ -125,7 +132,9 @@ exports.checkStoreOwnership = async (req, res, next) => {
     if (!owner) {
       return res.status(403).json({ 
         error: 'Access denied',
-        message: 'You do not have access to this store'
+        errorAr: 'تم رفض الوصول',
+        message: 'You do not have access to this store',
+        messageAr: 'ليس لديك صلاحية للوصول إلى هذا المتجر'
       });
     }
 
@@ -136,6 +145,7 @@ exports.checkStoreOwnership = async (req, res, next) => {
     console.error('Store ownership verification error:', error);
     res.status(500).json({ 
       error: 'Store ownership verification failed',
+      errorAr: 'فشل في التحقق من ملكية المتجر',
       message: error.message
     });
   }
@@ -157,7 +167,8 @@ exports.extractStoreId = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Access denied. No token provided.'
+        message: 'Access denied. No token provided.',
+        messageAr: 'تم رفض الوصول. لم يتم توفير رمز مميز.'
       });
     }
 
@@ -180,13 +191,15 @@ exports.extractStoreId = async (req, res, next) => {
     } catch (error) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token'
+        message: 'Invalid token',
+        messageAr: 'رمز مميز غير صالح'
       });
     }
   } catch (error) {
     return res.status(500).json({
       success: false,
       message: 'Token extraction error',
+      messageAr: 'خطأ في استخراج الرمز المميز',
       error: error.message
     });
   }
@@ -250,7 +263,8 @@ exports.requireStoreId = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Access denied. No token provided.'
+        message: 'Access denied. No token provided.',
+        messageAr: 'تم رفض الوصول. لم يتم توفير رمز مميز.'
       });
     }
 
@@ -274,7 +288,8 @@ exports.requireStoreId = async (req, res, next) => {
       if (!storeId) {
         return res.status(400).json({
           success: false,
-          message: 'Store ID not found in token or user data'
+          message: 'Store ID not found in token or user data',
+          messageAr: 'معرف المتجر غير موجود في الرمز المميز أو بيانات المستخدم'
         });
       }
 
@@ -283,13 +298,15 @@ exports.requireStoreId = async (req, res, next) => {
     } catch (error) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token'
+        message: 'Invalid token',
+        messageAr: 'رمز مميز غير صالح'
       });
     }
   } catch (error) {
     return res.status(500).json({
       success: false,
       message: 'Token extraction error',
+      messageAr: 'خطأ في استخراج الرمز المميز',
       error: error.message
     });
   }

@@ -13,7 +13,8 @@ exports.protect = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Access denied. No token provided.'
+        message: 'Access denied. No token provided.',
+        messageAr: 'تم رفض الوصول. لم يتم توفير رمز مميز.'
       });
     }
 
@@ -25,14 +26,16 @@ exports.protect = async (req, res, next) => {
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid token'
+          message: 'Invalid token',
+          messageAr: 'رمز مميز غير صالح'
         });
       }
 
       if (!user.isActive) {
         return res.status(401).json({
           success: false,
-          message: 'Account is deactivated'
+          message: 'Account is deactivated',
+          messageAr: 'الحساب معطل'
         });
       }
 
@@ -46,13 +49,15 @@ exports.protect = async (req, res, next) => {
     } catch (error) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token'
+        message: 'Invalid token',
+        messageAr: 'رمز مميز غير صالح'
       });
     }
   } catch (error) {
     return res.status(500).json({
       success: false,
       message: 'Authentication error',
+      messageAr: 'خطأ في المصادقة',
       error: error.message
     });
   }
@@ -110,7 +115,8 @@ exports.authorize = (...roles) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `User role ${req.user.role} is not authorized to access this route`
+        message: `User role ${req.user.role} is not authorized to access this route`,
+        messageAr: `دور المستخدم ${req.user.role} غير مخول للوصول إلى هذا المسار`
       });
     }
     next();
@@ -122,7 +128,8 @@ exports.isActive = (req, res, next) => {
   if (req.user.status !== 'active') {
     return res.status(403).json({
       success: false,
-      message: 'Account is not active'
+      message: 'Account is not active',
+      messageAr: 'الحساب غير نشط'
     });
   }
   next();

@@ -11,6 +11,7 @@ const createPlan = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Validation error',
+                messageAr: 'خطأ في التحقق من صحة البيانات',
                 errors: errors.array()
             });
         }
@@ -45,7 +46,8 @@ const createPlan = async (req, res) => {
         if (existingPlan) {
             return res.status(400).json({
                 success: false,
-                message: 'A plan with this type and duration already exists'
+                message: 'A plan with this type and duration already exists',
+                messageAr: 'خطة بهذا النوع والمدة موجودة بالفعل'
             });
         }
 
@@ -80,6 +82,7 @@ const createPlan = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -139,6 +142,7 @@ const getAllPlans = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -164,6 +168,7 @@ const getActivePlans = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -183,7 +188,8 @@ const getPlanById = async (req, res) => {
         if (!plan) {
             return res.status(404).json({
                 success: false,
-                message: 'Subscription plan not found'
+                message: 'Subscription plan not found',
+                messageAr: 'خطة الاشتراك غير موجودة'
             });
         }
 
@@ -196,6 +202,7 @@ const getPlanById = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -211,6 +218,7 @@ const updatePlan = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Validation error',
+                messageAr: 'خطأ في التحقق من صحة البيانات',
                 errors: errors.array()
             });
         }
@@ -236,7 +244,8 @@ const updatePlan = async (req, res) => {
         if (!plan) {
             return res.status(404).json({
                 success: false,
-                message: 'Subscription plan not found'
+                message: 'Subscription plan not found',
+                messageAr: 'خطة الاشتراك غير موجودة'
             });
         }
 
@@ -250,6 +259,7 @@ const updatePlan = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -267,7 +277,8 @@ const deletePlan = async (req, res) => {
         if (!plan) {
             return res.status(404).json({
                 success: false,
-                message: 'Subscription plan not found'
+                message: 'Subscription plan not found',
+                messageAr: 'خطة الاشتراك غير موجودة'
             });
         }
 
@@ -280,7 +291,8 @@ const deletePlan = async (req, res) => {
         if (storesUsingPlan > 0) {
             return res.status(400).json({
                 success: false,
-                message: `Cannot delete plan. It is currently used by ${storesUsingPlan} store(s). Consider deactivating it instead.`
+                message: `Cannot delete plan. It is currently used by ${storesUsingPlan} store(s). Consider deactivating it instead.`,
+                messageAr: `لا يمكن حذف الخطة. يتم استخدامها حاليًا من قبل ${storesUsingPlan} متجر. فكر في إلغاء تفعيلها بدلاً من ذلك.`
             });
         }
 
@@ -295,6 +307,7 @@ const deletePlan = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -312,7 +325,8 @@ const togglePlanStatus = async (req, res) => {
         if (!plan) {
             return res.status(404).json({
                 success: false,
-                message: 'Subscription plan not found'
+                message: 'Subscription plan not found',
+                messageAr: 'خطة الاشتراك غير موجودة'
             });
         }
 
@@ -330,6 +344,7 @@ const togglePlanStatus = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -348,7 +363,8 @@ const setPopularPlan = async (req, res) => {
         if (!plan) {
             return res.status(404).json({
                 success: false,
-                message: 'Subscription plan not found'
+                message: 'Subscription plan not found',
+                messageAr: 'خطة الاشتراك غير موجودة'
             });
         }
 
@@ -366,6 +382,7 @@ const setPopularPlan = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }
@@ -399,6 +416,7 @@ const getPlanStats = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            messageAr: 'خطأ داخلي في الخادم',
             error: error.message
         });
     }

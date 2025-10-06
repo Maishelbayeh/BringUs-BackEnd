@@ -67,25 +67,33 @@ const checkWholesalerStatus = async (email, phone, storeId) => {
   }
 };
 
-// Get all active POS carts for admin
+// Get all POS carts for admin
 exports.getPOSCarts = async (req, res) => {
   try {
     const { storeId } = req.params;
-    const { status = 'active' } = req.query;
+    const { status, includeDeleted = false } = req.query;
 
     // Check if user is admin
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Admin only.'
+        message: 'Access denied. Admin only.',
+        messageAr: 'الوصول مرفوض. للمدير فقط.'
       });
     }
 
     const filter = {
       admin: req.user._id,
-      store: storeId,
-      status: status
+      store: storeId
     };
+
+    // If specific status is requested, use it
+    if (status) {
+      filter.status = status;
+    } else if (!includeDeleted) {
+      // By default, exclude deleted carts unless explicitly requested
+      filter.status = { $ne: 'deleted' };
+    }
 
     const carts = await POSCart.find(filter)
       .populate('items.product', 'nameEn nameAr price images mainImage')
@@ -94,7 +102,9 @@ exports.getPOSCarts = async (req, res) => {
     res.json({
       success: true,
       data: carts,
-      count: carts.length
+      count: carts.length,
+      message: includeDeleted ? 'Including deleted carts' : 'Excluding deleted carts',
+      messageAr: includeDeleted ? 'تشمل السلات المحذوفة' : 'استبعاد السلات المحذوفة'
     });
 
   } catch (error) {
@@ -102,6 +112,7 @@ exports.getPOSCarts = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching POS carts',
+      messageAr: 'خطأ في جلب سلات نقاط البيع',
       error: error.message
     });
   }
@@ -116,7 +127,8 @@ exports.createPOSCart = async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Admin only.'
+        message: 'Access denied. Admin only.',
+        messageAr: 'الوصول مرفوض. للمدير فقط.'
       });
     }
 
@@ -147,6 +159,7 @@ exports.createPOSCart = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating POS cart',
+      messageAr: 'خطأ في إنشاء سلة نقطة البيع',
       error: error.message
     });
   }
@@ -161,7 +174,8 @@ exports.getPOSCart = async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Admin only.'
+        message: 'Access denied. Admin only.',
+        messageAr: 'الوصول مرفوض. للمدير فقط.'
       });
     }
 
@@ -175,13 +189,16 @@ exports.getPOSCart = async (req, res) => {
     if (!cart) {
       return res.status(404).json({
         success: false,
-        message: 'POS cart not found'
+        message: 'POS cart not found',
+        messageAr: 'سلة نقطة البيع غير موجودة'
       });
     }
 
     res.json({
       success: true,
-      data: cart
+      data: cart,
+      message: `POS cart status: ${cart.status}`,
+      messageAr: `حالة سلة نقطة البيع: ${cart.status}`
     });
 
   } catch (error) {
@@ -189,6 +206,72 @@ exports.getPOSCart = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching POS cart',
+      messageAr: 'خطأ في جلب سلة نقطة البيع',
+      error: error.message
+    });
+  }
+};
+
+// Get POS cart status only
+exports.getPOSCartStatus = async (req, res) => {
+  try {
+    const { cartId } = req.params;
+
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin only.',
+        messageAr: 'الوصول مرفوض. للمدير فقط.'
+      });
+    }
+
+    const cart = await POSCart.findOne({
+      _id: cartId,
+      admin: req.user._id
+    }).select('status completedAt createdAt updatedAt');
+
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: 'POS cart not found',
+        messageAr: 'سلة نقطة البيع غير موجودة'
+      });
+    }
+
+    const statusInfo = {
+      cartId: cart._id,
+      status: cart.status,
+      createdAt: cart.createdAt,
+      updatedAt: cart.updatedAt,
+      completedAt: cart.completedAt,
+      statusDescription: {
+        active: 'Cart is active and can be modified',
+        completed: 'Cart has been completed and converted to order',
+        cancelled: 'Cart has been cancelled',
+        deleted: 'Cart has been deleted'
+      },
+      statusDescriptionAr: {
+        active: 'السلة نشطة ويمكن تعديلها',
+        completed: 'تم إكمال السلة وتحويلها إلى طلب',
+        cancelled: 'تم إلغاء السلة',
+        deleted: 'تم حذف السلة'
+      }
+    };
+
+    res.json({
+      success: true,
+      data: statusInfo,
+      message: `Cart status: ${cart.status}`,
+      messageAr: `حالة السلة: ${cart.status}`
+    });
+
+  } catch (error) {
+    console.error('Get POS cart status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching POS cart status',
+      messageAr: 'خطأ في جلب حالة سلة نقطة البيع',
       error: error.message
     });
   }
@@ -204,7 +287,8 @@ exports.addToPOSCart = async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Admin only.'
+        message: 'Access denied. Admin only.',
+        messageAr: 'الوصول مرفوض. للمدير فقط.'
       });
     }
 
@@ -212,7 +296,8 @@ exports.addToPOSCart = async (req, res) => {
     if (!product || !quantity) {
       return res.status(400).json({
         success: false,
-        message: 'Product and quantity are required'
+        message: 'Product and quantity are required',
+        messageAr: 'المنتج والكمية مطلوبان'
       });
     }
 
@@ -225,7 +310,8 @@ exports.addToPOSCart = async (req, res) => {
     if (!cart) {
       return res.status(404).json({
         success: false,
-        message: 'POS cart not found'
+        message: 'POS cart not found',
+        messageAr: 'سلة نقطة البيع غير موجودة'
       });
     }
 
@@ -234,7 +320,8 @@ exports.addToPOSCart = async (req, res) => {
     if (!productData) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
 
@@ -242,7 +329,8 @@ exports.addToPOSCart = async (req, res) => {
     if (productData.stock < quantity) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient stock. Available: ${productData.stock}`
+        message: `Insufficient stock. Available: ${productData.stock}`,
+        messageAr: `المخزون غير كافي. المتوفر: ${productData.stock}`
       });
     }
 
@@ -413,6 +501,7 @@ exports.addToPOSCart = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: `Product ${productData.nameEn} does not support specifications`,
+          messageAr: `المنتج ${productData.nameEn} لا يدعم المواصفات`,
           details: {
             productName: productData.nameEn,
             hasSpecificationValues: false
@@ -463,6 +552,7 @@ exports.addToPOSCart = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error adding item to POS cart',
+      messageAr: 'خطأ في إضافة عنصر إلى سلة نقطة البيع',
       error: error.message
     });
   }
@@ -712,7 +802,8 @@ exports.completePOSCart = async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Admin only.'
+        message: 'Access denied. Admin only.',
+        messageAr: 'الوصول مرفوض. للمدير فقط.'
       });
     }
 
@@ -725,14 +816,34 @@ exports.completePOSCart = async (req, res) => {
     if (!cart) {
       return res.status(404).json({
         success: false,
-        message: 'POS cart not found'
+        message: 'POS cart not found',
+        messageAr: 'سلة نقاط البيع غير موجودة'
+      });
+    }
+
+    // Check if cart is already completed
+    if (cart.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'POS cart is already completed',
+        messageAr: 'سلة نقاط البيع مكتملة بالفعل'
+      });
+    }
+
+    // Check if cart is deleted
+    if (cart.status === 'deleted') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot complete deleted cart',
+        messageAr: 'لا يمكن إكمال سلة محذوفة'
       });
     }
 
     if (cart.items.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot complete empty cart'
+        message: 'Cannot complete empty cart',
+        messageAr: 'لا يمكن إكمال سلة فارغة'
       });
     }
 
@@ -879,79 +990,130 @@ exports.completePOSCart = async (req, res) => {
     }
 
     // Update product stock (consistent with existing order system)
+    console.log(`📦 POS Cart - Starting stock reduction for ${cart.items.length} items`);
+    
     for (const item of cart.items) {
       try {
         const product = await Product.findById(item.product);
-        if (product) {
-          console.log(`📦 POS Cart - Updating stock for product: ${product.nameEn}`);
-          console.log(`📦 POS Cart - Item specifications:`, JSON.stringify(item.selectedSpecifications, null, 2));
+        if (!product) {
+          console.error(`❌ POS Cart - Product not found: ${item.product}`);
+          continue;
+        }
+
+        console.log(`📦 POS Cart - Updating stock for product: ${product.nameEn}`);
+        console.log(`📦 POS Cart - Quantity to reduce: ${item.quantity}`);
+        console.log(`📦 POS Cart - Current general stock: ${product.stock}`);
+        console.log(`📦 POS Cart - Current available quantity: ${product.availableQuantity}`);
+        console.log(`📦 POS Cart - Item specifications:`, JSON.stringify(item.selectedSpecifications, null, 2));
+        
+        // Import the stock reduction function from OrderController
+        const { reduceProductStock } = require('./OrderController');
+        
+        // Always reduce both general stock AND specification stock if applicable
+        if (product.specificationValues && product.specificationValues.length > 0) {
+          console.log(`📦 POS Cart - Product has ${product.specificationValues.length} specification values`);
           
-          // Import the stock reduction function from OrderController
-          const { reduceProductStock } = require('./OrderController');
-          
-          // Check if product has specification values
-          if (product.specificationValues && product.specificationValues.length > 0) {
-            console.log(`📦 POS Cart - Product has ${product.specificationValues.length} specification values`);
+          if (item.selectedSpecifications && item.selectedSpecifications.length > 0) {
+            console.log(`📦 POS Cart - Reducing both general stock and specification stock`);
             
-            // Only try to reduce specification stock if we have valid specifications
-            if (item.selectedSpecifications && item.selectedSpecifications.length > 0) {
-              // Validate that the specifications exist in the product before reducing stock
-              const validSpecifications = [];
+            // Validate that the specifications exist in the product before reducing stock
+            const validSpecifications = [];
+            
+            for (const selectedSpec of item.selectedSpecifications) {
+              const specExists = product.specificationValues.find(spec => 
+                spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+                spec.valueId === selectedSpec.valueId
+              );
               
-              for (const selectedSpec of item.selectedSpecifications) {
-                const specExists = product.specificationValues.find(spec => 
-                  spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
-                  spec.valueId === selectedSpec.valueId
-                );
-                
-                if (specExists) {
-                  validSpecifications.push(selectedSpec);
-                  console.log(`✅ POS Cart - Valid specification found: ${selectedSpec.specificationId}:${selectedSpec.valueId}`);
-                } else {
-                  console.warn(`⚠️ POS Cart - Specification not found in product: ${selectedSpec.specificationId}:${selectedSpec.valueId}`);
-                  console.warn(`⚠️ Available specifications:`, product.specificationValues.map(s => `${s.specificationId}:${s.valueId}`));
-                }
-              }
-              
-              if (validSpecifications.length > 0) {
-                await reduceProductStock(product, item.quantity, validSpecifications);
+              if (specExists) {
+                validSpecifications.push(selectedSpec);
+                console.log(`✅ POS Cart - Valid specification found: ${selectedSpec.specificationId}:${selectedSpec.valueId}`);
               } else {
-                console.warn(`⚠️ POS Cart - No valid specifications found, only reducing general stock for ${product.nameEn}`);
-                // Only reduce general stock
-                product.stock -= item.quantity;
-                product.soldCount += item.quantity;
-                await product.save();
+                console.warn(`⚠️ POS Cart - Specification not found in product: ${selectedSpec.specificationId}:${selectedSpec.valueId}`);
+                console.warn(`⚠️ Available specifications:`, product.specificationValues.map(s => `${s.specificationId}:${s.valueId}`));
               }
+            }
+            
+            if (validSpecifications.length > 0) {
+              // Use the comprehensive stock reduction function that handles both general and specification stock
+              await reduceProductStock(product, item.quantity, validSpecifications);
+              console.log(`✅ POS Cart - Successfully reduced both general and specification stock for ${product.nameEn}`);
+            } else {
+              console.warn(`⚠️ POS Cart - No valid specifications found, reducing general stock only for ${product.nameEn}`);
+              // Fallback: reduce both general stock and available quantity
+              product.stock -= item.quantity;
+              product.availableQuantity -= item.quantity;
+              product.soldCount += item.quantity;
+              await product.save();
+            }
             } else {
               console.log(`📦 POS Cart - No specifications selected, reducing general stock only for ${product.nameEn}`);
-              // Only reduce general stock
+              // Reduce both general stock and available quantity
               product.stock -= item.quantity;
+              product.availableQuantity -= item.quantity;
               product.soldCount += item.quantity;
               await product.save();
             }
           } else {
             console.log(`📦 POS Cart - Product has no specification values, reducing general stock only for ${product.nameEn}`);
-            // Only reduce general stock
+            // Reduce both general stock and available quantity
             product.stock -= item.quantity;
+            product.availableQuantity -= item.quantity;
             product.soldCount += item.quantity;
             await product.save();
           }
-        }
+        
+        console.log(`✅ POS Cart - Stock update completed for ${product.nameEn}. New general stock: ${product.stock}, New available quantity: ${product.availableQuantity}`);
+        
       } catch (error) {
         console.error(`❌ POS Cart - Error updating stock for product ${item.product}:`, error.message);
+        console.error(`❌ POS Cart - Error details:`, error);
         // Continue with other items even if one fails
+      }
+    }
+    
+    console.log(`📦 POS Cart - Stock reduction process completed for all items`);
+
+    // Verify stock levels after completion
+    console.log(`🔍 POS Cart - Verifying final stock levels...`);
+    for (const item of cart.items) {
+      try {
+        const product = await Product.findById(item.product);
+        if (product) {
+          console.log(`📊 POS Cart - Final stock for ${product.nameEn}:`);
+          console.log(`   General stock: ${product.stock}`);
+          console.log(`   Available quantity: ${product.availableQuantity}`);
+          console.log(`   Sold count: ${product.soldCount}`);
+          
+          if (product.specificationValues && product.specificationValues.length > 0) {
+            console.log(`   Specification quantities:`);
+            product.specificationValues.forEach(spec => {
+              console.log(`     ${spec.title}: ${spec.value} - Quantity: ${spec.quantity}`);
+            });
+          }
+        }
+      } catch (error) {
+        console.error(`❌ POS Cart - Error verifying stock for product ${item.product}:`, error.message);
       }
     }
 
     res.json({
       success: true,
       message: 'POS cart completed and order created successfully',
+      messageAr: 'تم إكمال سلة نقاط البيع وإنشاء الطلب بنجاح',
       data: {
         cartId: cart._id,
+        cartStatus: cart.status,
         orderId: order._id,
         orderNumber: order.orderNumber,
         total: order.total,
-        paymentStatus: order.paymentStatus
+        paymentStatus: order.paymentStatus,
+        completedAt: cart.completedAt,
+        stockReduction: {
+          message: 'Stock levels have been reduced for all items',
+          messageAr: 'تم تقليل مستويات المخزون لجميع العناصر',
+          itemsProcessed: cart.items.length
+        }
       }
     });
 
@@ -960,6 +1122,7 @@ exports.completePOSCart = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error completing POS cart',
+      messageAr: 'خطأ في إكمال سلة نقاط البيع',
       error: error.message
     });
   }
@@ -1010,7 +1173,7 @@ exports.clearPOSCart = async (req, res) => {
   }
 };
 
-// Delete POS cart
+// Delete POS cart (soft delete - mark as deleted)
 exports.deletePOSCart = async (req, res) => {
   try {
     const { cartId } = req.params;
@@ -1019,12 +1182,13 @@ exports.deletePOSCart = async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Admin only.'
+        message: 'Access denied. Admin only.',
+        messageAr: 'الوصول مرفوض. للمدير فقط.'
       });
     }
 
-    // Find and delete the cart
-    const cart = await POSCart.findOneAndDelete({
+    // Find the cart
+    const cart = await POSCart.findOne({
       _id: cartId,
       admin: req.user._id
     });
@@ -1032,13 +1196,32 @@ exports.deletePOSCart = async (req, res) => {
     if (!cart) {
       return res.status(404).json({
         success: false,
-        message: 'POS cart not found'
+        message: 'POS cart not found',
+        messageAr: 'سلة نقاط البيع غير موجودة'
       });
     }
 
+    // Check if cart is already deleted
+    if (cart.status === 'deleted') {
+      return res.status(400).json({
+        success: false,
+        message: 'POS cart is already deleted',
+        messageAr: 'سلة نقاط البيع محذوفة بالفعل'
+      });
+    }
+
+    // Soft delete the cart (mark as deleted)
+    await cart.deleteCart();
+
     res.json({
       success: true,
-      message: 'POS cart deleted successfully'
+      message: 'POS cart deleted successfully',
+      messageAr: 'تم حذف سلة نقاط البيع بنجاح',
+      data: {
+        cartId: cart._id,
+        status: cart.status,
+        deletedAt: new Date()
+      }
     });
 
   } catch (error) {
@@ -1046,6 +1229,7 @@ exports.deletePOSCart = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting POS cart',
+      messageAr: 'خطأ في حذف سلة نقاط البيع',
       error: error.message
     });
   }
