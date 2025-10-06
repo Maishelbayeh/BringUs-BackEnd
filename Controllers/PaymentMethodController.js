@@ -787,6 +787,7 @@ const createPaymentMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -796,7 +797,9 @@ const createPaymentMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Cannot create a default payment method as inactive. Default methods must be active.',
-        error: 'Default method cannot be inactive'
+        messageAr: 'لا يمكن إنشاء طريقة دفع افتراضية كغير نشطة. الطرق الافتراضية يجب أن تكون نشطة.',
+        error: 'Default method cannot be inactive',
+        errorAr: 'الطريقة الافتراضية لا يمكن أن تكون غير نشطة'
       });
     }
 
@@ -806,7 +809,9 @@ const createPaymentMethod = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: 'QR Code URL or data is required when QR code is enabled',
-          error: 'QR code validation failed'
+          messageAr: 'رابط رمز الاستجابة السريعة أو البيانات مطلوبة عند تفعيل رمز الاستجابة السريعة',
+          error: 'QR code validation failed',
+          errorAr: 'فشل في التحقق من رمز الاستجابة السريعة'
         });
       }
     }
@@ -832,7 +837,9 @@ const createPaymentMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Cannot create a default payment method as inactive. Default methods must be active.',
-        error: 'Default method cannot be inactive'
+        messageAr: 'لا يمكن إنشاء طريقة دفع افتراضية كغير نشطة. الطرق الافتراضية يجب أن تكون نشطة.',
+        error: 'Default method cannot be inactive',
+        errorAr: 'الطريقة الافتراضية لا يمكن أن تكون غير نشطة'
       });
     }
     
@@ -840,13 +847,16 @@ const createPaymentMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'QR Code URL or data is required when QR code is enabled',
-        error: 'QR code validation failed'
+        messageAr: 'رابط رمز الاستجابة السريعة أو البيانات مطلوبة عند تفعيل رمز الاستجابة السريعة',
+        error: 'QR code validation failed',
+        errorAr: 'فشل في التحقق من رمز الاستجابة السريعة'
       });
     }
     
     res.status(500).json({
       success: false,
       message: 'Error creating payment method',
+      messageAr: 'خطأ في إنشاء طريقة الدفع',
       error: error.message
     });
   }
@@ -1196,6 +1206,7 @@ const updatePaymentMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -1207,7 +1218,9 @@ const updatePaymentMethod = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: 'Cannot deactivate the default payment method. Please set another method as default first.',
-          error: 'Default method cannot be inactive'
+          messageAr: 'لا يمكن إلغاء تفعيل طريقة الدفع الافتراضية. يرجى تعيين طريقة أخرى كافتراضية أولاً.',
+          error: 'Default method cannot be inactive',
+          errorAr: 'الطريقة الافتراضية لا يمكن أن تكون غير نشطة'
         });
       }
     }
@@ -1218,7 +1231,9 @@ const updatePaymentMethod = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: 'QR Code URL or data is required when QR code is enabled',
-          error: 'QR code validation failed'
+          messageAr: 'رابط رمز الاستجابة السريعة أو البيانات مطلوبة عند تفعيل رمز الاستجابة السريعة',
+          error: 'QR code validation failed',
+          errorAr: 'فشل في التحقق من رمز الاستجابة السريعة'
         });
       }
     }
@@ -1235,7 +1250,8 @@ const updatePaymentMethod = async (req, res) => {
     if (!paymentMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Payment method not found'
+        message: 'Payment method not found',
+        messageAr: 'طريقة الدفع غير موجودة'
       });
     }
 
@@ -1252,7 +1268,9 @@ const updatePaymentMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Cannot deactivate the default payment method. Please set another method as default first.',
-        error: 'Default method cannot be inactive'
+        messageAr: 'لا يمكن إلغاء تفعيل طريقة الدفع الافتراضية. يرجى تعيين طريقة أخرى كافتراضية أولاً.',
+        error: 'Default method cannot be inactive',
+        errorAr: 'الطريقة الافتراضية لا يمكن أن تكون غير نشطة'
       });
     }
     
@@ -1260,13 +1278,16 @@ const updatePaymentMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'QR Code URL or data is required when QR code is enabled',
-        error: 'QR code validation failed'
+        messageAr: 'رابط رمز الاستجابة السريعة أو البيانات مطلوبة عند تفعيل رمز الاستجابة السريعة',
+        error: 'QR code validation failed',
+        errorAr: 'فشل في التحقق من رمز الاستجابة السريعة'
       });
     }
     
     res.status(500).json({
       success: false,
       message: 'Error updating payment method',
+      messageAr: 'خطأ في تحديث طريقة الدفع',
       error: error.message
     });
   }

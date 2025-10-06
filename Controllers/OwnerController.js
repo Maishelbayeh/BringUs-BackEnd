@@ -12,21 +12,41 @@ class OwnerController {
     try {
       const { userId, storeId, permissions, isPrimaryOwner } = req.body;
       const store = await Store.findById(storeId);
-      if (!store) return error(res, { message: 'Store not found', statusCode: 404 });
+      if (!store) return error(res, { 
+        message: 'Store not found', 
+        messageAr: 'المتجر غير موجود',
+        statusCode: 404 
+      });
       const user = await User.findById(userId);
-      if (!user) return error(res, { message: 'User not found', statusCode: 404 });
+      if (!user) return error(res, { 
+        message: 'User not found', 
+        messageAr: 'المستخدم غير موجود',
+        statusCode: 404 
+      });
       const existingOwner = await Owner.findOne({ userId, storeId });
-      if (existingOwner) return error(res, { message: 'User is already an owner of this store', statusCode: 400 });
+      if (existingOwner) return error(res, { 
+        message: 'User is already an owner of this store', 
+        messageAr: 'المستخدم مالك لهذا المتجر بالفعل',
+        statusCode: 400 
+      });
       if (isPrimaryOwner) {
         const primaryOwner = await Owner.findOne({ storeId, isPrimaryOwner: true });
-        if (primaryOwner) return error(res, { message: 'Store already has a primary owner', statusCode: 400 });
+        if (primaryOwner) return error(res, { 
+          message: 'Store already has a primary owner', 
+          messageAr: 'المتجر له مالك أساسي بالفعل',
+          statusCode: 400 
+        });
       }
       const owner = await Owner.create({ userId, storeId, permissions: permissions || [], isPrimaryOwner: isPrimaryOwner || false });
       await owner.populate('userId', 'firstName lastName email');
       await owner.populate('storeId', 'name domain');
       return success(res, { data: owner, message: 'Owner created', statusCode: 201 });
     } catch (err) {
-      return error(res, { message: 'Create owner error', error: err });
+      return error(res, { 
+        message: 'Create owner error', 
+        messageAr: 'خطأ في إنشاء المالك',
+        error: err 
+      });
     }
   }
 
@@ -39,7 +59,11 @@ class OwnerController {
         .populate('storeId', 'name domain');
       return success(res, { data: owners, count: owners.length });
     } catch (err) {
-      return error(res, { message: 'Get store owners error', error: err });
+      return error(res, { 
+        message: 'Get store owners error', 
+        messageAr: 'خطأ في جلب مالكي المتجر',
+        error: err 
+      });
     }
   }
 
@@ -50,10 +74,18 @@ class OwnerController {
       const owner = await Owner.findById(id)
         .populate('userId', 'firstName lastName email avatar')
         .populate('storeId', 'name domain');
-      if (!owner) return error(res, { message: 'Owner not found', statusCode: 404 });
+      if (!owner) return error(res, { 
+        message: 'Owner not found', 
+        messageAr: 'المالك غير موجود',
+        statusCode: 404 
+      });
       return success(res, { data: owner });
     } catch (err) {
-      return error(res, { message: 'Get owner error', error: err });
+      return error(res, { 
+        message: 'Get owner error', 
+        messageAr: 'خطأ في جلب المالك',
+        error: err 
+      });
     }
   }
 
@@ -63,7 +95,11 @@ class OwnerController {
       const { id } = req.params;
       const { permissions, isPrimaryOwner, status } = req.body;
       const owner = await Owner.findById(id);
-      if (!owner) return error(res, { message: 'Owner not found', statusCode: 404 });
+      if (!owner) return error(res, { 
+        message: 'Owner not found', 
+        messageAr: 'المالك غير موجود',
+        statusCode: 404 
+      });
       if (isPrimaryOwner && !owner.isPrimaryOwner) {
         await Owner.updateMany({ storeId: owner.storeId, isPrimaryOwner: true }, { isPrimaryOwner: false });
       }
@@ -75,7 +111,11 @@ class OwnerController {
        .populate('storeId', 'name domain');
       return success(res, { data: updatedOwner, message: 'Owner updated' });
     } catch (err) {
-      return error(res, { message: 'Update owner error', error: err });
+      return error(res, { 
+        message: 'Update owner error', 
+        messageAr: 'خطأ في تحديث المالك',
+        error: err 
+      });
     }
   }
 
@@ -84,12 +124,24 @@ class OwnerController {
     try {
       const { id } = req.params;
       const owner = await Owner.findById(id);
-      if (!owner) return error(res, { message: 'Owner not found', statusCode: 404 });
-      if (owner.isPrimaryOwner) return error(res, { message: 'Cannot delete primary owner', statusCode: 400 });
+      if (!owner) return error(res, { 
+        message: 'Owner not found', 
+        messageAr: 'المالك غير موجود',
+        statusCode: 404 
+      });
+      if (owner.isPrimaryOwner) return error(res, { 
+        message: 'Cannot delete primary owner', 
+        messageAr: 'لا يمكن حذف المالك الأساسي',
+        statusCode: 400 
+      });
       await Owner.findByIdAndDelete(id);
       return success(res, { message: 'Owner deleted successfully' });
     } catch (err) {
-      return error(res, { message: 'Delete owner error', error: err });
+      return error(res, { 
+        message: 'Delete owner error', 
+        messageAr: 'خطأ في حذف المالك',
+        error: err 
+      });
     }
   }
 
@@ -102,7 +154,11 @@ class OwnerController {
         .populate('userId', 'firstName lastName email');
       return success(res, { data: owners, count: owners.length });
     } catch (err) {
-      return error(res, { message: 'Get user stores error', error: err });
+      return error(res, { 
+        message: 'Get user stores error', 
+        messageAr: 'خطأ في جلب متاجر المستخدم',
+        error: err 
+      });
     }
   }
 }

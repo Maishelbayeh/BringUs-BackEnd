@@ -158,6 +158,7 @@ const getAllStoreSliders = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching store sliders',
+      messageAr: 'خطأ في جلب شرائح المتجر',
       error: error.message
     });
   }
@@ -220,7 +221,8 @@ const getStoreSliderById = async (req, res) => {
     if (!slider) {
       return res.status(404).json({
         success: false,
-        message: 'Store slider not found'
+        message: 'Store slider not found',
+        messageAr: 'شريحة المتجر غير موجودة'
       });
     }
 
@@ -233,6 +235,7 @@ const getStoreSliderById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching store slider',
+      messageAr: 'خطأ في جلب شريحة المتجر',
       error: error.message
     });
   }
@@ -304,6 +307,7 @@ const createStoreSlider = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating store slider',
+      messageAr: 'خطأ في إنشاء شريحة المتجر',
       error: error.message
     });
   }
@@ -360,6 +364,7 @@ const updateStoreSlider = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -376,7 +381,8 @@ const updateStoreSlider = async (req, res) => {
     if (!slider) {
       return res.status(404).json({
         success: false,
-        message: 'Store slider not found'
+        message: 'Store slider not found',
+        messageAr: 'شريحة المتجر غير موجودة'
       });
     }
 
@@ -390,6 +396,7 @@ const updateStoreSlider = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating store slider',
+      messageAr: 'خطأ في تحديث شريحة المتجر',
       error: error.message
     });
   }
@@ -440,7 +447,8 @@ const deleteStoreSlider = async (req, res) => {
     if (!slider) {
       return res.status(404).json({
         success: false,
-        message: 'Store slider not found'
+        message: 'Store slider not found',
+        messageAr: 'شريحة المتجر غير موجودة'
       });
     }
 
@@ -453,6 +461,7 @@ const deleteStoreSlider = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting store slider',
+      messageAr: 'خطأ في حذف شريحة المتجر',
       error: error.message
     });
   }
@@ -505,7 +514,8 @@ const toggleActiveStatus = async (req, res) => {
     if (!slider) {
       return res.status(404).json({
         success: false,
-        message: 'Store slider not found'
+        message: 'Store slider not found',
+        messageAr: 'شريحة المتجر غير موجودة'
       });
     }
 
@@ -522,6 +532,7 @@ const toggleActiveStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating store slider status',
+      messageAr: 'خطأ في تحديث حالة شريحة المتجر',
       error: error.message
     });
   }
@@ -574,7 +585,8 @@ const incrementViews = async (req, res) => {
     if (!slider) {
       return res.status(404).json({
         success: false,
-        message: 'Store slider not found'
+        message: 'Store slider not found',
+        messageAr: 'شريحة المتجر غير موجودة'
       });
     }
 
@@ -590,6 +602,7 @@ const incrementViews = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error incrementing views',
+      messageAr: 'خطأ في زيادة المشاهدات',
       error: error.message
     });
   }
@@ -642,7 +655,8 @@ const incrementClicks = async (req, res) => {
     if (!slider) {
       return res.status(404).json({
         success: false,
-        message: 'Store slider not found'
+        message: 'Store slider not found',
+        messageAr: 'شريحة المتجر غير موجودة'
       });
     }
 
@@ -658,6 +672,7 @@ const incrementClicks = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error incrementing clicks',
+      messageAr: 'خطأ في زيادة النقرات',
       error: error.message
     });
   }
@@ -713,7 +728,8 @@ const getActiveByType = async (req, res) => {
     if (!['slider', 'video'].includes(type)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid type. Must be either "slider" or "video"'
+        message: 'Invalid type. Must be either "slider" or "video"',
+        messageAr: 'نوع غير صحيح. يجب أن يكون "slider" أو "video"'
       });
     }
 
@@ -738,6 +754,7 @@ const getActiveByType = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching active store sliders',
+      messageAr: 'خطأ في جلب شرائح المتجر النشطة',
       error: error.message
     });
   }

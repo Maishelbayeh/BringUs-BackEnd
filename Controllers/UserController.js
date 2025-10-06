@@ -144,6 +144,7 @@ const createUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -160,7 +161,8 @@ const createUser = async (req, res) => {
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: 'User already exists with this email in this store'
+        message: 'User already exists with this email in this store',
+        messageAr: 'المستخدم موجود بالفعل بهذا البريد الإلكتروني في هذا المتجر'
       });
     }
 
@@ -173,7 +175,8 @@ const createUser = async (req, res) => {
       if (existingAdminUser) {
         return res.status(409).json({
           success: false,
-          message: `User with ${role} role already exists with this email`
+          message: `User with ${role} role already exists with this email`,
+          messageAr: `المستخدم بدور ${role} موجود بالفعل بهذا البريد الإلكتروني`
         });
       }
     }
@@ -214,7 +217,8 @@ const createUser = async (req, res) => {
     if ((userData.role === 'admin' || userData.role === 'client') && !userData.store) {
       return res.status(400).json({
         success: false,
-        message: 'Store is required for admin and client roles'
+        message: 'Store is required for admin and client roles',
+        messageAr: 'المتجر مطلوب لأدوار المدير والعميل'
       });
     }
 
@@ -281,6 +285,7 @@ const createUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating user',
+      messageAr: 'خطأ في إنشاء المستخدم',
       error: error.message
     });
   }
@@ -412,6 +417,7 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching users',
+      messageAr: 'خطأ في جلب المستخدمين',
       error: error.message
     });
   }
@@ -463,7 +469,8 @@ const getUserById = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User not found',
+        messageAr: 'المستخدم غير موجود'
       });
     }
 
@@ -493,6 +500,7 @@ const getUserById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching user',
+      messageAr: 'خطأ في جلب المستخدم',
       error: error.message
     });
   }
@@ -555,6 +563,7 @@ const getCustomers = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching customers',
+      messageAr: 'خطأ في جلب العملاء',
       error: error.message
     });
   }
@@ -617,6 +626,7 @@ const getStoreStaff = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching store staff',
+      messageAr: 'خطأ في جلب موظفي المتجر',
       error: error.message
     });
   }
@@ -725,6 +735,7 @@ const updateUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -740,7 +751,8 @@ const updateUser = async (req, res) => {
     if (!existingUser) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User not found',
+        messageAr: 'المستخدم غير موجود'
       });
     }
 
@@ -750,7 +762,8 @@ const updateUser = async (req, res) => {
       if (emailExists) {
         return res.status(409).json({
           success: false,
-          message: 'Email already exists'
+          message: 'Email already exists',
+          messageAr: 'البريد الإلكتروني موجود بالفعل'
         });
       }
     }
@@ -817,6 +830,7 @@ const updateUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating user',
+      messageAr: 'خطأ في تحديث المستخدم',
       error: error.message
     });
   }
@@ -871,7 +885,8 @@ const deleteUser = async (req, res) => {
     if (!userToDelete) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User not found',
+        messageAr: 'المستخدم غير موجود'
       });
     }
 
@@ -879,7 +894,8 @@ const deleteUser = async (req, res) => {
     if (userToDelete._id.toString() === req.user._id.toString()) {
       return res.status(400).json({
         success: false,
-        message: 'You cannot delete yourself'
+        message: 'You cannot delete yourself',
+        messageAr: 'لا يمكنك حذف نفسك'
       });
     }
 
@@ -887,7 +903,8 @@ const deleteUser = async (req, res) => {
     if (req.user.role !== 'superadmin' && (userToDelete.role === 'admin' || userToDelete.role === 'superadmin')) {
       return res.status(403).json({
         success: false,
-        message: 'You cannot delete admin or superadmin users'
+        message: 'You cannot delete admin or superadmin users',
+        messageAr: 'لا يمكنك حذف مستخدمي المدير أو المدير الأعلى'
       });
     }
 
@@ -903,6 +920,7 @@ const deleteUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting user',
+      messageAr: 'خطأ في حذف المستخدم',
       error: error.message
     });
   }
@@ -993,6 +1011,7 @@ const updateCurrentUserProfile = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -1005,7 +1024,8 @@ const updateCurrentUserProfile = async (req, res) => {
     if (!existingUser) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User not found',
+        messageAr: 'المستخدم غير موجود'
       });
     }
 
@@ -1015,7 +1035,8 @@ const updateCurrentUserProfile = async (req, res) => {
       if (emailExists) {
         return res.status(409).json({
           success: false,
-          message: 'Email already exists'
+          message: 'Email already exists',
+          messageAr: 'البريد الإلكتروني موجود بالفعل'
         });
       }
     }
@@ -1072,6 +1093,7 @@ const updateCurrentUserProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating profile',
+      messageAr: 'خطأ في تحديث الملف الشخصي',
       error: error.message
     });
   }
@@ -1086,7 +1108,8 @@ const sendEmailVerification = async (req, res) => {
     if (!email || !email.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Email is required'
+        message: 'Email is required',
+        messageAr: 'البريد الإلكتروني مطلوب'
       });
     }
 
@@ -1094,7 +1117,8 @@ const sendEmailVerification = async (req, res) => {
     if (!storeSlug) {
       return res.status(400).json({
         success: false,
-        message: 'Store slug is required'
+        message: 'Store slug is required',
+        messageAr: 'رابط المتجر مطلوب'
       });
     }
 
@@ -1103,7 +1127,8 @@ const sendEmailVerification = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found with this email'
+        message: 'User not found with this email',
+        messageAr: 'المستخدم غير موجود بهذا البريد الإلكتروني'
       });
     }
 
@@ -1111,7 +1136,8 @@ const sendEmailVerification = async (req, res) => {
     if (user.isEmailVerified) {
       return res.status(400).json({
         success: false,
-        message: 'Email is already verified'
+        message: 'Email is already verified',
+        messageAr: 'البريد الإلكتروني محقق بالفعل'
       });
     }
 
@@ -1198,6 +1224,7 @@ const sendEmailVerification = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error sending verification code',
+      messageAr: 'خطأ في إرسال رمز التحقق',
       error: error.message
     });
   }
@@ -1211,7 +1238,8 @@ const verifyEmail = async (req, res) => {
     if (!email || !otp) {
       return res.status(400).json({
         success: false,
-        message: 'Email and OTP are required'
+        message: 'Email and OTP are required',
+        messageAr: 'البريد الإلكتروني ورمز التحقق مطلوبان'
       });
     }
 
@@ -1220,7 +1248,8 @@ const verifyEmail = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User not found',
+        messageAr: 'المستخدم غير موجود'
       });
     }
 
@@ -1228,7 +1257,8 @@ const verifyEmail = async (req, res) => {
     if (user.isEmailVerified) {
       return res.status(400).json({
         success: false,
-        message: 'Email is already verified'
+        message: 'Email is already verified',
+        messageAr: 'البريد الإلكتروني محقق بالفعل'
       });
     }
 
@@ -1236,7 +1266,8 @@ const verifyEmail = async (req, res) => {
     if (!user.emailVerificationOTP || !user.emailVerificationExpiry) {
       return res.status(400).json({
         success: false,
-        message: 'No verification code found. Please request a new one.'
+        message: 'No verification code found. Please request a new one.',
+        messageAr: 'لم يتم العثور على رمز التحقق. يرجى طلب رمز جديد.'
       });
     }
 
@@ -1244,7 +1275,8 @@ const verifyEmail = async (req, res) => {
     if (new Date() > user.emailVerificationExpiry) {
       return res.status(400).json({
         success: false,
-        message: 'Verification code has expired. Please request a new one.'
+        message: 'Verification code has expired. Please request a new one.',
+        messageAr: 'انتهت صلاحية رمز التحقق. يرجى طلب رمز جديد.'
       });
     }
 
@@ -1252,7 +1284,8 @@ const verifyEmail = async (req, res) => {
     if (user.emailVerificationOTP !== otp) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid verification code'
+        message: 'Invalid verification code',
+        messageAr: 'رمز التحقق غير صحيح'
       });
     }
 
@@ -1278,6 +1311,7 @@ const verifyEmail = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error verifying email',
+      messageAr: 'خطأ في التحقق من البريد الإلكتروني',
       error: error.message
     });
   }
@@ -1291,7 +1325,8 @@ const resendEmailVerification = async (req, res) => {
     if (!email || !email.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Email is required'
+        message: 'Email is required',
+        messageAr: 'البريد الإلكتروني مطلوب'
       });
     }
 
@@ -1299,7 +1334,8 @@ const resendEmailVerification = async (req, res) => {
     if (!storeSlug) {
       return res.status(400).json({
         success: false,
-        message: 'Store slug is required'
+        message: 'Store slug is required',
+        messageAr: 'رابط المتجر مطلوب'
       });
     }
 
@@ -1308,7 +1344,8 @@ const resendEmailVerification = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found with this email'
+        message: 'User not found with this email',
+        messageAr: 'المستخدم غير موجود بهذا البريد الإلكتروني'
       });
     }
 
@@ -1316,7 +1353,8 @@ const resendEmailVerification = async (req, res) => {
     if (user.isEmailVerified) {
       return res.status(400).json({
         success: false,
-        message: 'Email is already verified'
+        message: 'Email is already verified',
+        messageAr: 'البريد الإلكتروني محقق بالفعل'
       });
     }
 
@@ -1325,7 +1363,8 @@ const resendEmailVerification = async (req, res) => {
       const timeLeft = Math.ceil((user.emailVerificationExpiry - new Date()) / 1000 / 60);
       return res.status(400).json({
         success: false,
-        message: `Please wait ${timeLeft} minutes before requesting a new verification code`
+        message: `Please wait ${timeLeft} minutes before requesting a new verification code`,
+        messageAr: `يرجى الانتظار ${timeLeft} دقائق قبل طلب رمز تحقق جديد`
       });
     }
 
@@ -1415,6 +1454,7 @@ const resendEmailVerification = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error sending verification code',
+      messageAr: 'خطأ في إرسال رمز التحقق',
       error: error.message
     });
   }
@@ -1430,7 +1470,8 @@ const checkEmailVerificationStatus = async (req, res) => {
     if (!email || !email.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Email is required'
+        message: 'Email is required',
+        messageAr: 'البريد الإلكتروني مطلوب'
       });
     }
 
@@ -1439,7 +1480,8 @@ const checkEmailVerificationStatus = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found with this email'
+        message: 'User not found with this email',
+        messageAr: 'المستخدم غير موجود بهذا البريد الإلكتروني'
       });
     }
 
@@ -1465,6 +1507,7 @@ const checkEmailVerificationStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error checking email verification status',
+      messageAr: 'خطأ في التحقق من حالة التحقق من البريد الإلكتروني',
       error: error.message
     });
   }
@@ -1479,7 +1522,8 @@ const forgotPassword = async (req, res) => {
     if (!email || !email.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Email is required'
+        message: 'Email is required',
+        messageAr: 'البريد الإلكتروني مطلوب'
       });
     }
 
@@ -1488,7 +1532,8 @@ const forgotPassword = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found with this email'
+        message: 'User not found with this email',
+        messageAr: 'المستخدم غير موجود بهذا البريد الإلكتروني'
       });
     }
 
@@ -1537,6 +1582,7 @@ const forgotPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error sending password reset email',
+      messageAr: 'خطأ في إرسال بريد إعادة تعيين كلمة المرور',
       error: error.message
     });
   }
@@ -1551,7 +1597,8 @@ const resetPassword = async (req, res) => {
     if (!token || !newPassword) {
       return res.status(400).json({
         success: false,
-        message: 'Token and new password are required'
+        message: 'Token and new password are required',
+        messageAr: 'الرمز المميز وكلمة المرور الجديدة مطلوبان'
       });
     }
 
@@ -1559,7 +1606,8 @@ const resetPassword = async (req, res) => {
     if (newPassword.length < 6) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 6 characters long'
+        message: 'Password must be at least 6 characters long',
+        messageAr: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
       });
     }
 
@@ -1578,7 +1626,8 @@ const resetPassword = async (req, res) => {
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired reset token'
+        message: 'Invalid or expired reset token',
+        messageAr: 'رمز إعادة التعيين غير صحيح أو منتهي الصلاحية'
       });
     }
 
@@ -1601,6 +1650,7 @@ const resetPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error resetting password',
+      messageAr: 'خطأ في إعادة تعيين كلمة المرور',
       error: error.message
     });
   }

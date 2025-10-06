@@ -77,7 +77,8 @@ exports.getPOSCarts = async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Admin only.'
+        message: 'Access denied. Admin only.',
+        messageAr: 'الوصول مرفوض. للمدير فقط.'
       });
     }
 
@@ -102,6 +103,7 @@ exports.getPOSCarts = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching POS carts',
+      messageAr: 'خطأ في جلب سلات نقاط البيع',
       error: error.message
     });
   }
@@ -116,7 +118,8 @@ exports.createPOSCart = async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Admin only.'
+        message: 'Access denied. Admin only.',
+        messageAr: 'الوصول مرفوض. للمدير فقط.'
       });
     }
 
@@ -147,6 +150,7 @@ exports.createPOSCart = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating POS cart',
+      messageAr: 'خطأ في إنشاء سلة نقطة البيع',
       error: error.message
     });
   }
@@ -161,7 +165,8 @@ exports.getPOSCart = async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Admin only.'
+        message: 'Access denied. Admin only.',
+        messageAr: 'الوصول مرفوض. للمدير فقط.'
       });
     }
 
@@ -175,7 +180,8 @@ exports.getPOSCart = async (req, res) => {
     if (!cart) {
       return res.status(404).json({
         success: false,
-        message: 'POS cart not found'
+        message: 'POS cart not found',
+        messageAr: 'سلة نقطة البيع غير موجودة'
       });
     }
 
@@ -189,6 +195,7 @@ exports.getPOSCart = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching POS cart',
+      messageAr: 'خطأ في جلب سلة نقطة البيع',
       error: error.message
     });
   }
@@ -204,7 +211,8 @@ exports.addToPOSCart = async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Admin only.'
+        message: 'Access denied. Admin only.',
+        messageAr: 'الوصول مرفوض. للمدير فقط.'
       });
     }
 
@@ -212,7 +220,8 @@ exports.addToPOSCart = async (req, res) => {
     if (!product || !quantity) {
       return res.status(400).json({
         success: false,
-        message: 'Product and quantity are required'
+        message: 'Product and quantity are required',
+        messageAr: 'المنتج والكمية مطلوبان'
       });
     }
 
@@ -225,7 +234,8 @@ exports.addToPOSCart = async (req, res) => {
     if (!cart) {
       return res.status(404).json({
         success: false,
-        message: 'POS cart not found'
+        message: 'POS cart not found',
+        messageAr: 'سلة نقطة البيع غير موجودة'
       });
     }
 
@@ -234,7 +244,8 @@ exports.addToPOSCart = async (req, res) => {
     if (!productData) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
 
@@ -242,7 +253,8 @@ exports.addToPOSCart = async (req, res) => {
     if (productData.stock < quantity) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient stock. Available: ${productData.stock}`
+        message: `Insufficient stock. Available: ${productData.stock}`,
+        messageAr: `المخزون غير كافي. المتوفر: ${productData.stock}`
       });
     }
 
@@ -413,6 +425,7 @@ exports.addToPOSCart = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: `Product ${productData.nameEn} does not support specifications`,
+          messageAr: `المنتج ${productData.nameEn} لا يدعم المواصفات`,
           details: {
             productName: productData.nameEn,
             hasSpecificationValues: false
@@ -463,6 +476,7 @@ exports.addToPOSCart = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error adding item to POS cart',
+      messageAr: 'خطأ في إضافة عنصر إلى سلة نقطة البيع',
       error: error.message
     });
   }

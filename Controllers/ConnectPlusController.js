@@ -33,6 +33,8 @@ exports.addOrders = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -67,6 +69,7 @@ exports.addOrders = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error adding orders to Connect Plus',
+      messageAr: 'خطأ في إضافة الطلبات إلى Connect Plus',
       error: error.response?.data?.message || error.message,
       details: error.response?.data || null
     });
@@ -83,6 +86,8 @@ exports.getProducts = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -117,6 +122,7 @@ exports.getProducts = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error getting products from Connect Plus',
+      messageAr: 'خطأ في جلب المنتجات من Connect Plus',
       error: error.response?.data?.message || error.message,
       details: error.response?.data || null
     });
@@ -133,6 +139,8 @@ exports.getVariants = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -167,6 +175,7 @@ exports.getVariants = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error getting variants from Connect Plus',
+      messageAr: 'خطأ في جلب متغيرات المنتج من Connect Plus',
       error: error.response?.data?.message || error.message,
       details: error.response?.data || null
     });
@@ -183,6 +192,8 @@ exports.getDeliveryCompanies = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -217,6 +228,7 @@ exports.getDeliveryCompanies = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error getting delivery companies from Connect Plus',
+      messageAr: 'خطأ في جلب شركات التوصيل من Connect Plus',
       error: error.response?.data?.message || error.message,
       details: error.response?.data || null
     });
@@ -233,6 +245,8 @@ exports.getDeliveryFee = async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل في التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -267,6 +281,7 @@ exports.getDeliveryFee = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error getting delivery fee from Connect Plus',
+      messageAr: 'خطأ في جلب رسوم التوصيل من Connect Plus',
       error: error.response?.data?.message || error.message,
       details: error.response?.data || null
     });
@@ -308,6 +323,7 @@ exports.getAreaSubArea = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error getting area and sub area from Connect Plus',
+      messageAr: 'خطأ في جلب المنطقة والمنطقة الفرعية من Connect Plus',
       error: error.response?.data?.message || error.message,
       details: error.response?.data || null
     });
@@ -353,6 +369,7 @@ exports.testConnection = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Connect Plus connection test failed',
+      messageAr: 'فشل في اختبار الاتصال بـ Connect Plus',
       error: error.response?.data?.message || error.message,
       details: error.response?.data || null
     });

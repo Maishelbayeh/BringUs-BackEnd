@@ -565,6 +565,7 @@ exports.create = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating product',
+      messageAr: 'خطأ في إنشاء المنتج',
       error: error.message
     });
   }
@@ -712,6 +713,7 @@ exports.update = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating product',
+      messageAr: 'خطأ في تحديث المنتج',
       error: error.message
     });
   }
@@ -756,7 +758,9 @@ exports.createVariant = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Store ID is required',
-        message: 'Please provide storeId in request body'
+        errorAr: 'معرف المتجر مطلوب',
+        message: 'Please provide storeId in request body',
+        messageAr: 'يرجى تقديم معرف المتجر في طلب الجسم'
       });
     }
 
@@ -765,7 +769,8 @@ exports.createVariant = async (req, res) => {
     if (!parentProduct) {
       return res.status(404).json({ 
         success: false,
-        error: 'Parent product not found' 
+        error: 'Parent product not found',
+        errorAr: 'المنتج الأب غير موجود'
       });
     }
 

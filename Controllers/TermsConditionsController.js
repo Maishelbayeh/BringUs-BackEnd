@@ -82,7 +82,7 @@ const getTermsByStore = async (req, res) => {
 
   } catch (err) {
     //CONSOLE.error('Get terms by store error:', err);
-    return error(res, { message: 'Failed to fetch terms & conditions', statusCode: 500 });
+    return error(res, { message: 'Failed to fetch terms & conditions', messageAr: 'فشل في جلب الشروط والأحكام', statusCode: 500 });
   }
 };
 
@@ -120,10 +120,10 @@ const createTerms = async (req, res) => {
     
     if (err.name === 'ValidationError') {
       const errors = Object.values(err.errors).map(e => e.message);
-      return error(res, { message: errors.join(', '), statusCode: 400 });
+      return error(res, { message: errors.join(', '), messageAr: 'خطأ في التحقق من صحة البيانات', statusCode: 400 });
     }
     
-    return error(res, { message: 'Failed to create terms & conditions', statusCode: 500 });
+    return error(res, { message: 'Failed to create terms & conditions', messageAr: 'فشل في إنشاء الشروط والأحكام', statusCode: 500 });
   }
 };
 
@@ -146,7 +146,7 @@ const updateTerms = async (req, res) => {
     });
 
     if (!terms) {
-      return error(res, { message: 'Terms & conditions not found', statusCode: 404 });
+      return error(res, { message: 'Terms & conditions not found', messageAr: 'الشروط والأحكام غير موجودة', statusCode: 404 });
     }
 
     // Update terms
@@ -166,10 +166,10 @@ const updateTerms = async (req, res) => {
     
     if (err.name === 'ValidationError') {
       const errors = Object.values(err.errors).map(e => e.message);
-      return error(res, { message: errors.join(', '), statusCode: 400 });
+      return error(res, { message: errors.join(', '), messageAr: 'خطأ في التحقق من صحة البيانات', statusCode: 400 });
     }
     
-    return error(res, { message: 'Failed to update terms & conditions', statusCode: 500 });
+    return error(res, { message: 'Failed to update terms & conditions', messageAr: 'فشل في تحديث الشروط والأحكام', statusCode: 500 });
   }
 };
 

@@ -35,6 +35,7 @@ class StoreController {
           //CONSOLE.error('Error parsing contact:', e);
           return error(res, { 
             message: 'Invalid contact data format', 
+            messageAr: 'تنسيق بيانات الاتصال غير صحيح',
             statusCode: 400 
           });
         }
@@ -47,6 +48,7 @@ class StoreController {
           //CONSOLE.error('Error parsing settings:', e);
           return error(res, { 
             message: 'Invalid settings data format', 
+            messageAr: 'تنسيق بيانات الإعدادات غير صحيح',
             statusCode: 400 
           });
         }
@@ -59,6 +61,7 @@ class StoreController {
       if (!nameAr || !nameEn  || !contact?.email) {
         return error(res, { 
           message: 'Missing required fields: nameAr, nameEn, and contact.email are required', 
+          messageAr: 'حقول مطلوبة مفقودة: الاسم العربي والاسم الإنجليزي وبريد الاتصال مطلوبة',
           statusCode: 400 
         });
       }
@@ -82,6 +85,7 @@ class StoreController {
           //CONSOLE.error('Logo upload error:', uploadError);
           return error(res, { 
             message: 'Failed to upload logo', 
+            messageAr: 'فشل في رفع الشعار',
             statusCode: 500 
           });
         }
@@ -137,7 +141,7 @@ class StoreController {
       return success(res, { data: storeResponse, message: 'Store created successfully', statusCode: 201 });
     } catch (err) {
       //CONSOLE.error('Create store error:', err);
-      return error(res, { message: 'Create store error', error: err });
+      return error(res, { message: 'Create store error', messageAr: 'خطأ في إنشاء المتجر', error: err });
     }
   }
 
@@ -147,7 +151,7 @@ class StoreController {
       const stores = await Store.find().populate('contact', 'email phone');
       return success(res, { data: stores, count: stores.length });
     } catch (err) {
-      return error(res, { message: 'Get all stores error', error: err });
+      return error(res, { message: 'Get all stores error', messageAr: 'خطأ في جلب جميع المتاجر', error: err });
     }
   }
 
@@ -157,11 +161,11 @@ class StoreController {
       const { id } = req.params;
       const store = await Store.findById(id).populate('contact', 'email phone address');
       if (!store) {
-        return error(res, { message: 'Store not found', statusCode: 404 });
+        return error(res, { message: 'Store not found', messageAr: 'المتجر غير موجود', statusCode: 404 });
       }
       return success(res, { data: store });
     } catch (err) {
-      return error(res, { message: 'Get store error', error: err });
+      return error(res, { message: 'Get store error', messageAr: 'خطأ في جلب المتجر', error: err });
     }
   }
 
@@ -171,11 +175,11 @@ class StoreController {
       const { slug } = req.params;
       const store = await Store.findOne({ slug, status: 'active' }).populate('contact', 'email phone address');
       if (!store) {
-        return error(res, { message: 'Store not found', statusCode: 404 });
+        return error(res, { message: 'Store not found', messageAr: 'المتجر غير موجود', statusCode: 404 });
       }
       return success(res, { data: store });
     } catch (err) {
-      return error(res, { message: 'Get store by slug error', error: err });
+      return error(res, { message: 'Get store by slug error', messageAr: 'خطأ في جلب المتجر بالرابط', error: err });
     }
   }
 
@@ -193,6 +197,7 @@ class StoreController {
       if (!id || !mongoose.Types.ObjectId.isValid(id)) {
         return error(res, { 
           message: 'Invalid store ID format', 
+          messageAr: 'تنسيق معرف المتجر غير صحيح',
           statusCode: 400 
         });
       }
@@ -205,6 +210,7 @@ class StoreController {
           //CONSOLE.error('Error parsing contact JSON:', parseError);
           return error(res, { 
             message: 'Invalid contact data format', 
+            messageAr: 'تنسيق بيانات الاتصال غير صحيح',
             statusCode: 400 
           });
         }
@@ -217,6 +223,7 @@ class StoreController {
           //CONSOLE.error('Error parsing settings JSON:', parseError);
           return error(res, { 
             message: 'Invalid settings data format', 
+            messageAr: 'تنسيق بيانات الإعدادات غير صحيح',
             statusCode: 400 
           });
         }
@@ -238,6 +245,7 @@ class StoreController {
           console.error('Logo upload error:', uploadError);
           return error(res, { 
             message: 'Failed to upload logo', 
+            messageAr: 'فشل في رفع الشعار',
             statusCode: 500 
           });
         }
@@ -252,6 +260,7 @@ class StoreController {
       if (!existingStore) {
         return error(res, { 
           message: 'Store not found', 
+          messageAr: 'المتجر غير موجود',
           statusCode: 404 
         });
       }
@@ -262,6 +271,7 @@ class StoreController {
         if (storeWithSameSlug) {
           return error(res, { 
             message: 'Store slug already exists', 
+            messageAr: 'رابط المتجر موجود بالفعل',
             statusCode: 400 
           });
         }
@@ -273,6 +283,7 @@ class StoreController {
       if (updateData.contact && !updateData.contact.email) {
         return error(res, { 
           message: 'Contact email is required', 
+          messageAr: 'بريد الاتصال مطلوب',
           statusCode: 400 
         });
       }
@@ -280,6 +291,7 @@ class StoreController {
       if (updateData.nameAr && !updateData.nameAr.trim()) {
         return error(res, { 
           message: 'Arabic name is required', 
+          messageAr: 'الاسم العربي مطلوب',
           statusCode: 400 
         });
       }
@@ -287,6 +299,7 @@ class StoreController {
       if (updateData.nameEn && !updateData.nameEn.trim()) {
         return error(res, { 
           message: 'English name is required', 
+          messageAr: 'الاسم الإنجليزي مطلوب',
           statusCode: 400 
         });
       }
@@ -294,6 +307,7 @@ class StoreController {
       if (updateData.slug && !updateData.slug.trim()) {
         return error(res, { 
           message: 'Slug is required', 
+          messageAr: 'الرابط مطلوب',
           statusCode: 400 
         });
       }
@@ -311,7 +325,7 @@ class StoreController {
         console.log('Update store - Result:', store);
 
         if (!store) {
-          return error(res, { message: 'Store not found', statusCode: 404 });
+          return error(res, { message: 'Store not found', messageAr: 'المتجر غير موجود', statusCode: 404 });
         }
         return success(res, { data: store, message: 'Store updated successfully' });
       } catch (dbError) {
@@ -324,6 +338,7 @@ class StoreController {
         if (dbError.name === 'ValidationError') {
           return error(res, { 
             message: 'Validation error', 
+            messageAr: 'خطأ في التحقق من صحة البيانات',
             error: dbError.message,
             statusCode: 400 
           });
@@ -332,6 +347,7 @@ class StoreController {
         if (dbError.code === 11000) {
           return error(res, { 
             message: 'Duplicate key error - slug already exists', 
+            messageAr: 'خطأ في المفتاح المكرر - الرابط موجود بالفعل',
             statusCode: 400 
           });
         }
@@ -343,7 +359,7 @@ class StoreController {
       console.error('Update store error stack:', err.stack);
       console.error('Update store error name:', err.name);
       console.error('Update store error code:', err.code);
-      return error(res, { message: 'Server error', error: err.message, details: err.stack });
+      return error(res, { message: 'Server error', messageAr: 'خطأ في الخادم', error: err.message, details: err.stack });
     }
   }
 
@@ -353,14 +369,14 @@ class StoreController {
       const { id } = req.params;
       const store = await Store.findById(id);
       if (!store) {
-        return error(res, { message: 'Store not found', statusCode: 404 });
+        return error(res, { message: 'Store not found', messageAr: 'المتجر غير موجود', statusCode: 404 });
       }
       
       await Owner.deleteMany({ storeId: id });
       await Store.findByIdAndDelete(id);
       return success(res, { message: 'Store deleted successfully' });
     } catch (err) {
-      return error(res, { message: 'Delete store error', error: err });
+      return error(res, { message: 'Delete store error', messageAr: 'خطأ في حذف المتجر', error: err });
     }
   }
 
@@ -371,7 +387,7 @@ class StoreController {
       const ownersCount = await Owner.countDocuments({ storeId, status: 'active' });
       return success(res, { data: { ownersCount } });
     } catch (err) {
-      return error(res, { message: 'Get store stats error', error: err });
+      return error(res, { message: 'Get store stats error', messageAr: 'خطأ في جلب إحصائيات المتجر', error: err });
     }
   }
 
@@ -616,7 +632,7 @@ class StoreController {
         }
       });
     } catch (err) {
-      return error(res, { message: 'Get customers by store error', error: err });
+      return error(res, { message: 'Get customers by store error', messageAr: 'خطأ في جلب العملاء حسب المتجر', error: err });
     }
   }
 
@@ -732,7 +748,7 @@ class StoreController {
         }
       });
     } catch (err) {
-      return error(res, { message: 'Get guests by store error', error: err });
+      return error(res, { message: 'Get guests by store error', messageAr: 'خطأ في جلب الضيوف حسب المتجر', error: err });
     }
   }
 
@@ -764,13 +780,13 @@ class StoreController {
       }
 
       if (!customer) {
-        return error(res, { message: 'Customer not found', statusCode: 404 });
+        return error(res, { message: 'Customer not found', messageAr: 'العميل غير موجود', statusCode: 404 });
       }
 
       return success(res, { data: customer });
     } catch (err) {
       console.error('🔍 getCustomerById - Error:', err);
-      return error(res, { message: 'Get customer error', error: err });
+      return error(res, { message: 'Get customer error', messageAr: 'خطأ في جلب العميل', error: err });
     }
   }
 
@@ -798,12 +814,12 @@ class StoreController {
       .populate('store', 'nameAr nameEn slug');
 
       if (!customer) {
-        return error(res, { message: 'Customer not found', statusCode: 404 });
+        return error(res, { message: 'Customer not found', messageAr: 'العميل غير موجود', statusCode: 404 });
       }
 
       return success(res, { data: customer, message: 'Customer updated successfully' });
     } catch (err) {
-      return error(res, { message: 'Update customer error', error: err });
+      return error(res, { message: 'Update customer error', messageAr: 'خطأ في تحديث العميل', error: err });
     }
   }
 
@@ -819,12 +835,12 @@ class StoreController {
       });
 
       if (!customer) {
-        return error(res, { message: 'Customer not found', statusCode: 404 });
+        return error(res, { message: 'Customer not found', messageAr: 'العميل غير موجود', statusCode: 404 });
       }
 
       return success(res, { message: 'Customer deleted successfully' });
     } catch (err) {
-      return error(res, { message: 'Delete customer error', error: err });
+      return error(res, { message: 'Delete customer error', messageAr: 'خطأ في حذف العميل', error: err });
     }
   }
 }

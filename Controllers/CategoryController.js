@@ -111,9 +111,14 @@ exports.create = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Missing required fields',
+        errorAr: 'حقول مطلوبة مفقودة',
         details: {
           nameAr: !nameAr ? 'Arabic name is required' : null,
           nameEn: !nameEn ? 'English name is required' : null
+        },
+        detailsAr: {
+          nameAr: !nameAr ? 'الاسم العربي مطلوب' : null,
+          nameEn: !nameEn ? 'الاسم الإنجليزي مطلوب' : null
         }
       });
     }
@@ -122,7 +127,9 @@ exports.create = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Store ID is required',
-        message: 'Please provide storeId in request body'
+        errorAr: 'معرف المتجر مطلوب',
+        message: 'Please provide storeId in request body',
+        messageAr: 'يرجى تقديم معرف المتجر في طلب الجسم'
       });
     }
 
@@ -132,7 +139,9 @@ exports.create = async (req, res) => {
       return res.status(404).json({ 
         success: false,
         error: 'Store not found',
-        message: 'The specified store does not exist'
+        errorAr: 'المتجر غير موجود',
+        message: 'The specified store does not exist',
+        messageAr: 'المتجر المحدد غير موجود'
       });
     }
 
@@ -158,6 +167,7 @@ exports.create = async (req, res) => {
         return res.status(400).json({ 
           success: false,
           error: 'Category with this slug already exists in this store',
+          errorAr: 'فئة بهذا الرابط موجودة بالفعل في هذا المتجر',
           slug: slug
         });
       }
@@ -188,6 +198,7 @@ exports.create = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل في التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -198,14 +209,17 @@ exports.create = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: `Duplicate ${field}`,
-        details: { [field]: `${field} already exists in this store` }
+        errorAr: `مكرر ${field}`,
+        details: { [field]: `${field} already exists in this store` },
+        detailsAr: { [field]: `${field} موجود بالفعل في هذا المتجر` }
       });
     }
     
     // Handle other errors
     res.status(400).json({ 
       success: false,
-      error: err.message 
+      error: err.message,
+      errorAr: 'خطأ في إنشاء الفئة'
     });
   }
 };
@@ -223,7 +237,9 @@ exports.update = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Store ID is required',
-        message: 'Please provide storeId in request body'
+        errorAr: 'معرف المتجر مطلوب',
+        message: 'Please provide storeId in request body',
+        messageAr: 'يرجى تقديم معرف المتجر في طلب الجسم'
       });
     }
 
@@ -245,7 +261,8 @@ exports.update = async (req, res) => {
     
     if (!category) return res.status(404).json({ 
       success: false,
-      error: 'Category not found' 
+      error: 'Category not found',
+      errorAr: 'الفئة غير موجودة'
     });
     
     res.json({
@@ -266,6 +283,7 @@ exports.update = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل في التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -276,13 +294,16 @@ exports.update = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: `Duplicate ${field}`,
-        details: { [field]: `${field} already exists in this store` }
+        errorAr: `مكرر ${field}`,
+        details: { [field]: `${field} already exists in this store` },
+        detailsAr: { [field]: `${field} موجود بالفعل في هذا المتجر` }
       });
     }
     
     res.status(400).json({ 
       success: false,
-      error: err.message 
+      error: err.message,
+      errorAr: 'خطأ في تحديث الفئة'
     });
   }
 };

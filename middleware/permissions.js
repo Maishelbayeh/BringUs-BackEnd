@@ -46,7 +46,8 @@ exports.hasStoreAccess = async (req, res, next) => {
     if (!storeId) {
       return res.status(400).json({
         success: false,
-        message: 'Store ID is required and could not be determined from parameters, token, or user data.'
+        message: 'Store ID is required and could not be determined from parameters, token, or user data.',
+        messageAr: 'معرف المتجر مطلوب ولا يمكن تحديده من المعاملات أو الرمز المميز أو بيانات المستخدم.'
       });
     }
     
@@ -55,7 +56,8 @@ exports.hasStoreAccess = async (req, res, next) => {
       if (!storeId) {
         return res.status(400).json({
           success: false,
-          message: 'Store ID not found in token or user data'
+          message: 'Store ID not found in token or user data',
+          messageAr: 'معرف المتجر غير موجود في الرمز المميز أو بيانات المستخدم'
         });
       }
       
@@ -63,7 +65,8 @@ exports.hasStoreAccess = async (req, res, next) => {
       if (!store) {
         return res.status(404).json({
           success: false,
-          message: 'Store not found'
+          message: 'Store not found',
+          messageAr: 'المتجر غير موجود'
         });
       }
       req.store = store;
@@ -91,7 +94,8 @@ exports.hasStoreAccess = async (req, res, next) => {
     if (!storeId) {
       return res.status(400).json({
         success: false,
-        message: 'Store ID not found in token or user data'
+        message: 'Store ID not found in token or user data',
+        messageAr: 'معرف المتجر غير موجود في الرمز المميز أو بيانات المستخدم'
       });
     }
     
@@ -104,7 +108,8 @@ exports.hasStoreAccess = async (req, res, next) => {
     if (!owner) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied to this store'
+        message: 'Access denied to this store',
+        messageAr: 'تم رفض الوصول إلى هذا المتجر'
       });
     }
 
@@ -117,6 +122,7 @@ exports.hasStoreAccess = async (req, res, next) => {
     return res.status(500).json({
       success: false,
       message: 'Server error',
+      messageAr: 'خطأ في الخادم',
       details: error.message
     });
   }
@@ -138,13 +144,15 @@ exports.hasPermission = (permission) => {
 
       return res.status(403).json({
         success: false,
-        message: `Permission denied: ${permission}`
+        message: `Permission denied: ${permission}`,
+        messageAr: `تم رفض الإذن: ${permission}`
       });
     } catch (error) {
       //CONSOLE.error('Permission middleware error:', error);
       return res.status(500).json({
         success: false,
-        message: 'Server error'
+        message: 'Server error',
+        messageAr: 'خطأ في الخادم'
       });
     }
   };
@@ -164,7 +172,8 @@ exports.isPrimaryOwner = async (req, res, next) => {
 
     return res.status(403).json({
       success: false,
-      message: 'Only primary owner can perform this action'
+      message: 'Only primary owner can perform this action',
+      messageAr: 'المالك الأساسي فقط يمكنه تنفيذ هذا الإجراء'
     });
   } catch (error) {
     //CONSOLE.error('Primary owner middleware error:', error);
@@ -183,7 +192,8 @@ exports.isAdmin = (req, res, next) => {
 
   return res.status(403).json({
     success: false,
-    message: 'Admin access required'
+    message: 'Admin access required',
+    messageAr: 'الوصول كمدير مطلوب'
   });
 };
 
@@ -195,7 +205,8 @@ exports.isSuperAdmin = (req, res, next) => {
 
   return res.status(403).json({
     success: false,
-    message: 'Super admin access required'
+    message: 'Super admin access required',
+    messageAr: 'الوصول كمدير عام مطلوب'
   });
 };
 
@@ -214,7 +225,8 @@ exports.requireStoreIdForAdmin = (req, res, next) => {
       if (!storeId) {
         return res.status(400).json({
           success: false,
-          message: 'Store ID is required for admin users'
+          message: 'Store ID is required for admin users',
+          messageAr: 'معرف المتجر مطلوب لمستخدمي الإدارة'
         });
       }
 
@@ -229,7 +241,8 @@ exports.requireStoreIdForAdmin = (req, res, next) => {
       if (!owner) {
         return res.status(403).json({
           success: false,
-          message: 'Access denied to this store'
+          message: 'Access denied to this store',
+          messageAr: 'تم رفض الوصول إلى هذا المتجر'
         });
       }
     }
@@ -259,7 +272,8 @@ exports.checkAdminStoreOwnership = async (req, res, next) => {
       if (!storeId) {
         return res.status(400).json({
           success: false,
-          message: 'Store ID is required for admin users'
+          message: 'Store ID is required for admin users',
+          messageAr: 'معرف المتجر مطلوب لمستخدمي الإدارة'
         });
       }
 
@@ -273,7 +287,8 @@ exports.checkAdminStoreOwnership = async (req, res, next) => {
       if (!owner) {
         return res.status(403).json({
           success: false,
-          message: 'Access denied to this store'
+          message: 'Access denied to this store',
+          messageAr: 'تم رفض الوصول إلى هذا المتجر'
         });
       }
 

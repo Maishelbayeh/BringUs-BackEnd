@@ -13,7 +13,10 @@ exports.getSocialComments = async (req, res) => {
     const comments = await SocialComment.find({ store: storeId });
     return response.success(res, { data: comments });
   } catch (err) {
-    return response.error(res, { message: err.message || 'Failed to fetch testimonials' });
+    return response.error(res, { 
+      message: err.message || 'Failed to fetch testimonials',
+      messageAr: 'فشل في جلب الشهادات'
+    });
   }
 };
 
@@ -45,7 +48,10 @@ exports.createSocialComment = async (req, res) => {
     await newComment.save();
     return response.success(res, { data: newComment });
   } catch (err) {
-    return response.error(res, { message: err.message || 'Failed to create testimonial' });
+    return response.error(res, { 
+      message: err.message || 'Failed to create testimonial',
+      messageAr: 'فشل في إنشاء الشهادة'
+    });
   }
 };
 
@@ -62,10 +68,17 @@ exports.updateSocialComment = async (req, res) => {
       update,
       { new: true }
     );
-    if (!updated) return response.error(res, { message: 'Testimonial not found', statusCode: 404 });
+    if (!updated) return response.error(res, { 
+      message: 'Testimonial not found',
+      messageAr: 'الشهادة غير موجودة',
+      statusCode: 404 
+    });
     return response.success(res, { data: updated });
   } catch (err) {
-    return response.error(res, { message: err.message || 'Failed to update testimonial' });
+    return response.error(res, { 
+      message: err.message || 'Failed to update testimonial',
+      messageAr: 'فشل في تحديث الشهادة'
+    });
   }
 };
 
@@ -77,10 +90,17 @@ exports.deleteSocialComment = async (req, res) => {
     const storeId = req.store?._id || req.store;
     const { id } = req.params;
     const deleted = await SocialComment.findOneAndDelete({ _id: id, store: storeId });
-    if (!deleted) return response.error(res, { message: 'Testimonial not found', statusCode: 404 });
+    if (!deleted) return response.error(res, { 
+      message: 'Testimonial not found',
+      messageAr: 'الشهادة غير موجودة',
+      statusCode: 404 
+    });
     return response.success(res, { data: deleted });
   } catch (err) {
-    return response.error(res, { message: err.message || 'Failed to delete testimonial' });
+    return response.error(res, { 
+      message: err.message || 'Failed to delete testimonial',
+      messageAr: 'فشل في حذف الشهادة'
+    });
   }
 };
 
@@ -90,7 +110,11 @@ exports.deleteSocialComment = async (req, res) => {
 exports.uploadImage = async (req, res) => {
   try {
     if (!req.file) {
-      return response.error(res, { message: 'No image file provided', statusCode: 400 });
+      return response.error(res, { 
+        message: 'No image file provided',
+        messageAr: 'لم يتم توفير ملف صورة',
+        statusCode: 400 
+      });
     }
 
     // Upload to Cloudflare R2
@@ -103,7 +127,10 @@ exports.uploadImage = async (req, res) => {
     return response.success(res, { data: { url: result.url, key: result.key } });
   } catch (err) {
     console.error('Image upload error:', err);
-    return response.error(res, { message: err.message || 'Failed to upload image' });
+    return response.error(res, { 
+      message: err.message || 'Failed to upload image',
+      messageAr: 'فشل في رفع الصورة'
+    });
   }
 };
 
@@ -114,12 +141,19 @@ exports.getSocialCommentsByStoreId = async (req, res) => {
   try {
     const { storeId } = req.params;
     if (!storeId) {
-      return response.error(res, { message: 'storeId is required', statusCode: 400 });
+      return response.error(res, { 
+        message: 'storeId is required',
+        messageAr: 'معرف المتجر مطلوب',
+        statusCode: 400 
+      });
     }
     const comments = await SocialComment.find({ store: storeId });
     return response.success(res, { data: comments });
   } catch (err) {
-    return response.error(res, { message: err.message || 'Failed to fetch testimonials by storeId' });
+    return response.error(res, { 
+      message: err.message || 'Failed to fetch testimonials by storeId',
+      messageAr: 'فشل في جلب الشهادات بواسطة معرف المتجر'
+    });
   }
 };
 

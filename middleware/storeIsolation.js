@@ -9,7 +9,9 @@ exports.requireStoreContext = async (req, res, next) => {
     if (!storeId) {
       return res.status(400).json({ 
         error: 'Store context is required',
-        message: 'All operations must be performed within a store context'
+        errorAr: 'سياق المتجر مطلوب',
+        message: 'All operations must be performed within a store context',
+        messageAr: 'جميع العمليات يجب أن تتم ضمن سياق المتجر'
       });
     }
 
@@ -17,13 +19,15 @@ exports.requireStoreContext = async (req, res, next) => {
     const store = await Store.findById(storeId);
     if (!store) {
       return res.status(404).json({ 
-        error: 'Store not found' 
+        error: 'Store not found',
+        errorAr: 'المتجر غير موجود'
       });
     }
 
     if (store.status !== 'active') {
       return res.status(403).json({ 
         error: 'Store is not active',
+        errorAr: 'المتجر غير نشط',
         status: store.status
       });
     }
@@ -32,7 +36,8 @@ exports.requireStoreContext = async (req, res, next) => {
     next();
   } catch (error) {
     res.status(500).json({ 
-      error: 'Store context verification failed' 
+      error: 'Store context verification failed',
+      errorAr: 'فشل في التحقق من سياق المتجر'
     });
   }
 };
@@ -45,7 +50,8 @@ exports.checkStoreAccess = async (req, res, next) => {
 
     if (!userId) {
       return res.status(401).json({ 
-        error: 'Authentication required' 
+        error: 'Authentication required',
+        errorAr: 'المصادقة مطلوبة'
       });
     }
 
@@ -59,7 +65,9 @@ exports.checkStoreAccess = async (req, res, next) => {
     if (!owner) {
       return res.status(403).json({ 
         error: 'Access denied',
-        message: 'You do not have access to this store'
+        errorAr: 'تم رفض الوصول',
+        message: 'You do not have access to this store',
+        messageAr: 'ليس لديك صلاحية للوصول إلى هذا المتجر'
       });
     }
 
@@ -67,7 +75,8 @@ exports.checkStoreAccess = async (req, res, next) => {
     next();
   } catch (error) {
     res.status(500).json({ 
-      error: 'Store access verification failed' 
+      error: 'Store access verification failed',
+      errorAr: 'فشل في التحقق من وصول المتجر'
     });
   }
 };
@@ -77,13 +86,15 @@ exports.requirePermission = (permission) => {
   return (req, res, next) => {
     if (!req.storeOwner) {
       return res.status(403).json({ 
-        error: 'Store access required' 
+        error: 'Store access required',
+        errorAr: 'الوصول إلى المتجر مطلوب'
       });
     }
 
     if (!req.storeOwner.permissions.includes(permission)) {
       return res.status(403).json({ 
         error: 'Permission denied',
+        errorAr: 'تم رفض الإذن',
         required: permission,
         current: req.storeOwner.permissions
       });
@@ -109,7 +120,8 @@ exports.ensureStoreData = (modelName) => {
 
       if (!item) {
         return res.status(404).json({ 
-          error: `${modelName} not found` 
+          error: `${modelName} not found`,
+          errorAr: `${modelName} غير موجود`
         });
       }
 
@@ -117,7 +129,9 @@ exports.ensureStoreData = (modelName) => {
       if (item.store.toString() !== storeId.toString()) {
         return res.status(403).json({ 
           error: 'Access denied',
-          message: `This ${modelName.toLowerCase()} does not belong to your store`
+          errorAr: 'تم رفض الوصول',
+          message: `This ${modelName.toLowerCase()} does not belong to your store`,
+          messageAr: `هذا ${modelName.toLowerCase()} لا ينتمي إلى متجرك`
         });
       }
 
@@ -125,7 +139,8 @@ exports.ensureStoreData = (modelName) => {
       next();
     } catch (error) {
       res.status(500).json({ 
-        error: 'Data verification failed' 
+        error: 'Data verification failed',
+        errorAr: 'فشل في التحقق من البيانات'
       });
     }
   };
