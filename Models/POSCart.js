@@ -101,6 +101,10 @@ const posCartSchema = new mongoose.Schema({
     type: String,
     default: 'POS Cart'
   },
+  cartNameAr: { 
+    type: String,
+    default: 'سلة للبيع'
+  },
   // Customer information (if known)
   customer: {
     name: { type: String },
@@ -201,10 +205,13 @@ posCartSchema.virtual('total').get(function() {
 
 // Pre-save middleware to update timestamps
 posCartSchema.pre('save', function(next) {
+  console.log(`🔄 POSCart Pre-save - Cart ${this._id}, status: ${this.status}, completedAt: ${this.completedAt}`);
   this.updatedAt = new Date();
   if (this.status === 'completed' && !this.completedAt) {
     this.completedAt = new Date();
+    console.log(`✅ POSCart Pre-save - Set completedAt for cart ${this._id}: ${this.completedAt}`);
   }
+  console.log(`✅ POSCart Pre-save - Final status: ${this.status}, completedAt: ${this.completedAt}`);
   next();
 });
 
@@ -254,8 +261,10 @@ posCartSchema.methods.clearCart = function() {
 
 // Method to complete cart (convert to order)
 posCartSchema.methods.completeCart = function() {
+  console.log(`🔄 POSCart Model - Completing cart ${this._id}, current status: ${this.status}`);
   this.status = 'completed';
   this.completedAt = new Date();
+  console.log(`✅ POSCart Model - Cart ${this._id} status set to: ${this.status}, completedAt: ${this.completedAt}`);
   return this.save();
 };
 

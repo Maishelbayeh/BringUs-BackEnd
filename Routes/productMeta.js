@@ -209,7 +209,8 @@ const ProductController = require('../Controllers/ProductController');
  *       404:
  *         description: Product label not found
  *   delete:
- *     summary: Delete product label by ID
+ *     summary: Delete product label by ID (with protection)
+ *     description: Deletes a product label only if it's not being used by any products in the same store
  *     tags: [ProductLabels]
  *     parameters:
  *       - in: path
@@ -217,11 +218,120 @@ const ProductController = require('../Controllers/ProductController');
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Product label ID
+ *       - in: query
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         example: "507f1f77bcf86cd799439012"
+ *         description: Store ID (required for security and validation)
  *     responses:
  *       200:
- *         description: Product label deleted
+ *         description: Product label deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Product label deleted successfully"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "تم حذف تسمية المنتج بنجاح"
+ *       400:
+ *         description: Store ID is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Store ID is required"
+ *                 message:
+ *                   type: string
+ *                   example: "Please provide storeId as query parameter"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "يرجى تقديم معرف المتجر كمعامل استعلام"
  *       404:
  *         description: Product label not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Product label not found"
+ *                 message:
+ *                   type: string
+ *                   example: "Product label not found"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "تسمية المنتج غير موجودة"
+ *       409:
+ *         description: Cannot delete - label is being used by products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Cannot delete product label"
+ *                 message:
+ *                   type: string
+ *                   example: "Cannot delete product label. It is being used by 3 product(s)"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "لا يمكن حذف تسمية المنتج. يتم استخدامها من قبل 3 منتج"
+ *                 details:
+ *                   type: object
+ *                   properties:
+ *                     connectedProducts:
+ *                       type: number
+ *                       example: 3
+ *                     productIds:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["507f1f77bcf86cd799439020", "507f1f77bcf86cd799439021"]
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Database connection failed"
+ *                 message:
+ *                   type: string
+ *                   example: "Error deleting product label"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "خطأ في حذف تسمية المنتج"
  */
 
 /**
@@ -240,9 +350,112 @@ const ProductController = require('../Controllers/ProductController');
  *         description: Store ID to filter product labels
  *     responses:
  *       200:
- *         description: List of active product labels for the store
+ *         description: List of product labels for the store
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ProductLabel'
+ *                 count:
+ *                   type: number
+ *                   example: 3
  *       400:
  *         description: Invalid store ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "storeId is required"
+ *                 message:
+ *                   type: string
+ *                   example: "Store ID is required"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "معرف المتجر مطلوب"
+ */
+
+/**
+ * @swagger
+ * /api/meta/stores/{storeId}/product-labels/active:
+ *   get:
+ *     summary: Get only active product labels for a specific store
+ *     description: Returns only product labels with isActive=true for the specified store, sorted by sortOrder
+ *     tags: [ProductLabels]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID to filter active product labels
+ *         example: "507f1f77bcf86cd799439012"
+ *     responses:
+ *       200:
+ *         description: List of active product labels for the store
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Active product labels retrieved successfully"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "تم جلب تسميات المنتج النشطة بنجاح"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ProductLabel'
+ *                 count:
+ *                   type: number
+ *                   example: 2
+ *       400:
+ *         description: Invalid store ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "storeId is required"
+ *                 message:
+ *                   type: string
+ *                   example: "Store ID is required"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "معرف المتجر مطلوب"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Database connection failed"
+ *                 message:
+ *                   type: string
+ *                   example: "Error fetching active product labels"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "خطأ في جلب تسميات المنتج النشطة"
  */
 
 /**
@@ -529,7 +742,8 @@ const ProductController = require('../Controllers/ProductController');
  *                   type: string
  *                   example: "Product specification not found"
  *   delete:
- *     summary: Delete product specification by ID
+ *     summary: Delete product specification by ID (with protection)
+ *     description: Deletes a product specification only if it's not being used by any products in the same store
  *     tags: [ProductSpecifications]
  *     parameters:
  *       - in: path
@@ -539,6 +753,14 @@ const ProductController = require('../Controllers/ProductController');
  *           type: string
  *           pattern: '^[a-fA-F0-9]{24}$'
  *         description: Product specification ID
+ *       - in: query
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         example: "507f1f77bcf86cd799439012"
+ *         description: Store ID (required for security and validation)
  *     responses:
  *       200:
  *         description: Product specification deleted successfully
@@ -553,6 +775,28 @@ const ProductController = require('../Controllers/ProductController');
  *                 message:
  *                   type: string
  *                   example: "Product specification deleted successfully"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "تم حذف مواصفات المنتج بنجاح"
+ *       400:
+ *         description: Store ID is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Store ID is required"
+ *                 message:
+ *                   type: string
+ *                   example: "Please provide storeId as query parameter"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "يرجى تقديم معرف المتجر كمعامل استعلام"
  *       404:
  *         description: Product specification not found
  *         content:
@@ -566,6 +810,61 @@ const ProductController = require('../Controllers/ProductController');
  *                 error:
  *                   type: string
  *                   example: "Product specification not found"
+ *                 message:
+ *                   type: string
+ *                   example: "Product specification not found"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "مواصفات المنتج غير موجودة"
+ *       409:
+ *         description: Cannot delete - specification is being used by products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Cannot delete specification"
+ *                 message:
+ *                   type: string
+ *                   example: "Cannot delete specification. It is being used by 5 product(s)"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "لا يمكن حذف المواصفة. يتم استخدامها من قبل 5 منتج"
+ *                 details:
+ *                   type: object
+ *                   properties:
+ *                     connectedProducts:
+ *                       type: number
+ *                       example: 5
+ *                     productIds:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["507f1f77bcf86cd799439020", "507f1f77bcf86cd799439021"]
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Database connection failed"
+ *                 message:
+ *                   type: string
+ *                   example: "Error deleting product specification"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "خطأ في حذف مواصفات المنتج"
  */
 
 /**
@@ -614,8 +913,162 @@ const ProductController = require('../Controllers/ProductController');
  *                 error:
  *                   type: string
  *                   example: "storeId is required"
+ *                 message:
+ *                   type: string
+ *                   example: "Store ID is required"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "معرف المتجر مطلوب"
+ */
+
+/**
+ * @swagger
+ * /api/meta/stores/{storeId}/product-specifications/active:
+ *   get:
+ *     summary: Get only active product specifications for a specific store
+ *     description: Returns only product specifications with isActive=true for the specified store
+ *     tags: [ProductSpecifications]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID to filter active product specifications
+ *         example: "507f1f77bcf86cd799439012"
+ *     responses:
+ *       200:
+ *         description: List of active product specifications for the store
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Active product specifications retrieved successfully"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "تم جلب المواصفات النشطة بنجاح"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ProductSpecification'
+ *                 count:
+ *                   type: number
+ *                   example: 2
+ *       400:
+ *         description: Invalid store ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "storeId is required"
+ *                 message:
+ *                   type: string
+ *                   example: "Store ID is required"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "معرف المتجر مطلوب"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Database connection failed"
+ *                 message:
+ *                   type: string
+ *                   example: "Error fetching active product specifications"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "خطأ في جلب المواصفات النشطة"
  */
 router.get('/product-specifications/by-store', require('../Controllers/ProductSpecificationController').getByStoreId);
+
+/**
+ * @swagger
+ * /api/meta/stores/{storeId}/units/active:
+ *   get:
+ *     summary: Get only active units for a specific store
+ *     description: Returns only units with isActive=true for the specified store
+ *     tags: [Units]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID to filter active units
+ *         example: "507f1f77bcf86cd799439012"
+ *     responses:
+ *       200:
+ *         description: List of active units for the store
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Active units retrieved successfully"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "تم جلب الوحدات النشطة بنجاح"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Unit'
+ *                 count:
+ *                   type: number
+ *                   example: 3
+ *       400:
+ *         description: Invalid store ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "storeId is required"
+ *                 message:
+ *                   type: string
+ *                   example: "Store ID is required"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "معرف المتجر مطلوب"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Database connection failed"
+ *                 message:
+ *                   type: string
+ *                   example: "Error fetching active units"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "خطأ في جلب الوحدات النشطة"
+ */
 
 /**
  * @swagger
@@ -801,7 +1254,8 @@ router.get('/product-specifications/by-store', require('../Controllers/ProductSp
  *       404:
  *         description: Unit not found
  *   delete:
- *     summary: Delete unit by ID
+ *     summary: Delete unit by ID (with protection)
+ *     description: Deletes a unit only if it's not being used by any products in the same store
  *     tags: [Units]
  *     parameters:
  *       - in: path
@@ -809,11 +1263,120 @@ router.get('/product-specifications/by-store', require('../Controllers/ProductSp
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Unit ID
+ *       - in: query
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         example: "507f1f77bcf86cd799439012"
+ *         description: Store ID (required for security and validation)
  *     responses:
  *       200:
- *         description: Unit deleted
+ *         description: Unit deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Unit deleted successfully"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "تم حذف الوحدة بنجاح"
+ *       400:
+ *         description: Store ID is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Store ID is required"
+ *                 message:
+ *                   type: string
+ *                   example: "Please provide storeId as query parameter"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "يرجى تقديم معرف المتجر كمعامل استعلام"
  *       404:
  *         description: Unit not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Unit not found"
+ *                 message:
+ *                   type: string
+ *                   example: "Unit not found"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "الوحدة غير موجودة"
+ *       409:
+ *         description: Cannot delete - unit is being used by products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Cannot delete unit"
+ *                 message:
+ *                   type: string
+ *                   example: "Cannot delete unit. It is being used by 4 product(s)"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "لا يمكن حذف الوحدة. يتم استخدامها من قبل 4 منتج"
+ *                 details:
+ *                   type: object
+ *                   properties:
+ *                     connectedProducts:
+ *                       type: number
+ *                       example: 4
+ *                     productIds:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["507f1f77bcf86cd799439020", "507f1f77bcf86cd799439021"]
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Database connection failed"
+ *                 message:
+ *                   type: string
+ *                   example: "Error deleting unit"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "خطأ في حذف الوحدة"
  */
 
 /**

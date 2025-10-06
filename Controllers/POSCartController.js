@@ -139,6 +139,7 @@ exports.createPOSCart = async (req, res) => {
       store: storeId,
       sessionId: sessionId,
       cartName: 'Market POS Cart',
+      cartNameAr: 'سلة للبيع',
       customer: {}
     });
 
@@ -150,7 +151,8 @@ exports.createPOSCart = async (req, res) => {
       data: {
         cartId: posCart._id,
         sessionId: posCart.sessionId,
-        cartName: posCart.cartName
+        cartName: posCart.cartName,
+        cartNameAr: posCart.cartNameAr
       }
     });
 
@@ -194,11 +196,23 @@ exports.getPOSCart = async (req, res) => {
       });
     }
 
+    // Debug logging to check cart status
+    console.log(`🔍 POS Cart Debug - Cart ID: ${cart._id}`);
+    console.log(`🔍 POS Cart Debug - Cart Status: ${cart.status}`);
+    console.log(`🔍 POS Cart Debug - Cart Completed At: ${cart.completedAt}`);
+    console.log(`🔍 POS Cart Debug - Cart Updated At: ${cart.updatedAt}`);
+
     res.json({
       success: true,
       data: cart,
       message: `POS cart status: ${cart.status}`,
-      messageAr: `حالة سلة نقطة البيع: ${cart.status}`
+      messageAr: `حالة سلة نقطة البيع: ${cart.status}`,
+      debug: {
+        cartId: cart._id,
+        status: cart.status,
+        completedAt: cart.completedAt,
+        updatedAt: cart.updatedAt
+      }
     });
 
   } catch (error) {
@@ -860,7 +874,10 @@ exports.completePOSCart = async (req, res) => {
     }
 
     // Complete the cart
+    console.log(`🔄 POS Cart - Cart status before completion: ${cart.status}`);
     await cart.completeCart();
+    console.log(`✅ POS Cart - Cart status after completion: ${cart.status}`);
+    console.log(`✅ POS Cart - Cart completed at: ${cart.completedAt}`);
 
     // Calculate final amount paid by customer (after cart-level discounts, before shipping)
     const cartDiscountAmount = cart.discount?.type === 'percentage' ? 

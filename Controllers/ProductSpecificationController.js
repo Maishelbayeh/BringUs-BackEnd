@@ -214,21 +214,64 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const spec = await ProductSpecification.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Store ID is required',
+        message: 'Please provide storeId as query parameter',
+        messageAr: 'يرجى تقديم معرف المتجر كمعامل استعلام'
+      });
+    }
+    
+    // Check if specification exists and belongs to store
+    const spec = await ProductSpecification.findOne({ _id: id, store: storeId });
     if (!spec) {
       return res.status(404).json({ 
         success: false,
-        error: 'Product specification not found' 
+        error: 'Product specification not found',
+        message: 'Product specification not found',
+        messageAr: 'مواصفات المنتج غير موجودة'
       });
     }
+    
+    // Check if any products are using this specification
+    const Product = require('../Models/Product');
+    const productsUsingSpec = await Product.find({ 
+      store: storeId,
+      specifications: id 
+    });
+    
+    if (productsUsingSpec.length > 0) {
+      return res.status(409).json({ 
+        success: false,
+        error: 'Cannot delete specification',
+        message: `Cannot delete specification. It is being used by ${productsUsingSpec.length} product(s)`,
+        messageAr: `لا يمكن حذف المواصفة. يتم استخدامها من قبل ${productsUsingSpec.length} منتج`,
+        details: {
+          connectedProducts: productsUsingSpec.length,
+          productIds: productsUsingSpec.map(p => p._id)
+        }
+      });
+    }
+    
+    // Safe to delete
+    await ProductSpecification.findByIdAndDelete(id);
+    
     res.json({ 
       success: true,
-      message: 'Product specification deleted successfully' 
+      message: 'Product specification deleted successfully',
+      messageAr: 'تم حذف مواصفات المنتج بنجاح'
     });
   } catch (err) {
+    console.error('Delete product specification error:', err);
     res.status(500).json({ 
       success: false,
-      error: err.message 
+      error: err.message,
+      message: 'Error deleting product specification',
+      messageAr: 'خطأ في حذف مواصفات المنتج'
     });
   }
 };
@@ -239,7 +282,9 @@ exports.getByStoreId = async (req, res) => {
     if (!storeId) {
       return res.status(400).json({ 
         success: false,
-        error: 'storeId is required' 
+        error: 'storeId is required',
+        message: 'Store ID is required',
+        messageAr: 'معرف المتجر مطلوب'
       });
     }
     const specs = await mongoose.model('ProductSpecification').find({ store: storeId }).populate('category');
@@ -251,7 +296,45 @@ exports.getByStoreId = async (req, res) => {
   } catch (err) {
     res.status(500).json({ 
       success: false,
-      error: err.message 
+      error: err.message,
+      message: 'Error fetching product specifications',
+      messageAr: 'خطأ في جلب مواصفات المنتج'
+    });
+  }
+};
+
+// Get only active product specifications for a store
+exports.getActiveByStoreId = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    if (!storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'storeId is required',
+        message: 'Store ID is required',
+        messageAr: 'معرف المتجر مطلوب'
+      });
+    }
+    
+    const specs = await ProductSpecification.find({ 
+      store: storeId, 
+      isActive: true 
+    }).populate('category');
+    
+    res.json({
+      success: true,
+      message: 'Active product specifications retrieved successfully',
+      messageAr: 'تم جلب المواصفات النشطة بنجاح',
+      data: specs,
+      count: specs.length
+    });
+  } catch (err) {
+    console.error('Get active product specifications error:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message,
+      message: 'Error fetching active product specifications',
+      messageAr: 'خطأ في جلب المواصفات النشطة'
     });
   }
 }; 

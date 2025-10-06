@@ -123,7 +123,8 @@ exports.calculateProductPrice = async (req, res) => {
       if (!store) {
         return res.status(404).json({
           success: false,
-          message: 'Store not found'
+          message: 'Store not found',
+        messageAr: 'المتجر غير موجود'
         });
       }
       product = await Product.findOne({ _id: productId, store: store._id })
@@ -136,7 +137,8 @@ exports.calculateProductPrice = async (req, res) => {
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
     
@@ -204,9 +206,37 @@ exports.calculateProductPrice = async (req, res) => {
     
   } catch (error) {
     console.error('Calculate product price error:', error);
+    
+    // Handle specific error types
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${error.path}: ${error.value} is not a valid ${error.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${error.value} غير صحيح لـ ${error.path}`
+      });
+    }
+    
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => ({
+        field: e.path,
+        message: e.message,
+        value: e.value
+      }));
+      
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Some fields have invalid values',
+        messageAr: 'بعض الحقول تحتوي على قيم غير صحيحة',
+        details: errors
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error calculating product price',
+      messageAr: 'خطأ في حساب سعر المنتج',
       error: error.message
     });
   }
@@ -242,7 +272,8 @@ exports.getProductOptions = async (req, res) => {
       if (!store) {
         return res.status(404).json({
           success: false,
-          message: 'Store not found'
+          message: 'Store not found',
+        messageAr: 'المتجر غير موجود'
         });
       }
       product = await Product.findOne({ _id: productId, store: store._id })
@@ -255,7 +286,8 @@ exports.getProductOptions = async (req, res) => {
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
     
@@ -295,9 +327,21 @@ exports.getProductOptions = async (req, res) => {
     
   } catch (error) {
     console.error('Get product options error:', error);
+    
+    // Handle specific error types
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${error.path}: ${error.value} is not a valid ${error.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${error.value} غير صحيح لـ ${error.path}`
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error getting product options',
+      messageAr: 'خطأ في جلب خيارات المنتج',
       error: error.message
     });
   }
@@ -426,6 +470,7 @@ exports.getById = async (req, res) => {
       return res.status(404).json({ 
         success: false,
         message: 'Product not found',
+        messageAr: 'المنتج غير موجود',
         messageAr: 'المنتج غير موجود'
       });
     }
@@ -713,7 +758,48 @@ exports.create = async (req, res) => {
     });
 
   } catch (error) {
-    //CONSOLE.error('Create product error:', error);
+    console.error('Create product error:', error);
+    
+    // Handle specific error types
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${error.path}: ${error.value} is not a valid ${error.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${error.value} غير صحيح لـ ${error.path}`
+      });
+    }
+    
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => ({
+        field: e.path,
+        message: e.message,
+        value: e.value
+      }));
+      
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Some fields have invalid values',
+        messageAr: 'بعض الحقول تحتوي على قيم غير صحيحة',
+        details: errors
+      });
+    }
+    
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(409).json({
+        success: false,
+        error: 'Duplicate value',
+        message: `A product with this ${field} already exists`,
+        messageAr: `منتج بهذا ${field} موجود بالفعل`,
+        details: {
+          field: field,
+          value: error.keyValue[field]
+        }
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error creating product',
@@ -744,7 +830,8 @@ exports.update = async (req, res) => {
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
     
@@ -804,16 +891,8 @@ exports.update = async (req, res) => {
       });
     }
 
-    // Handle attributes - ensure it's a valid array
-    if (req.body.attributes) {
-      if (Array.isArray(req.body.attributes)) {
-        updateData.attributes = req.body.attributes.filter(attr => 
-          attr && typeof attr === 'object' && attr.name && attr.value
-        );
-      } else {
-        updateData.attributes = [];
-      }
-    }
+    // Remove attributes field to prevent validation errors
+    delete updateData.attributes;
     // Handle main image upload
     if (req.files && req.files.mainImage && req.files.mainImage[0]) {
       const result = await uploadToCloudflare(
@@ -861,7 +940,48 @@ exports.update = async (req, res) => {
       data: processedProduct
     });
   } catch (error) {
-    //CONSOLE.error('Update product error:', error);
+    console.error('Update product error:', error);
+    
+    // Handle specific error types
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${error.path}: ${error.value} is not a valid ${error.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${error.value} غير صحيح لـ ${error.path}`
+      });
+    }
+    
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => ({
+        field: e.path,
+        message: e.message,
+        value: e.value
+      }));
+      
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Some fields have invalid values',
+        messageAr: 'بعض الحقول تحتوي على قيم غير صحيحة',
+        details: errors
+      });
+    }
+    
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(409).json({
+        success: false,
+        error: 'Duplicate value',
+        message: `A product with this ${field} already exists`,
+        messageAr: `منتج بهذا ${field} موجود بالفعل`,
+        details: {
+          field: field,
+          value: error.keyValue[field]
+        }
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error updating product',
@@ -890,11 +1010,26 @@ exports.delete = async (req, res) => {
     
     res.json({ 
       success: true,
-      message: 'Product deleted successfully' 
+      message: 'Product deleted successfully',
+      messageAr: 'تم حذف المنتج بنجاح'
     });
   } catch (err) {
+    console.error('Delete product error:', err);
+    
+    // Handle specific error types
+    if (err.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${err.path}: ${err.value} is not a valid ${err.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${err.value} غير صحيح لـ ${err.path}`
+      });
+    }
+    
     res.status(500).json({ 
       success: false,
+      message: 'Error deleting product',
+      messageAr: 'خطأ في حذف المنتج',
       error: err.message 
     });
   }
@@ -922,6 +1057,7 @@ exports.createVariant = async (req, res) => {
       return res.status(404).json({ 
         success: false,
         error: 'Parent product not found',
+        messageAr: 'المنتج الرئيسي غير موجود',
         errorAr: 'المنتج الأب غير موجود'
       });
     }
@@ -1152,8 +1288,22 @@ exports.getByCategory = async (req, res) => {
       count: processedProducts.length
     });
   } catch (err) {
+    console.error('Error:', err);
+    
+    // Handle specific error types
+    if (err.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${err.path}: ${err.value} is not a valid ${err.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${err.value} غير صحيح لـ ${err.path}`
+      });
+    }
+    
     res.status(500).json({ 
       success: false,
+      message: 'Internal server error',
+      messageAr: 'خطأ في الخادم الداخلي',
       error: err.message 
     });
   }
@@ -1223,8 +1373,22 @@ exports.getWithFilters = async (req, res) => {
       }
     });
   } catch (err) {
+    console.error('Error:', err);
+    
+    // Handle specific error types
+    if (err.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${err.path}: ${err.value} is not a valid ${err.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${err.value} غير صحيح لـ ${err.path}`
+      });
+    }
+    
     res.status(500).json({ 
       success: false,
+      message: 'Internal server error',
+      messageAr: 'خطأ في الخادم الداخلي',
       error: err.message 
     });
   }
@@ -1262,8 +1426,22 @@ exports.getWithVariants = async (req, res) => {
       count: processedProducts.length
     });
   } catch (err) {
+    console.error('Error:', err);
+    
+    // Handle specific error types
+    if (err.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${err.path}: ${err.value} is not a valid ${err.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${err.value} غير صحيح لـ ${err.path}`
+      });
+    }
+    
     res.status(500).json({ 
       success: false,
+      message: 'Internal server error',
+      messageAr: 'خطأ في الخادم الداخلي',
       error: err.message 
     });
   }
@@ -1300,8 +1478,22 @@ exports.getVariantsOnly = async (req, res) => {
       count: processedVariants.length
     });
   } catch (err) {
+    console.error('Error:', err);
+    
+    // Handle specific error types
+    if (err.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${err.path}: ${err.value} is not a valid ${err.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${err.value} غير صحيح لـ ${err.path}`
+      });
+    }
+    
     res.status(500).json({ 
       success: false,
+      message: 'Internal server error',
+      messageAr: 'خطأ في الخادم الداخلي',
       error: err.message 
     });
   }
@@ -1531,9 +1723,21 @@ exports.getWithoutVariants = async (req, res) => {
     });
   } catch (error) {
     console.error('Get products without variants error:', error);
+    
+    // Handle specific error types
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${error.path}: ${error.value} is not a valid ${error.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${error.value} غير صحيح لـ ${error.path}`
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error fetching products',
+      messageAr: 'خطأ في جلب المنتجات',
       error: error.message
     });
   }
@@ -1636,9 +1840,21 @@ exports.getProductWithVariants = async (req, res) => {
     });
   } catch (error) {
     console.error('Get product with variants error:', error);
+    
+    // Handle specific error types
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${error.path}: ${error.value} is not a valid ${error.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${error.value} غير صحيح لـ ${error.path}`
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error fetching product details',
+      messageAr: 'خطأ في جلب تفاصيل المنتج',
       error: error.message
     });
   }
@@ -1672,7 +1888,8 @@ exports.getVariantDetails = async (req, res) => {
     if (!parentProduct) {
       return res.status(404).json({
         success: false,
-        error: 'Parent product not found'
+        error: 'Parent product not found',
+        messageAr: 'المنتج الرئيسي غير موجود'
       });
     }
 
@@ -1700,7 +1917,8 @@ exports.getVariantDetails = async (req, res) => {
     if (!variant) {
       return res.status(404).json({
         success: false,
-        error: 'Variant not found'
+        error: 'Variant not found',
+        messageAr: 'المتغير غير موجود'
       });
     }
 
@@ -1740,9 +1958,21 @@ exports.getVariantDetails = async (req, res) => {
     });
   } catch (error) {
     console.error('Get variant details error:', error);
+    
+    // Handle specific error types
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${error.path}: ${error.value} is not a valid ${error.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${error.value} غير صحيح لـ ${error.path}`
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error fetching variant details',
+      messageAr: 'خطأ في جلب تفاصيل المتغير',
       error: error.message
     });
   }
@@ -1767,7 +1997,8 @@ exports.addVariant = async (req, res) => {
     if (!parentProduct) {
       return res.status(404).json({ 
         success: false,
-        error: 'Parent product not found' 
+        error: 'Parent product not found',
+        messageAr: 'المنتج الرئيسي غير موجود' 
       });
     }
 
@@ -2044,7 +2275,8 @@ exports.deleteVariant = async (req, res) => {
     if (!parentProduct) {
       return res.status(404).json({ 
         success: false,
-        error: 'Parent product not found' 
+        error: 'Parent product not found',
+        messageAr: 'المنتج الرئيسي غير موجود' 
       });
     }
 
@@ -2053,7 +2285,8 @@ exports.deleteVariant = async (req, res) => {
     if (!variant) {
       return res.status(404).json({ 
         success: false,
-        error: 'Variant not found' 
+        error: 'Variant not found',
+        messageAr: 'المتغير غير موجود' 
       });
     }
 
@@ -2097,12 +2330,33 @@ exports.deleteVariant = async (req, res) => {
 exports.updateVariant = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
-    const { storeId, ...updateData } = req.body;
+    
+    // Clean and process the request body to handle duplicate fields and invalid data
+    const cleanedBody = { ...req.body };
+    
+    // Handle storeId extraction - it might be an array due to duplicate fields
+    let storeId;
+    if (Array.isArray(cleanedBody.storeId)) {
+      // If storeId is an array, take the first valid ObjectId
+      storeId = cleanedBody.storeId.find(id => id && typeof id === 'string' && id.length === 24);
+    } else if (typeof cleanedBody.storeId === 'string') {
+      storeId = cleanedBody.storeId;
+    } else {
+      storeId = null;
+    }
+    
+    // Remove storeId from the body to avoid conflicts
+    delete cleanedBody.storeId;
+    
+    // Extract other fields
+    const updateData = cleanedBody;
     
     console.log('🔍 updateVariant - Received data:', {
       productId,
       variantId,
       storeId,
+      storeIdType: typeof storeId,
+      storeIdIsArray: Array.isArray(storeId),
       updateData: Object.keys(updateData)
     });
     console.log('🔍 updateVariant - Full updateData:', updateData);
@@ -2114,19 +2368,282 @@ exports.updateVariant = async (req, res) => {
     console.log('🔍 updateVariant - ProductLabels before processing:', updateData.productLabels);
     
     if (!storeId) {
-      return res.status(400).json({ 
+      // Try to get storeId from token if not provided or invalid
+      const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
+      const tokenStoreId = await getStoreIdFromHeaders(req.headers);
+      
+      if (tokenStoreId && mongoose.Types.ObjectId.isValid(tokenStoreId)) {
+        storeId = tokenStoreId;
+        console.log('🔍 Using storeId from token:', storeId);
+      } else {
+        return res.status(400).json({ 
+          success: false,
+          error: 'Store ID is required',
+          message: 'Please provide storeId in request body',
+          messageAr: 'معرف المتجر مطلوب'
+        });
+      }
+    }
+
+    // Validate ObjectId fields
+    const mongoose = require('mongoose');
+    
+    // Validate productId
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({
         success: false,
-        error: 'Store ID is required',
-        message: 'Please provide storeId in request body'
+        error: 'Invalid product ID format',
+        message: 'Product ID must be a valid MongoDB ObjectId',
+        messageAr: 'معرف المنتج غير صحيح'
       });
     }
+    
+    // Validate variantId
+    if (!mongoose.Types.ObjectId.isValid(variantId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid variant ID format',
+        message: 'Variant ID must be a valid MongoDB ObjectId',
+        messageAr: 'معرف المتغير غير صحيح'
+      });
+    }
+    
+    // Validate storeId - if invalid, try to get from token
+    if (!mongoose.Types.ObjectId.isValid(storeId)) {
+      // Try to get storeId from token if provided value is invalid
+      const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
+      const tokenStoreId = await getStoreIdFromHeaders(req.headers);
+      
+      if (tokenStoreId && mongoose.Types.ObjectId.isValid(tokenStoreId)) {
+        // Use storeId from token
+        req.body.storeId = tokenStoreId;
+        storeId = tokenStoreId;
+        console.log('🔍 Using storeId from token:', storeId);
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid store ID format',
+          message: 'Store ID must be a valid MongoDB ObjectId',
+          messageAr: 'معرف المتجر غير صحيح'
+        });
+      }
+    }
+
+    // Validate and clean ObjectId fields in updateData
+    if (updateData.categoryId && !mongoose.Types.ObjectId.isValid(updateData.categoryId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid category ID format',
+        message: 'Category ID must be a valid MongoDB ObjectId',
+        messageAr: 'معرف الفئة غير صحيح'
+      });
+    }
+
+    if (updateData.unitId && !mongoose.Types.ObjectId.isValid(updateData.unitId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid unit ID format',
+        message: 'Unit ID must be a valid MongoDB ObjectId',
+        messageAr: 'معرف الوحدة غير صحيح'
+      });
+    }
+
+    // Validate specifications array if provided
+    if (updateData.specifications && Array.isArray(updateData.specifications)) {
+      for (const specId of updateData.specifications) {
+        if (!mongoose.Types.ObjectId.isValid(specId)) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid specification ID format',
+            message: `Specification ID "${specId}" must be a valid MongoDB ObjectId`,
+            messageAr: `معرف المواصفة "${specId}" غير صحيح`
+          });
+        }
+      }
+    }
+
+    // Validate productLabels array if provided
+    if (updateData.productLabels && Array.isArray(updateData.productLabels)) {
+      for (const labelId of updateData.productLabels) {
+        if (!mongoose.Types.ObjectId.isValid(labelId)) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid product label ID format',
+            message: `Product label ID "${labelId}" must be a valid MongoDB ObjectId`,
+            messageAr: `معرف تسمية المنتج "${labelId}" غير صحيح`
+          });
+        }
+      }
+    }
+
+    // Validate specificationValues if provided
+    if (updateData.specificationValues && Array.isArray(updateData.specificationValues)) {
+      for (const specValue of updateData.specificationValues) {
+        if (specValue.specificationId && !mongoose.Types.ObjectId.isValid(specValue.specificationId)) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid specification ID in specification values',
+            message: `Specification ID "${specValue.specificationId}" must be a valid MongoDB ObjectId`,
+            messageAr: `معرف المواصفة "${specValue.specificationId}" غير صحيح`
+          });
+        }
+      }
+    }
+
+    // Clean and process specific fields that might cause issues
+    const processedUpdateData = { ...updateData };
+    
+    // Handle categories field - ensure it's an array
+    if (processedUpdateData.categories) {
+      if (typeof processedUpdateData.categories === 'string') {
+        try {
+          processedUpdateData.categories = JSON.parse(processedUpdateData.categories);
+        } catch (error) {
+          console.log('🔍 Error parsing categories:', error);
+          processedUpdateData.categories = [processedUpdateData.categories];
+        }
+      }
+      if (!Array.isArray(processedUpdateData.categories)) {
+        processedUpdateData.categories = [processedUpdateData.categories];
+      }
+    }
+    
+    // Handle productLabels field - ensure it's an array
+    if (processedUpdateData.productLabels) {
+      if (typeof processedUpdateData.productLabels === 'string') {
+        try {
+          processedUpdateData.productLabels = JSON.parse(processedUpdateData.productLabels);
+        } catch (error) {
+          console.log('🔍 Error parsing productLabels:', error);
+          processedUpdateData.productLabels = [processedUpdateData.productLabels];
+        }
+      }
+      if (!Array.isArray(processedUpdateData.productLabels)) {
+        processedUpdateData.productLabels = [processedUpdateData.productLabels];
+      }
+    }
+    
+    // Handle specifications field - ensure it's an array
+    if (processedUpdateData.specifications) {
+      if (typeof processedUpdateData.specifications === 'string') {
+        try {
+          processedUpdateData.specifications = JSON.parse(processedUpdateData.specifications);
+        } catch (error) {
+          console.log('🔍 Error parsing specifications:', error);
+          processedUpdateData.specifications = [processedUpdateData.specifications];
+        }
+      }
+      if (!Array.isArray(processedUpdateData.specifications)) {
+        processedUpdateData.specifications = [processedUpdateData.specifications];
+      }
+    }
+    
+    // Handle barcodes field - ensure it's an array
+    if (processedUpdateData.barcodes) {
+      if (typeof processedUpdateData.barcodes === 'string') {
+        try {
+          processedUpdateData.barcodes = JSON.parse(processedUpdateData.barcodes);
+        } catch (error) {
+          console.log('🔍 Error parsing barcodes:', error);
+          processedUpdateData.barcodes = [processedUpdateData.barcodes];
+        }
+      }
+      if (!Array.isArray(processedUpdateData.barcodes)) {
+        processedUpdateData.barcodes = [processedUpdateData.barcodes];
+      }
+    }
+    
+    // Handle colors field - ensure it's an array
+    if (processedUpdateData.colors) {
+      if (typeof processedUpdateData.colors === 'string') {
+        try {
+          processedUpdateData.colors = JSON.parse(processedUpdateData.colors);
+        } catch (error) {
+          console.log('🔍 Error parsing colors:', error);
+          processedUpdateData.colors = [];
+        }
+      }
+      if (!Array.isArray(processedUpdateData.colors)) {
+        processedUpdateData.colors = [];
+      }
+    }
+    
+    // Handle allColors field - ensure it's an array
+    if (processedUpdateData.allColors) {
+      if (typeof processedUpdateData.allColors === 'string') {
+        try {
+          processedUpdateData.allColors = JSON.parse(processedUpdateData.allColors);
+        } catch (error) {
+          console.log('🔍 Error parsing allColors:', error);
+          processedUpdateData.allColors = [];
+        }
+      }
+      if (!Array.isArray(processedUpdateData.allColors)) {
+        processedUpdateData.allColors = [];
+      }
+    }
+    
+    // Handle specificationValues field - ensure it's an array
+    if (processedUpdateData.specificationValues) {
+      if (typeof processedUpdateData.specificationValues === 'string') {
+        try {
+          processedUpdateData.specificationValues = JSON.parse(processedUpdateData.specificationValues);
+        } catch (error) {
+          console.log('🔍 Error parsing specificationValues:', error);
+          processedUpdateData.specificationValues = [];
+        }
+      }
+      if (!Array.isArray(processedUpdateData.specificationValues)) {
+        processedUpdateData.specificationValues = [];
+      }
+    }
+    
+    // Remove fields that shouldn't be updated directly
+    delete processedUpdateData._id;
+    delete processedUpdateData.__v;
+    delete processedUpdateData.createdAt;
+    delete processedUpdateData.updatedAt;
+    delete processedUpdateData.id;
+    delete processedUpdateData.finalPrice;
+    delete processedUpdateData.discountPercentage;
+    delete processedUpdateData.stockStatus;
+    delete processedUpdateData.specificationStockStatus;
+    delete processedUpdateData.allColors;
+    delete processedUpdateData.colorOptionsCount;
+    delete processedUpdateData.variantsCount;
+    delete processedUpdateData.activeVariantsCount;
+    delete processedUpdateData.totalStock;
+    delete processedUpdateData.totalSpecificationQuantities;
+    delete processedUpdateData.isParent;
+    delete processedUpdateData.videoId;
+    delete processedUpdateData.videoPlatform;
+    delete processedUpdateData.videoEmbedUrl;
+    delete processedUpdateData.isActiveAr;
+    delete processedUpdateData.isFeaturedAr;
+    delete processedUpdateData.isOnSaleAr;
+    delete processedUpdateData.visibilityAr;
+    delete processedUpdateData.hasVariantsAr;
+    delete processedUpdateData.isParentAr;
+    delete processedUpdateData.stockStatusAr;
+    delete processedUpdateData.specificationStockStatusAr;
+    delete processedUpdateData.maintainStock;
+    delete processedUpdateData.selectedSpecifications;
+    delete processedUpdateData.newBarcode;
+    delete processedUpdateData.tags;
+    delete processedUpdateData.unitId;
+    delete processedUpdateData.subcategoryId;
+    delete processedUpdateData.originalPrice;
+    delete processedUpdateData.attributes; // Remove attributes to prevent validation errors
+    
+    console.log('🔍 updateVariant - Processed updateData:', processedUpdateData);
 
     // Check if parent product exists and belongs to store
     const parentProduct = await Product.findOne({ _id: productId, store: storeId });
     if (!parentProduct) {
       return res.status(404).json({ 
         success: false,
-        error: 'Parent product not found' 
+        error: 'Parent product not found',
+        messageAr: 'المنتج الرئيسي غير موجود' 
       });
     }
 
@@ -2135,7 +2652,8 @@ exports.updateVariant = async (req, res) => {
     if (!variant) {
       return res.status(404).json({ 
         success: false,
-        error: 'Variant not found' 
+        error: 'Variant not found',
+        messageAr: 'المتغير غير موجود' 
       });
     }
 
@@ -2410,7 +2928,7 @@ exports.updateVariant = async (req, res) => {
     // Update the variant
     const updatedVariant = await Product.findByIdAndUpdate(
       variantId,
-      { ...updateData },
+      { ...processedUpdateData },
       { new: true, runValidators: true }
     ).populate('category')
      .populate('categories')
@@ -2439,13 +2957,66 @@ exports.updateVariant = async (req, res) => {
     res.json({
       success: true,
       message: 'Variant updated successfully',
+      messageAr: 'تم تحديث المتغير بنجاح',
       data: processedVariant
     });
   } catch (err) {
     console.error('Update variant error:', err);
+    
+    // Handle specific Mongoose validation errors
+    if (err.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        message: `Invalid ${err.path}: ${err.value} is not a valid ${err.kind}`,
+        messageAr: `تنسيق بيانات غير صحيح: ${err.value} غير صحيح لـ ${err.path}`,
+        details: {
+          field: err.path,
+          value: err.value,
+          expectedType: err.kind
+        }
+      });
+    }
+    
+    // Handle validation errors
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => ({
+        field: e.path,
+        message: e.message,
+        value: e.value
+      }));
+      
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Some fields have invalid values',
+        messageAr: 'بعض الحقول تحتوي على قيم غير صحيحة',
+        details: errors
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[0];
+      return res.status(400).json({
+        success: false,
+        error: 'Duplicate value',
+        message: `A variant with this ${field} already exists`,
+        messageAr: `متغير بهذا ${field} موجود بالفعل`,
+        details: {
+          field: field,
+          value: err.keyValue[field]
+        }
+      });
+    }
+    
+    // Generic error
     res.status(500).json({ 
       success: false,
-      error: err.message 
+      error: 'Internal server error',
+      message: 'An error occurred while updating the variant',
+      messageAr: 'حدث خطأ أثناء تحديث المتغير',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
 }; 
@@ -2576,6 +3147,7 @@ exports.getVariantById = async (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'Parent product not found',
+        messageAr: 'المنتج الرئيسي غير موجود',
         messageAr: 'المنتج الرئيسي غير موجود'
       });
     }
@@ -2593,6 +3165,7 @@ exports.getVariantById = async (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'Variant not found',
+        messageAr: 'المتغير غير موجود',
         messageAr: 'المتغير غير موجود'
       });
     }
@@ -2706,7 +3279,8 @@ exports.addColors = async (req, res) => {
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
 
@@ -2749,6 +3323,7 @@ exports.addColors = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error adding colors',
+      messageAr: 'خطأ في إضافة الألوان',
       error: error.message
     });
   }
@@ -2779,7 +3354,8 @@ exports.removeColors = async (req, res) => {
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
 
@@ -2822,6 +3398,7 @@ exports.removeColors = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error removing colors',
+      messageAr: 'خطأ في إزالة الألوان',
       error: error.message
     });
   }
@@ -2852,7 +3429,8 @@ exports.replaceColors = async (req, res) => {
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
 
@@ -2881,6 +3459,7 @@ exports.replaceColors = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error replacing colors',
+      messageAr: 'خطأ في استبدال الألوان',
       error: error.message
     });
   }
@@ -2904,7 +3483,8 @@ exports.incrementViews = async (req, res) => {
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
 
@@ -2940,6 +3520,7 @@ exports.incrementViews = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error incrementing product views',
+      messageAr: 'خطأ في زيادة مشاهدات المنتج',
       error: error.message
     });
   }
@@ -2970,7 +3551,8 @@ exports.incrementViews = async (req, res) => {
 //     if (!product) {
 //       return res.status(404).json({
 //         success: false,
-//         message: 'Product not found'
+//         message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
 //       });
 //     }
 
@@ -3074,7 +3656,8 @@ exports.updateReview = async (req, res) => {
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
 
@@ -3089,7 +3672,8 @@ exports.updateReview = async (req, res) => {
     if (!existingReview) {
       return res.status(404).json({
         success: false,
-        message: 'Review not found'
+        message: 'Review not found',
+        messageAr: 'التقييم غير موجود'
       });
     }
 
@@ -3127,6 +3711,7 @@ exports.updateReview = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating review',
+      messageAr: 'خطأ في تحديث التقييم',
       error: error.message
     });
   }
@@ -3150,7 +3735,8 @@ exports.deleteReview = async (req, res) => {
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
 
@@ -3165,7 +3751,8 @@ exports.deleteReview = async (req, res) => {
     if (!existingReview) {
       return res.status(404).json({
         success: false,
-        message: 'Review not found'
+        message: 'Review not found',
+        messageAr: 'التقييم غير موجود'
       });
     }
 
@@ -3197,6 +3784,7 @@ exports.deleteReview = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting review',
+      messageAr: 'خطأ في حذف التقييم',
       error: error.message
     });
   }
@@ -3222,7 +3810,8 @@ exports.verifyReview = async (req, res) => {
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
 
@@ -3244,6 +3833,7 @@ exports.verifyReview = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error verifying review',
+      messageAr: 'خطأ في التحقق من التقييم',
       error: error.message
     });
   }
@@ -3370,6 +3960,7 @@ exports.getAlmostSoldProducts = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching almost sold products',
+      messageAr: 'خطأ في جلب المنتجات قاربة النفاد',
       error: error.message
     });
   }

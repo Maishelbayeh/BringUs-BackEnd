@@ -759,10 +759,33 @@ router.delete('/:productId/variants/:variantId', [
  *       404:
  *         description: Product or variant not found
  */
+// Middleware to auto-set storeId from token if not provided or invalid
+const autoSetStoreId = async (req, res, next) => {
+  try {
+    const mongoose = require('mongoose');
+    
+    // If storeId is not provided or is invalid, try to get from token
+    if (!req.body.storeId || !mongoose.Types.ObjectId.isValid(req.body.storeId)) {
+      const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
+      const tokenStoreId = await getStoreIdFromHeaders(req.headers);
+      
+      if (tokenStoreId && mongoose.Types.ObjectId.isValid(tokenStoreId)) {
+        req.body.storeId = tokenStoreId;
+        console.log('🔍 Auto-set storeId from token:', tokenStoreId);
+      }
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Auto-set storeId error:', error);
+    next(); // Continue even if auto-set fails
+  }
+};
+
 router.put('/:productId/variants/:variantId', upload.fields([
   { name: 'mainImage', maxCount: 1 },
   { name: 'images', maxCount: 10 }
-]), [
+]), autoSetStoreId, [
   body('storeId').isMongoId().withMessage('Valid store ID is required'),
   body('nameAr').optional().notEmpty().withMessage('Arabic name cannot be empty'),
   body('nameEn').optional().notEmpty().withMessage('English name cannot be empty'),
