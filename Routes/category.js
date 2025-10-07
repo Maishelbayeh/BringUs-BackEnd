@@ -31,6 +31,7 @@ router.get('/', async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -38,6 +39,7 @@ router.get('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching categories',
+      messageAr: 'خطأ في جلب الفئات',
       error: error.message
     });
   }
@@ -62,6 +64,7 @@ router.get('/tree', async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -69,6 +72,7 @@ router.get('/tree', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching category tree',
+      messageAr: 'خطأ في جلب شجرة الفئات',
       error: error.message
     });
   }
@@ -93,6 +97,7 @@ router.get('/list', async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -100,6 +105,7 @@ router.get('/list', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching category list',
+      messageAr: 'خطأ في جلب قائمة الفئات',
       error: error.message
     });
   }
@@ -124,6 +130,7 @@ router.get('/by-parent', async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -131,6 +138,7 @@ router.get('/by-parent', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching categories by parent',
+      messageAr: 'خطأ في جلب الفئات حسب الفئة الأب',
       error: error.message
     });
   }
@@ -147,7 +155,8 @@ router.get('/slug/:slug', async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Store ID is required',
-        message: 'Please provide storeId in query parameters'
+        message: 'Please provide storeId in query parameters',
+        messageAr: 'يرجى تقديم معرف المتجر في معاملات الاستعلام'
       });
     }
 
@@ -160,7 +169,8 @@ router.get('/slug/:slug', async (req, res) => {
     if (!category) {
       return res.status(404).json({
         success: false,
-        message: 'Category not found'
+        message: 'Category not found',
+        messageAr: 'الفئة غير موجودة'
       });
     }
 
@@ -181,6 +191,7 @@ router.get('/slug/:slug', async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -188,6 +199,7 @@ router.get('/slug/:slug', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching category',
+      messageAr: 'خطأ في جلب الفئة',
       error: error.message
     });
   }
@@ -212,6 +224,7 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -219,6 +232,7 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching category',
+      messageAr: 'خطأ في جلب الفئة',
       error: error.message
     });
   }
@@ -243,6 +257,7 @@ router.get('/:id/details', async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -250,6 +265,7 @@ router.get('/:id/details', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching category details',
+      messageAr: 'خطأ في جلب تفاصيل الفئة',
       error: error.message
     });
   }
@@ -286,7 +302,8 @@ router.post('/', [
     if (!store) {
       return res.status(404).json({
         success: false,
-        message: 'Store not found'
+        message: 'Store not found',
+        messageAr: 'المتجر غير موجود'
       });
     }
 
@@ -299,7 +316,8 @@ router.post('/', [
       if (!parentCategory) {
         return res.status(400).json({
           success: false,
-          message: 'Parent category not found or does not belong to this store'
+          message: 'Parent category not found or does not belong to this store',
+        messageAr: 'الفئة الأب غير موجودة أو لا تنتمي لهذا المتجر'
         });
       }
     }
@@ -318,6 +336,7 @@ router.post('/', [
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -325,6 +344,7 @@ router.post('/', [
     res.status(500).json({
       success: false,
       message: 'Error creating category',
+      messageAr: 'خطأ في إنشاء الفئة',
       error: error.message
     });
   }
@@ -361,7 +381,8 @@ router.put('/:id', [
     if (!store) {
       return res.status(404).json({
         success: false,
-        message: 'Store not found'
+        message: 'Store not found',
+        messageAr: 'المتجر غير موجود'
       });
     }
 
@@ -370,7 +391,8 @@ router.put('/:id', [
       if (req.body.parent === req.params.id) {
         return res.status(400).json({
           success: false,
-          message: 'Category cannot be its own parent'
+          message: 'Category cannot be its own parent',
+        messageAr: 'لا يمكن للفئة أن تكون أبًا لنفسها'
         });
       }
 
@@ -381,7 +403,8 @@ router.put('/:id', [
       if (!parentCategory) {
         return res.status(400).json({
           success: false,
-          message: 'Parent category not found or does not belong to this store'
+          message: 'Parent category not found or does not belong to this store',
+        messageAr: 'الفئة الأب غير موجودة أو لا تنتمي لهذا المتجر'
         });
       }
     }
@@ -400,6 +423,7 @@ router.put('/:id', [
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -407,6 +431,7 @@ router.put('/:id', [
     res.status(500).json({
       success: false,
       message: 'Error updating category',
+      messageAr: 'خطأ في تحديث الفئة',
       error: error.message
     });
   }
@@ -425,7 +450,8 @@ router.delete('/:id', [
     if (!storeId) {
       return res.status(400).json({
         success: false,
-        message: 'Store ID is required'
+        message: 'Store ID is required',
+        messageAr: 'معرف المتجر مطلوب'
       });
     }
 
@@ -437,7 +463,8 @@ router.delete('/:id', [
     if (hasChildren) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot delete category with subcategories'
+        message: 'Cannot delete category with subcategories',
+        messageAr: 'لا يمكن حذف فئة تحتوي على فئات فرعية'
       });
     }
 
@@ -449,7 +476,8 @@ router.delete('/:id', [
     if (hasProducts) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot delete category with products'
+        message: 'Cannot delete category with products',
+        messageAr: 'لا يمكن حذف فئة تحتوي على منتجات'
       });
     }
 
@@ -467,6 +495,7 @@ router.delete('/:id', [
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -474,6 +503,7 @@ router.delete('/:id', [
     res.status(500).json({
       success: false,
       message: 'Error deleting category',
+      messageAr: 'خطأ في حذف الفئة',
       error: error.message
     });
   }
@@ -490,7 +520,8 @@ router.get('/featured', async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Store ID is required',
-        message: 'Please provide storeId in query parameters'
+        message: 'Please provide storeId in query parameters',
+        messageAr: 'يرجى تقديم معرف المتجر في معاملات الاستعلام'
       });
     }
 
@@ -520,6 +551,7 @@ router.get('/featured', async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -527,6 +559,7 @@ router.get('/featured', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching featured categories',
+      messageAr: 'خطأ في جلب الفئات المميزة',
       error: error.message
     });
   }
@@ -607,7 +640,8 @@ router.get('/store/:storeId', async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Store ID is required',
-        message: 'Please provide storeId in the URL parameter'
+        message: 'Please provide storeId in the URL parameter',
+        messageAr: 'يرجى تقديم معرف المتجر في معامل URL'
       });
     }
     const store = await Store.findById(storeId);
@@ -615,7 +649,8 @@ router.get('/store/:storeId', async (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'Store not found',
-        message: 'The specified store does not exist'
+        message: 'The specified store does not exist',
+        messageAr: 'المتجر المحدد غير موجود'
       });
     }
     const categories = await Category.find({ store: storeId })
@@ -639,6 +674,7 @@ router.get('/store/:storeId', async (req, res) => {
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -663,7 +699,11 @@ router.post('/upload-image', [protect, authorize('admin', 'superadmin')], upload
   try {
     const { storeId } = req.body;
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No file uploaded',
+        messageAr: 'لم يتم رفع ملف'
+      });
     }
     // رفع الصورة إلى Cloudflare R2
     const folder = storeId ? `categories/${storeId}` : 'categories';
@@ -682,6 +722,7 @@ router.post('/upload-image', [protect, authorize('admin', 'superadmin')], upload
       return res.status(400).json({ 
         success: false,
         error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
         details: validationErrors
       });
     }
@@ -689,7 +730,9 @@ router.post('/upload-image', [protect, authorize('admin', 'superadmin')], upload
     res.status(500).json({ 
       success: false, 
       error: 'Upload failed',
-      message: err.message 
+      message: 'Error uploading category image',
+      messageAr: 'خطأ في رفع صورة الفئة',
+      details: err.message 
     });
   }
 });

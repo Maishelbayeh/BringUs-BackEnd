@@ -40,7 +40,7 @@ exports.getById = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { titleAr, titleEn, values, category, storeId } = req.body;
+    const { titleAr, titleEn, values, category, storeId, sortOrder, isActive } = req.body;
     
     if (!titleAr || !titleEn || !values || !Array.isArray(values) || values.length === 0) {
       return res.status(400).json({ 
@@ -90,7 +90,9 @@ exports.create = async (req, res) => {
       titleEn,
       values,
       category,
-      store: storeId
+      store: storeId,
+      sortOrder: sortOrder !== undefined ? sortOrder : 0,
+      isActive: isActive !== undefined ? isActive : true
     };
 
     const spec = new ProductSpecification(specData);
@@ -132,7 +134,7 @@ exports.update = async (req, res) => {
   try {
 
     const { id } = req.params;
-    const { titleAr, titleEn, values, category, storeId, isActive } = req.body;
+    const { titleAr, titleEn, values, category, storeId, isActive, sortOrder } = req.body;
     
     if (!storeId) {
       return res.status(400).json({ 
@@ -166,7 +168,7 @@ exports.update = async (req, res) => {
       }
     }
 
-    const updateData = { titleAr, titleEn, values, category , isActive};
+    const updateData = { titleAr, titleEn, values, category, isActive, sortOrder };
     
     const spec = await ProductSpecification.findOneAndUpdate(
       { _id: id, store: storeId }, 

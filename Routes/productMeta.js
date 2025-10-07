@@ -1503,6 +1503,7 @@ router.get('/stores/:storeId/categories/tree', CategoryController.getCategoryTre
 router.get('/product-labels', ProductLabelController.getAll);
 router.get('/product-labels/:id', ProductLabelController.getById);
 router.get('/stores/:storeId/product-labels', ProductLabelController.getByStoreId);
+router.get('/stores/:storeId/product-labels/active', ProductLabelController.getActiveByStoreId);
 router.post('/product-labels', ProductLabelController.create);
 router.put('/product-labels/:id', ProductLabelController.update);
 router.delete('/product-labels/:id', ProductLabelController.delete);
@@ -1510,6 +1511,7 @@ router.delete('/product-labels/:id', ProductLabelController.delete);
 // ProductSpecification routes
 router.get('/product-specifications', ProductSpecificationController.getAll);
 router.get('/product-specifications/:id', ProductSpecificationController.getById);
+router.get('/stores/:storeId/product-specifications/active', ProductSpecificationController.getActiveByStoreId);
 router.post('/product-specifications', ProductSpecificationController.create);
 router.put('/product-specifications/:id', ProductSpecificationController.update);
 router.delete('/product-specifications/:id', ProductSpecificationController.delete);
@@ -1524,6 +1526,7 @@ router.delete('/product-specifications/:id', ProductSpecificationController.dele
 // Unit routes
 router.get('/units', UnitController.getAll);
 router.get('/units/:id', UnitController.getById);
+router.get('/stores/:storeId/units/active', UnitController.getActiveByStoreId);
 router.post('/units', UnitController.create);
 router.put('/units/:id', UnitController.update);
 router.delete('/units/:id', UnitController.delete);

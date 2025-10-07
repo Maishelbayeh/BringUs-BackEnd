@@ -31,7 +31,8 @@ const setCurrentStoreAndCheckPermissions = async (req, res, next) => {
     if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
       return res.status(403).json({
         success: false,
-        message: 'Admin access required'
+        message: 'Admin access required',
+        messageAr: 'مطلوب وصول المسؤول'
       });
     }
 
@@ -63,7 +64,8 @@ const setCurrentStoreAndCheckPermissions = async (req, res, next) => {
       } else {
         return res.status(403).json({
           success: false,
-          message: 'No store access found'
+          message: 'No store access found',
+          messageAr: 'لا يوجد وصول للمتجر'
         });
       }
     }
@@ -72,7 +74,8 @@ const setCurrentStoreAndCheckPermissions = async (req, res, next) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error',
+      messageAr: 'خطأ في الخادم'
     });
   }
 };

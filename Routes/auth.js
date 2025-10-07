@@ -117,6 +117,8 @@ router.post('/register', [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -130,7 +132,8 @@ router.post('/register', [
       if (!storeExists) {
         return res.status(400).json({
           success: false,
-          message: 'Store not found'
+          message: 'Store not found',
+          messageAr: 'المتجر غير موجود'
         });
       }
     }
@@ -146,7 +149,8 @@ router.post('/register', [
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: 'User already exists with this email in this store with this role'
+        message: 'User already exists with this email in this store with this role',
+        messageAr: 'المستخدم موجود بالفعل بهذا البريد الإلكتروني في هذا المتجر بهذا الدور'
       });
     }
 
@@ -159,7 +163,8 @@ router.post('/register', [
       if (existingAdminUser) {
         return res.status(409).json({
           success: false,
-          message: `User with ${role} role already exists with this email`
+          message: `User with ${role} role already exists with this email`,
+          messageAr: `مستخدم بدور ${role === 'admin' ? 'مسؤول' : 'مسؤول عام'} موجود بالفعل بهذا البريد الإلكتروني`
         });
       }
     }
@@ -241,6 +246,7 @@ router.post('/register', [
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
+      messageAr: 'تم تسجيل المستخدم بنجاح',
       token,
       user: {
         id: user._id,
@@ -256,7 +262,10 @@ router.post('/register', [
         sent: emailVerificationSent,
         message: emailVerificationSent 
           ? 'Email verification OTP sent successfully' 
-          : emailVerificationError || 'Email verification not sent'
+          : emailVerificationError || 'Email verification not sent',
+        messageAr: emailVerificationSent 
+          ? 'تم إرسال رمز التحقق من البريد الإلكتروني بنجاح' 
+          : 'لم يتم إرسال رمز التحقق من البريد الإلكتروني'
       }
     });
   } catch (error) {
@@ -264,6 +273,7 @@ router.post('/register', [
     res.status(500).json({
       success: false,
       message: 'Error registering user',
+      messageAr: 'خطأ في تسجيل المستخدم',
       error: error.message
     });
   }
@@ -387,7 +397,8 @@ router.post('/login', [
         console.log(`❌ Store not found with slug: ${storeSlug}`);
         return res.status(400).json({
           success: false,
-          message: 'Store not found'
+          message: 'Store not found',
+          messageAr: 'المتجر غير موجود'
         });
       }
       
@@ -426,6 +437,7 @@ router.post('/login', [
           return res.status(400).json({
             success: false,
             message: 'User not found in this store',
+            messageAr: 'المستخدم غير موجود في هذا المتجر',
             availableAccounts: allUsers.map(u => ({
               role: u.role,
               storeId: u.store ? u.store._id : null,
@@ -441,7 +453,8 @@ router.post('/login', [
       
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid email or password',
+        messageAr: 'بريد إلكتروني أو كلمة مرور غير صحيحة'
       });
     }
        
@@ -453,7 +466,8 @@ router.post('/login', [
     if (!isPasswordCorrect) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid email or password',
+        messageAr: 'بريد إلكتروني أو كلمة مرور غير صحيحة'
       });
     }
 
@@ -461,14 +475,16 @@ router.post('/login', [
     if (!user.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'Account is deactivated'
+        message: 'Account is deactivated',
+        messageAr: 'الحساب معطل'
       });
     }
 
     if(user.isEmailVerified == false){
       return res.status(401).json({
         success: false,
-        message: 'Email is not verified'
+        message: 'Email is not verified',
+        messageAr: 'البريد الإلكتروني غير مؤكد'
       });
     }
 
@@ -636,6 +652,7 @@ router.post('/login', [
     res.status(200).json({
       success: true,
       message: 'Login successful',
+      messageAr: 'تم تسجيل الدخول بنجاح',
       token,
       redirectUrl, // Add redirect URL based on role
       user: {
@@ -662,6 +679,7 @@ router.post('/login', [
     res.status(500).json({
       success: false,
       message: 'Error logging in',
+      messageAr: 'خطأ في تسجيل الدخول',
       error: error.message
     });
   }
@@ -768,6 +786,7 @@ router.post('/check-email', [
       return res.status(200).json({
         success: true,
         message: 'Email check completed',
+      messageAr: 'تم التحقق من البريد الإلكتروني',
         email,
         exists: false,
         accounts: []
@@ -805,6 +824,7 @@ router.post('/check-email', [
     return res.status(200).json({
       success: true,
       message: 'Email check completed',
+      messageAr: 'تم التحقق من البريد الإلكتروني',
       email,
       exists: filteredAccounts.length > 0,
       accounts: filteredAccounts,
@@ -816,6 +836,7 @@ router.post('/check-email', [
     res.status(500).json({
       success: false,
       message: 'Error checking email',
+      messageAr: 'خطأ في التحقق من البريد الإلكتروني',
       error: error.message
     });
   }
@@ -940,7 +961,8 @@ router.post('/login-any', [
     if (activeUsers.length === 0) {
       return res.status(401).json({
         success: false,
-        message: 'No active accounts found'
+        message: 'No active accounts found',
+        messageAr: 'لا توجد حسابات نشطة'
       });
     }
 
@@ -977,6 +999,7 @@ router.post('/login-any', [
     return res.status(200).json({
       success: true,
       message: 'Login successful',
+      messageAr: 'تم تسجيل الدخول بنجاح',
       email,
       accounts,
       totalAccounts: accounts.length
@@ -987,6 +1010,7 @@ router.post('/login-any', [
     res.status(500).json({
       success: false,
       message: 'Error logging in',
+      messageAr: 'خطأ في تسجيل الدخول',
       error: error.message
     });
   }
@@ -1027,7 +1051,8 @@ router.get('/me', async (req, res) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Access denied. No token provided.'
+        message: 'Access denied. No token provided.',
+        messageAr: 'الوصول مرفوض. لم يتم توفير رمز'
       });
     }
 
@@ -1038,7 +1063,8 @@ router.get('/me', async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token'
+        message: 'Invalid token',
+        messageAr: 'رمز غير صالح'
       });
     }
 
@@ -1202,7 +1228,8 @@ router.post('/forgot-password', [
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found with this email'
+        message: 'User not found with this email',
+        messageAr: 'المستخدم غير موجود بهذا البريد الإلكتروني'
       });
     }
 
@@ -1215,6 +1242,7 @@ router.post('/forgot-password', [
     res.status(200).json({
       success: true,
       message: 'Password reset token sent to email',
+      messageAr: 'تم إرسال رمز إعادة تعيين كلمة المرور إلى البريد الإلكتروني',
       resetToken: process.env.NODE_ENV === 'development' ? resetToken : undefined
     });
   } catch (error) {
@@ -1222,6 +1250,7 @@ router.post('/forgot-password', [
     res.status(500).json({
       success: false,
       message: 'Error sending reset email',
+      messageAr: 'خطأ في إرسال بريد إعادة التعيين',
       error: error.message
     });
   }
@@ -1259,7 +1288,8 @@ router.post('/reset-password', [
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: 'Password reset token is invalid or has expired'
+        message: 'Password reset token is invalid or has expired',
+        messageAr: 'رمز إعادة تعيين كلمة المرور غير صالح أو منتهي الصلاحية'
       });
     }
 
@@ -1271,13 +1301,15 @@ router.post('/reset-password', [
 
     res.status(200).json({
       success: true,
-      message: 'Password updated successfully'
+      message: 'Password updated successfully',
+      messageAr: 'تم تحديث كلمة المرور بنجاح'
     });
   } catch (error) {
     //CONSOLE.error('Reset password error:', error);
     res.status(500).json({
       success: false,
       message: 'Error resetting password',
+      messageAr: 'خطأ في إعادة تعيين كلمة المرور',
       error: error.message
     });
   }

@@ -12,7 +12,8 @@ const authenticateToken = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Access denied. No token provided.'
+        message: 'Access denied. No token provided.',
+        messageAr: 'الوصول مرفوض. لم يتم توفير رمز'
       });
     }
 
@@ -23,14 +24,16 @@ const authenticateToken = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token'
+        message: 'Invalid token',
+        messageAr: 'رمز غير صالح'
       });
     }
 
     if (!user.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'Account is deactivated'
+        message: 'Account is deactivated',
+        messageAr: 'الحساب معطل'
       });
     }
 
@@ -39,7 +42,8 @@ const authenticateToken = async (req, res, next) => {
   } catch (error) {
     return res.status(401).json({
       success: false,
-      message: 'Invalid token'
+      message: 'Invalid token',
+      messageAr: 'رمز غير صالح'
     });
   }
 };
@@ -59,6 +63,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching profile',
+      messageAr: 'خطأ في جلب الملف الشخصي',
       error: error.message
     });
   }
@@ -87,6 +92,8 @@ router.put('/profile', [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -100,7 +107,8 @@ router.put('/profile', [
       if (emailExists) {
         return res.status(409).json({
           success: false,
-          message: 'Email already exists'
+          message: 'Email already exists',
+        messageAr: 'البريد الإلكتروني موجود بالفعل'
         });
       }
       updateFields.email = email.trim().toLowerCase();
@@ -130,6 +138,7 @@ router.put('/profile', [
     res.status(200).json({
       success: true,
       message: 'Profile updated successfully',
+      messageAr: 'تم تحديث الملف الشخصي بنجاح',
       user
     });
   } catch (error) {
@@ -137,6 +146,7 @@ router.put('/profile', [
     res.status(500).json({
       success: false,
       message: 'Error updating profile',
+      messageAr: 'خطأ في تحديث الملف الشخصي',
       error: error.message
     });
   }
@@ -157,6 +167,8 @@ router.put('/change-password', [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -171,7 +183,8 @@ router.put('/change-password', [
     if (!isPasswordCorrect) {
       return res.status(400).json({
         success: false,
-        message: 'Current password is incorrect'
+        message: 'Current password is incorrect',
+        messageAr: 'كلمة المرور الحالية غير صحيحة'
       });
     }
 
@@ -181,13 +194,15 @@ router.put('/change-password', [
 
     res.status(200).json({
       success: true,
-      message: 'Password changed successfully'
+      message: 'Password changed successfully',
+      messageAr: 'تم تغيير كلمة المرور بنجاح'
     });
   } catch (error) {
     //CONSOLE.error('Change password error:', error);
     res.status(500).json({
       success: false,
       message: 'Error changing password',
+      messageAr: 'خطأ في تغيير كلمة المرور',
       error: error.message
     });
   }
@@ -210,6 +225,8 @@ router.post('/addresses', [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -245,6 +262,7 @@ router.post('/addresses', [
     res.status(201).json({
       success: true,
       message: 'Address added successfully',
+      messageAr: 'تمت إضافة العنوان بنجاح',
       addresses: user.addresses
     });
   } catch (error) {
@@ -252,6 +270,7 @@ router.post('/addresses', [
     res.status(500).json({
       success: false,
       message: 'Error adding address',
+      messageAr: 'خطأ في إضافة العنوان',
       error: error.message
     });
   }
@@ -274,6 +293,8 @@ router.put('/addresses/:addressId', [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -298,13 +319,15 @@ router.put('/addresses/:addressId', [
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Address not found'
+        message: 'Address not found',
+        messageAr: 'العنوان غير موجود'
       });
     }
 
     res.status(200).json({
       success: true,
       message: 'Address updated successfully',
+      messageAr: 'تم تحديث العنوان بنجاح',
       addresses: user.addresses
     });
   } catch (error) {
@@ -312,6 +335,7 @@ router.put('/addresses/:addressId', [
     res.status(500).json({
       success: false,
       message: 'Error updating address',
+      messageAr: 'خطأ في تحديث العنوان',
       error: error.message
     });
   }
@@ -333,6 +357,7 @@ router.delete('/addresses/:addressId', authenticateToken, async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Address deleted successfully',
+      messageAr: 'تم حذف العنوان بنجاح',
       addresses: user.addresses
     });
   } catch (error) {
@@ -340,6 +365,7 @@ router.delete('/addresses/:addressId', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting address',
+      messageAr: 'خطأ في حذف العنوان',
       error: error.message
     });
   }
@@ -361,6 +387,7 @@ router.get('/addresses', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching addresses',
+      messageAr: 'خطأ في جلب العناوين',
       error: error.message
     });
   }

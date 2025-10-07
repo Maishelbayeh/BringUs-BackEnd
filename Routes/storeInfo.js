@@ -95,6 +95,7 @@ router.get('/current',
             res.status(500).json({
                 success: false,
                 message: 'Error fetching store info',
+                messageAr: 'خطأ في جلب معلومات المتجر',
                 error: error.message
             });
         }
@@ -182,6 +183,7 @@ router.get('/optional',
             res.status(500).json({
                 success: false,
                 message: 'Error processing request',
+                messageAr: 'خطأ في معالجة الطلب',
                 error: error.message
             });
         }
@@ -272,6 +274,7 @@ router.get('/validated',
             res.status(500).json({
                 success: false,
                 message: 'Error fetching store info',
+                messageAr: 'خطأ في جلب معلومات المتجر',
                 error: error.message
             });
         }
@@ -353,6 +356,7 @@ router.get('/token-debug',
             res.status(500).json({
                 success: false,
                 message: 'Error in token debug',
+                messageAr: 'خطأ في تصحيح الرمز',
                 error: error.message
             });
         }
