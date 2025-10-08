@@ -625,7 +625,10 @@ productSchema.pre('save', function(next) {
     this.attributes = [];
   }
   
-
+  // Handle sale logic: if isOnSale is false, reset salePercentage to 0
+  if (this.isOnSale === false || this.isOnSale === 'false') {
+    this.salePercentage = 0;
+  }
   
   next();
 });
@@ -680,6 +683,11 @@ productSchema.pre('findOneAndUpdate', function(next) {
   // Ensure attributes is always an array in updates
   if (this._update.attributes && !Array.isArray(this._update.attributes)) {
     this._update.attributes = [];
+  }
+  
+  // Handle sale logic: if isOnSale is false, reset salePercentage to 0
+  if (this._update.isOnSale === false || this._update.isOnSale === 'false') {
+    this._update.salePercentage = 0;
   }
   
   next();

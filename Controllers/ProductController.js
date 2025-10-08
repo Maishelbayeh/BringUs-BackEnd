@@ -725,6 +725,12 @@ exports.create = async (req, res) => {
       );
     }
 
+    // Handle sale logic: if isOnSale is false, reset salePercentage to 0
+    let finalSalePercentage = salePercentage;
+    if (isOnSale === false || isOnSale === 'false') {
+      finalSalePercentage = 0;
+    }
+
     // Create product data
     const productData = {
       nameAr, nameEn, descriptionAr, descriptionEn, price, 
@@ -732,7 +738,7 @@ exports.create = async (req, res) => {
       categories: finalCategories, // الحقل الجديد
       unit, store: storeId,
       availableQuantity, stock, productLabels, colors: finalColors, images: imagesUrls, mainImage: mainImageUrl,
-      compareAtPrice, costPrice, productOrder, visibility, isActive, isFeatured, isOnSale, salePercentage,
+      compareAtPrice, costPrice, productOrder, visibility, isActive, isFeatured, isOnSale, salePercentage: finalSalePercentage,
       attributes: finalAttributes, specifications, tags, weight, dimensions, rating, views, soldCount, seo,
       specificationValues: finalSpecificationValues,
       barcodes, videoUrl: finalVideoUrl,
@@ -893,6 +899,11 @@ exports.update = async (req, res) => {
 
     // Remove attributes field to prevent validation errors
     delete updateData.attributes;
+    
+    // Handle sale logic: if isOnSale is false, reset salePercentage to 0
+    if (updateData.isOnSale === false || updateData.isOnSale === 'false') {
+      updateData.salePercentage = 0;
+    }
     // Handle main image upload
     if (req.files && req.files.mainImage && req.files.mainImage[0]) {
       const result = await uploadToCloudflare(
@@ -1105,6 +1116,11 @@ exports.createVariant = async (req, res) => {
     } else if ((variantData.videoUrl && variantData.videoUrl.trim() !== '') || 
         (variantData.productVideo && variantData.productVideo.trim() !== '')) {
       finalVideoUrl = variantData.videoUrl || variantData.productVideo;
+    }
+
+    // Handle sale logic for variant: if isOnSale is false, reset salePercentage to 0
+    if (variantData.isOnSale === false || variantData.isOnSale === 'false') {
+      variantData.salePercentage = 0;
     }
 
     // Create variant product
@@ -2492,6 +2508,11 @@ exports.updateVariant = async (req, res) => {
 
     // Clean and process specific fields that might cause issues
     const processedUpdateData = { ...updateData };
+    
+    // Handle sale logic for variant: if isOnSale is false, reset salePercentage to 0
+    if (processedUpdateData.isOnSale === false || processedUpdateData.isOnSale === 'false') {
+      processedUpdateData.salePercentage = 0;
+    }
     
     // Handle categories field - ensure it's an array
     if (processedUpdateData.categories) {

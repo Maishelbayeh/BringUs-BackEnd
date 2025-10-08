@@ -215,7 +215,8 @@ router.get('/:storeId', async (req, res) => {
     if (!store || store.status !== 'active') {
       return res.status(404).json({
         success: false,
-        message: 'Store not found or inactive'
+        message: 'Store not found or inactive',
+        messageAr: 'المتجر غير موجود أو غير نشط'
       });
     }
 

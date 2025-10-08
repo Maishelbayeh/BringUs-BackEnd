@@ -789,7 +789,11 @@ exports.createOrderFromCart = async (req, res) => {
     // جلب بيانات المتجر
     const storeDoc = await Store.findById(storeId);
     if (!storeDoc) {
-      return res.status(400).json({ success: false, message: 'Store not found' });
+      return res.status(400).json({ 
+  success: false, 
+  message: 'Store not found',
+  messageAr: 'المتجر غير موجود'
+});
     }
     const storeSnapshot = {
       id: storeDoc._id,
@@ -1923,7 +1927,11 @@ exports.createGuestOrder = async (req, res) => {
     // جلب بيانات المتجر
     const storeDoc = await Store.findById(storeId);
     if (!storeDoc) {
-      return res.status(400).json({ success: false, message: 'Store not found' });
+      return res.status(400).json({ 
+  success: false, 
+  message: 'Store not found',
+  messageAr: 'المتجر غير موجود'
+});
     }
     const storeSnapshot = {
       id: storeDoc._id,

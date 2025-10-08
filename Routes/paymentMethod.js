@@ -15,6 +15,7 @@ const {
   uploadQrCode,
   uploadPaymentImage,
   removePaymentImage,
+  checkLahzaCredentials,
   upload
 } = require('../Controllers/PaymentMethodController');
 const { protect, authorize } = require('../middleware/auth');
@@ -770,5 +771,109 @@ router.post('/:id/upload-payment-image', protect, authorize('admin', 'superadmin
  *         description: Access denied
  */
 router.delete('/:id/remove-payment-image/:imageIndex', protect, authorize('admin', 'superadmin'), verifyStoreAccess, removePaymentImage);
+
+/**
+ * @swagger
+ * /api/stores/{storeId}/payment-methods/lahza/credentials/status:
+ *   get:
+ *     summary: Check Lahza credentials status
+ *     description: Check if Lahza Merchant Code and Secret Key are configured for the store
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID
+ *     responses:
+ *       200:
+ *         description: Lahza credentials status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     storeId:
+ *                       type: string
+ *                       example: "60f7b3b3b3b3b3b3b3b3b3b3"
+ *                     storeName:
+ *                       type: object
+ *                       properties:
+ *                         ar:
+ *                           type: string
+ *                           example: "متجر القمر"
+ *                         en:
+ *                           type: string
+ *                           example: "Moon Store"
+ *                     isConfigured:
+ *                       type: boolean
+ *                       example: true
+ *                     hasMerchantCode:
+ *                       type: boolean
+ *                       example: true
+ *                     hasSecretKey:
+ *                       type: boolean
+ *                       example: true
+ *                     missingFields:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: []
+ *                     credentials:
+ *                       type: object
+ *                       properties:
+ *                         merchantCode:
+ *                           type: string
+ *                           example: "***configured***"
+ *                         secretKey:
+ *                           type: string
+ *                           example: "***configured***"
+ *                 message:
+ *                   type: string
+ *                   example: "Lahza credentials are fully configured"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "بيانات اعتماد لحظة مكتملة"
+ *       400:
+ *         description: Bad request - Invalid store ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied - Insufficient permissions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Store not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/stores/:storeId/payment-methods/lahza/credentials/status', protect, authorize('admin', 'superadmin'), verifyStoreAccess, checkLahzaCredentials);
 
 module.exports = router; 

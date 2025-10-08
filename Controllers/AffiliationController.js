@@ -353,7 +353,8 @@ const getAffiliatesByStoreId = async (req, res) => {
     if (!store) {
       return res.status(404).json({
         success: false,
-        message: 'Store not found'
+        message: 'Store not found',
+        messageAr: 'المتجر غير موجود'
       });
     }
 

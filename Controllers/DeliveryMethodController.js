@@ -856,6 +856,7 @@ const getDeliveryMethodsByStoreId = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Store not found',
+        messageAr: 'المتجر غير موجود',
         error: 'Invalid store ID'
       });
     }

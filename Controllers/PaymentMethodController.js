@@ -444,6 +444,7 @@ const getPaymentMethodsByStoreId = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Store not found',
+        messageAr: 'المتجر غير موجود',
         error: 'Invalid store ID'
       });
     }
@@ -659,6 +660,24 @@ const createPaymentMethodWithFiles = async (req, res) => {
       }
     }
 
+    // Check for Lahza uniqueness - only one Lahza payment method per store
+    if (methodType === 'lahza') {
+      const existingLahzaMethod = await PaymentMethod.findOne({
+        store: req.store._id,
+        methodType: 'lahza'
+      });
+      
+      if (existingLahzaMethod) {
+        return res.status(400).json({
+          success: false,
+          message: 'Only one Lahza payment method is allowed per store',
+          messageAr: 'يُسمح بطريقة دفع لحظة واحدة فقط لكل متجر',
+          error: 'Lahza method already exists',
+          errorAr: 'طريقة دفع لحظة موجودة بالفعل'
+        });
+      }
+    }
+
     // Create payment method
     const paymentMethod = await PaymentMethod.create(paymentMethodData);
 
@@ -813,6 +832,24 @@ const createPaymentMethod = async (req, res) => {
           messageAr: 'رابط رمز الاستجابة السريعة أو البيانات مطلوبة عند تفعيل رمز الاستجابة السريعة',
           error: 'QR code validation failed',
           errorAr: 'فشل في التحقق من رمز الاستجابة السريعة'
+        });
+      }
+    }
+
+    // Check for Lahza uniqueness - only one Lahza payment method per store
+    if (req.body.methodType === 'lahza') {
+      const existingLahzaMethod = await PaymentMethod.findOne({
+        store: req.store._id,
+        methodType: 'lahza'
+      });
+      
+      if (existingLahzaMethod) {
+        return res.status(400).json({
+          success: false,
+          message: 'Only one Lahza payment method is allowed per store',
+          messageAr: 'يُسمح بطريقة دفع لحظة واحدة فقط لكل متجر',
+          error: 'Lahza method already exists',
+          errorAr: 'طريقة دفع لحظة موجودة بالفعل'
         });
       }
     }
@@ -976,12 +1013,12 @@ const updatePaymentMethodWithFiles = async (req, res) => {
       });
     }
 
-    const validMethodTypes = ['cash', 'card', 'digital_wallet', 'bank_transfer', 'qr_code', 'other'];
+    const validMethodTypes = ['lahza', 'cash', 'card', 'digital_wallet', 'bank_transfer', 'qr_code', 'other'];
     if (methodType !== undefined && (!methodType || !validMethodTypes.includes(methodType))) {
       return res.status(400).json({
         success: false,
-        message: 'Method type must be one of: cash, card, digital_wallet, bank_transfer, qr_code, other',
-        errors: [{ field: 'methodType', message: 'Method type must be one of: cash, card, digital_wallet, bank_transfer, qr_code, other' }]
+        message: 'Method type must be one of: lahza, cash, card, digital_wallet, bank_transfer, qr_code, other',
+        errors: [{ field: 'methodType', message: 'Method type must be one of: lahza, cash, card, digital_wallet, bank_transfer, qr_code, other' }]
       });
     }
 
@@ -1039,6 +1076,25 @@ const updatePaymentMethodWithFiles = async (req, res) => {
         }
       } else {
         updateData.qrCode = { enabled: false };
+      }
+    }
+
+    // Check for Lahza uniqueness when changing method type to lahza
+    if (methodType === 'lahza') {
+      const existingLahzaMethod = await PaymentMethod.findOne({
+        store: req.store._id,
+        methodType: 'lahza',
+        _id: { $ne: req.params.id } // Exclude current method being updated
+      });
+      
+      if (existingLahzaMethod) {
+        return res.status(400).json({
+          success: false,
+          message: 'Only one Lahza payment method is allowed per store',
+          messageAr: 'يُسمح بطريقة دفع لحظة واحدة فقط لكل متجر',
+          error: 'Lahza method already exists',
+          errorAr: 'طريقة دفع لحظة موجودة بالفعل'
+        });
       }
     }
 
@@ -1235,6 +1291,25 @@ const updatePaymentMethod = async (req, res) => {
           messageAr: 'رابط رمز الاستجابة السريعة أو البيانات مطلوبة عند تفعيل رمز الاستجابة السريعة',
           error: 'QR code validation failed',
           errorAr: 'فشل في التحقق من رمز الاستجابة السريعة'
+        });
+      }
+    }
+
+    // Check for Lahza uniqueness when changing method type to lahza
+    if (req.body.methodType === 'lahza') {
+      const existingLahzaMethod = await PaymentMethod.findOne({
+        store: req.store._id,
+        methodType: 'lahza',
+        _id: { $ne: req.params.id } // Exclude current method being updated
+      });
+      
+      if (existingLahzaMethod) {
+        return res.status(400).json({
+          success: false,
+          message: 'Only one Lahza payment method is allowed per store',
+          messageAr: 'يُسمح بطريقة دفع لحظة واحدة فقط لكل متجر',
+          error: 'Lahza method already exists',
+          errorAr: 'طريقة دفع لحظة موجودة بالفعل'
         });
       }
     }
@@ -1986,6 +2061,103 @@ const removePaymentImage = async (req, res) => {
   }
 };
 
+/**
+ * Check Lahza credentials status for a store
+ * @desc    Check if Lahza Merchant Code and Secret Key are configured
+ * @route   GET /api/stores/:storeId/payment-methods/lahza/credentials/status
+ * @access  Private (Admin only)
+ */
+const checkLahzaCredentials = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    
+    // Validate storeId
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required',
+        messageAr: 'معرف المتجر مطلوب',
+        error: 'Missing storeId parameter'
+      });
+    }
+
+    // Validate ObjectId format
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(storeId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid store ID format',
+        messageAr: 'تنسيق معرف المتجر غير صحيح',
+        error: 'Invalid storeId format'
+      });
+    }
+
+    // Get store with Lahza credentials
+    const Store = require('../Models/Store');
+    const store = await Store.findById(storeId).select('lahzaToken lahzaSecretKey nameAr nameEn');
+    
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found',
+        messageAr: 'المتجر غير موجود',
+        error: 'Store not found'
+      });
+    }
+
+    // Check credentials status
+    const hasMerchantCode = store.lahzaToken && store.lahzaToken.trim() !== '';
+    const hasSecretKey = store.lahzaSecretKey && store.lahzaSecretKey.trim() !== '';
+    const isConfigured = hasMerchantCode && hasSecretKey;
+
+    // Determine missing fields
+    const missingFields = [];
+    if (!hasMerchantCode) {
+      missingFields.push('merchantCode');
+    }
+    if (!hasSecretKey) {
+      missingFields.push('secretKey');
+    }
+
+    // Prepare response
+    const response = {
+      success: true,
+      data: {
+        storeId: store._id,
+        storeName: {
+          ar: store.nameAr,
+          en: store.nameEn
+        },
+        isConfigured,
+        hasMerchantCode,
+        hasSecretKey,
+        missingFields,
+        credentials: {
+          merchantCode: hasMerchantCode ? '***configured***' : null,
+          secretKey: hasSecretKey ? '***configured***' : null
+        }
+      },
+      message: isConfigured 
+        ? 'Lahza credentials are fully configured' 
+        : 'Lahza credentials are incomplete',
+      messageAr: isConfigured 
+        ? 'بيانات اعتماد لحظة مكتملة' 
+        : 'بيانات اعتماد لحظة غير مكتملة'
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Check Lahza credentials error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error checking Lahza credentials',
+      messageAr: 'خطأ في فحص بيانات اعتماد لحظة',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllPaymentMethods,
   getPaymentMethodById,
@@ -2001,5 +2173,6 @@ module.exports = {
   uploadQrCode,
   uploadPaymentImage,
   removePaymentImage,
+  checkLahzaCredentials,
   upload // Export multer upload for use in routes
 }; 
