@@ -18,9 +18,59 @@ const { verifyStoreAccess } = require('../middleware/storeAuth');
 
 const router = express.Router();
 
-// إعداد multer لرفع الصور
+// إعداد multer لرفع الصور مع التحقق من نوع الملف
 const imageStorage = multer.memoryStorage();
-const uploadSliderImage = multer({ storage: imageStorage });
+const uploadSliderImage = multer({ 
+  storage: imageStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only image files (PNG, JPG, JPEG)
+    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (allowedMimeTypes.includes(file.mimetype.toLowerCase())) {
+      cb(null, true);
+    } else {
+      cb(new Error('UNSUPPORTED_FILE_TYPE'), false);
+    }
+  },
+});
+
+// Multer error handler middleware
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File size exceeds 10MB',
+        messageAr: 'حجم الملف يتجاوز 10 ميجابايت',
+        error: err.message
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: 'File upload error',
+      messageAr: 'خطأ في رفع الملف',
+      error: err.message
+    });
+  } else if (err) {
+    if (err.message === 'UNSUPPORTED_FILE_TYPE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported file type. Only PNG, JPG, and JPEG formats are allowed.',
+        messageAr: 'نوع الملف غير مدعوم. يُسمح فقط بتنسيقات PNG و JPG و JPEG.',
+        error: 'Invalid file format'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+      messageAr: 'خطأ في معالجة الملف',
+      error: err.message
+    });
+  }
+  next();
+};
 
 /**
  * @swagger
@@ -578,7 +628,7 @@ router.patch('/:id/increment-clicks', protect, authorize('admin', 'superadmin'),
  *       500:
  *         description: Internal server error
  */
-router.post('/upload-image', protect, authorize('admin', 'superadmin'), verifyStoreAccess, uploadSliderImage.single('image'), async (req, res) => {
+router.post('/upload-image', protect, authorize('admin', 'superadmin'), verifyStoreAccess, uploadSliderImage.single('image'), handleMulterError, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ 
