@@ -27,7 +27,8 @@ const authenticateToken = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Access denied. No token provided.'
+        message: 'Access denied. No token provided.',
+        messageAr: 'الوصول مرفوض. لم يتم توفير رمز'
       });
     }
 
@@ -39,14 +40,16 @@ const authenticateToken = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token'
+        message: 'Invalid token',
+        messageAr: 'رمز غير صالح'
       });
     }
 
     if (!user.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'Account is deactivated'
+        message: 'Account is deactivated',
+        messageAr: 'الحساب معطل'
       });
     }
 
@@ -79,6 +82,8 @@ router.post('/', [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -176,6 +181,7 @@ router.post('/', [
     res.status(201).json({
       success: true,
       message: 'Order created successfully',
+      messageAr: 'تم إنشاء الطلب بنجاح',
       data: populatedOrder
     });
   } catch (error) {
@@ -183,6 +189,7 @@ router.post('/', [
     res.status(500).json({
       success: false,
       message: 'Error creating order',
+      messageAr: 'خطأ في إنشاء الطلب',
       error: error.message
     });
   }
@@ -222,6 +229,7 @@ router.get('/', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching orders',
+      messageAr: 'خطأ في جلب الطلبات',
       error: error.message
     });
   }
@@ -350,6 +358,7 @@ router.get('/my-orders', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching user orders',
+      messageAr: 'خطأ في جلب طلبات المستخدم',
       error: error.message
     });
   }
@@ -474,6 +483,7 @@ router.get('/my-orders/:orderId', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching order details',
+      messageAr: 'خطأ في جلب تفاصيل الطلب',
       error: error.message
     });
   }
@@ -536,6 +546,7 @@ router.delete('/:orderId', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting order',
+      messageAr: 'خطأ في حذف الطلب',
       error: error.message
     });
   }
@@ -561,7 +572,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found'
+        message: 'Order not found',
+        messageAr: 'الطلب غير موجود'
       });
     }
 
@@ -569,7 +581,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
     if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied'
+        message: 'Access denied',
+        messageAr: 'الوصول مرفوض'
       });
     }
 
@@ -582,6 +595,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching order',
+      messageAr: 'خطأ في جلب الطلب',
       error: error.message
     });
   }
@@ -610,6 +624,8 @@ router.put('/:id/status', [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -627,7 +643,8 @@ router.put('/:id/status', [
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found'
+        message: 'Order not found',
+        messageAr: 'الطلب غير موجود'
       });
     }
 
@@ -668,6 +685,7 @@ router.put('/:id/status', [
     res.status(200).json({
       success: true,
       message: 'Order status updated successfully',
+      messageAr: 'تم تحديث حالة الطلب بنجاح',
       data: updatedOrder
     });
   } catch (error) {
@@ -675,6 +693,7 @@ router.put('/:id/status', [
     res.status(500).json({
       success: false,
       message: 'Error updating order status',
+      messageAr: 'خطأ في تحديث حالة الطلب',
       error: error.message
     });
   }
@@ -692,6 +711,8 @@ router.put('/:id/cancel', [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -709,7 +730,8 @@ router.put('/:id/cancel', [
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found'
+        message: 'Order not found',
+        messageAr: 'الطلب غير موجود'
       });
     }
 
@@ -717,7 +739,8 @@ router.put('/:id/cancel', [
     if (order.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied'
+        message: 'Access denied',
+        messageAr: 'الوصول مرفوض'
       });
     }
 
@@ -749,13 +772,15 @@ router.put('/:id/cancel', [
 
     res.status(200).json({
       success: true,
-      message: 'Order cancelled successfully'
+      message: 'Order cancelled successfully',
+      messageAr: 'تم إلغاء الطلب بنجاح'
     });
   } catch (error) {
     //CONSOLE.error('Cancel order error:', error);
     res.status(500).json({
       success: false,
       message: 'Error cancelling order',
+      messageAr: 'خطأ في إلغاء الطلب',
       error: error.message
     });
   }
@@ -772,7 +797,8 @@ router.get('/number/:orderNumber', authenticateToken, async (req, res) => {
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found'
+        message: 'Order not found',
+        messageAr: 'الطلب غير موجود'
       });
     }
 
@@ -780,7 +806,8 @@ router.get('/number/:orderNumber', authenticateToken, async (req, res) => {
     if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied'
+        message: 'Access denied',
+        messageAr: 'الوصول مرفوض'
       });
     }
 
@@ -793,6 +820,7 @@ router.get('/number/:orderNumber', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching order',
+      messageAr: 'خطأ في جلب الطلب',
       error: error.message
     });
   }
@@ -1123,6 +1151,8 @@ router.put('/:orderId/status', [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -1131,7 +1161,8 @@ router.put('/:orderId/status', [
     if (req.user.role !== 'admin' && req.user.role !== 'store_owner') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Admin or store owner only.'
+        message: 'Access denied. Admin or store owner only.',
+        messageAr: 'الوصول مرفوض. للمسؤولين أو أصحاب المتاجر فقط'
       });
     }
 
@@ -1141,6 +1172,7 @@ router.put('/:orderId/status', [
     res.status(500).json({
       success: false,
       message: 'Error updating order status',
+      messageAr: 'خطأ في تحديث حالة الطلب',
       error: error.message
     });
   }
@@ -1222,6 +1254,8 @@ router.put('/:orderId/payment-status', [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -1230,7 +1264,8 @@ router.put('/:orderId/payment-status', [
     if (req.user.role !== 'admin' && req.user.role !== 'store_owner') {
       return res.status(403).json({
         success: false,
-        message: 'Access denied. Admin or store owner only.'
+        message: 'Access denied. Admin or store owner only.',
+        messageAr: 'الوصول مرفوض. للمسؤولين أو أصحاب المتاجر فقط'
       });
     }
 
@@ -1240,6 +1275,7 @@ router.put('/:orderId/payment-status', [
     res.status(500).json({
       success: false,
       message: 'Error updating payment status',
+      messageAr: 'خطأ في تحديث حالة الدفع',
       error: error.message
     });
   }
@@ -1367,6 +1403,7 @@ router.get('/customer/:customerId', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching orders by customer ID',
+      messageAr: 'خطأ في جلب الطلبات حسب معرف العميل',
       error: error.message
     });
   }
@@ -1495,6 +1532,7 @@ router.get('/details/:identifier', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching order details',
+      messageAr: 'خطأ في جلب تفاصيل الطلب',
       error: error.message
     });
   }
@@ -1588,6 +1626,7 @@ router.get('/store/:storeId/product/:productId/stock-status', async (req, res) =
     res.status(500).json({
       success: false,
       message: 'Error fetching product stock status',
+      messageAr: 'خطأ في جلب حالة مخزون المنتج',
       error: error.message
     });
   }
@@ -1651,6 +1690,7 @@ router.get('/store/:storeId/wholesaler-discount/:userId', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching wholesaler discount',
+      messageAr: 'خطأ في جلب خصم تاجر الجملة',
       error: error.message
     });
   }
@@ -1749,6 +1789,7 @@ router.post('/store/:storeId/calculate-price', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error calculating final price',
+      messageAr: 'خطأ في حساب السعر النهائي',
       error: error.message
     });
   }
@@ -1820,6 +1861,7 @@ router.get('/store/:storeId/wholesaler-status/:userId', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error checking wholesaler status',
+      messageAr: 'خطأ في التحقق من حالة تاجر الجملة',
       error: error.message
     });
   }
@@ -1897,6 +1939,7 @@ router.get('/store/:storeId/affiliate-orders', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error getting affiliate orders',
+      messageAr: 'خطأ في جلب طلبات التسويق بالعمولة',
       error: error.message
     });
   }
@@ -1960,6 +2003,7 @@ router.get('/store/:storeId/affiliate-stats', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error getting affiliate order statistics',
+      messageAr: 'خطأ في جلب إحصائيات طلبات التسويق بالعمولة',
       error: error.message
     });
   }
@@ -2112,6 +2156,7 @@ router.get('/guest/:guestId', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error getting orders by guest ID',
+      messageAr: 'خطأ في جلب الطلبات حسب معرف الضيف',
       error: error.message
     });
   }
@@ -2173,6 +2218,7 @@ router.get('/analytics/order-percentage', authenticateToken, async (req, res) =>
     res.status(500).json({
       success: false,
       message: 'Error fetching order percentage',
+      messageAr: 'خطأ في جلب نسبة الطلبات',
       error: error.message
     });
   }
@@ -2235,6 +2281,7 @@ router.get('/analytics/top-users', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching top users',
+      messageAr: 'خطأ في جلب أفضل المستخدمين',
       error: error.message
     });
   }
@@ -2292,6 +2339,7 @@ router.get('/analytics/categories-revenue', authenticateToken, async (req, res) 
     res.status(500).json({
       success: false,
       message: 'Error fetching categories revenue',
+      messageAr: 'خطأ في جلب إيرادات الفئات',
       error: error.message
     });
   }
@@ -2361,6 +2409,7 @@ router.get('/analytics/top-products', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching top products',
+      messageAr: 'خطأ في جلب أفضل المنتجات',
       error: error.message
     });
   }

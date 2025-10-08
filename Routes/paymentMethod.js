@@ -19,6 +19,43 @@ const {
 } = require('../Controllers/PaymentMethodController');
 const { protect, authorize } = require('../middleware/auth');
 const { verifyStoreAccess } = require('../middleware/storeAuth');
+const multer = require('multer');
+
+// Multer error handler middleware
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File size exceeds 10MB',
+        messageAr: 'حجم الملف يتجاوز 10 ميجابايت',
+        error: err.message
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: 'File upload error',
+      messageAr: 'خطأ في رفع الملف',
+      error: err.message
+    });
+  } else if (err) {
+    if (err.message === 'UNSUPPORTED_FILE_TYPE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported file type. Only PNG, JPG, and JPEG formats are allowed.',
+        messageAr: 'نوع الملف غير مدعوم. يُسمح فقط بتنسيقات PNG و JPG و JPEG.',
+        error: 'Invalid file format'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+      messageAr: 'خطأ في معالجة الملف',
+      error: err.message
+    });
+  }
+  next();
+};
 
 const router = express.Router();
 
@@ -276,7 +313,7 @@ router.post('/with-files', protect, authorize('admin', 'superadmin'), verifyStor
   { name: 'logo', maxCount: 1 },
   { name: 'qrCodeImage', maxCount: 1 },
   { name: 'paymentImages', maxCount: 10 }
-]), createPaymentMethodWithFiles);
+]), handleMulterError, createPaymentMethodWithFiles);
 
 /**
  * @swagger
@@ -441,7 +478,7 @@ router.put('/:id/with-files', protect, authorize('admin', 'superadmin'), verifyS
   { name: 'logo', maxCount: 1 },
   { name: 'qrCodeImage', maxCount: 1 },
   { name: 'paymentImages', maxCount: 10 }
-]), updatePaymentMethodWithFiles);
+]), handleMulterError, updatePaymentMethodWithFiles);
 
 /**
  * @swagger
@@ -610,7 +647,7 @@ router.patch('/:id/set-default', protect, authorize('admin', 'superadmin'), veri
  *       403:
  *         description: Access denied
  */
-router.post('/:id/upload-logo', protect, authorize('admin', 'superadmin'), verifyStoreAccess, upload.single('logo'), uploadLogo);
+router.post('/:id/upload-logo', protect, authorize('admin', 'superadmin'), verifyStoreAccess, upload.single('logo'), handleMulterError, uploadLogo);
 
 /**
  * @swagger
@@ -652,7 +689,7 @@ router.post('/:id/upload-logo', protect, authorize('admin', 'superadmin'), verif
  *       403:
  *         description: Access denied
  */
-router.post('/:id/upload-qr-code', protect, authorize('admin', 'superadmin'), verifyStoreAccess, upload.single('qrCodeImage'), uploadQrCode);
+router.post('/:id/upload-qr-code', protect, authorize('admin', 'superadmin'), verifyStoreAccess, upload.single('qrCodeImage'), handleMulterError, uploadQrCode);
 
 /**
  * @swagger
@@ -698,7 +735,7 @@ router.post('/:id/upload-qr-code', protect, authorize('admin', 'superadmin'), ve
  *       403:
  *         description: Access denied
  */
-router.post('/:id/upload-payment-image', protect, authorize('admin', 'superadmin'), verifyStoreAccess, upload.single('image'), uploadPaymentImage);
+router.post('/:id/upload-payment-image', protect, authorize('admin', 'superadmin'), verifyStoreAccess, upload.single('image'), handleMulterError, uploadPaymentImage);
 
 /**
  * @swagger

@@ -3,13 +3,66 @@ const { body, validationResult, query } = require('express-validator');
 const Product = require('../Models/Product');
 const Category = require('../Models/Category');
 const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage() });
+
+// Configure multer with file validation
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only image files (PNG, JPG, JPEG)
+    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (allowedMimeTypes.includes(file.mimetype.toLowerCase())) {
+      cb(null, true);
+    } else {
+      cb(new Error('UNSUPPORTED_FILE_TYPE'), false);
+    }
+  },
+});
+
 const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 const ProductController = require('../Controllers/ProductController');
 const { protect } = require('../middleware/auth');
 const { addStoreFilter } = require('../middleware/storeIsolation');
 
 const router = express.Router();
+
+// Multer error handler middleware
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File size exceeds 10MB',
+        messageAr: 'حجم الملف يتجاوز 10 ميجابايت',
+        error: err.message
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: 'File upload error',
+      messageAr: 'خطأ في رفع الملف',
+      error: err.message
+    });
+  } else if (err) {
+    if (err.message === 'UNSUPPORTED_FILE_TYPE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported file type. Only PNG, JPG, and JPEG formats are allowed.',
+        messageAr: 'نوع الملف غير مدعوم. يُسمح فقط بتنسيقات PNG و JPG و JPEG.',
+        error: 'Invalid file format'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+      messageAr: 'خطأ في معالجة الملف',
+      error: err.message
+    });
+  }
+  next();
+};
 
 /**
  * @swagger
@@ -577,7 +630,7 @@ router.get('/:productId/variants', [
 router.post('/:productId/add-variant', upload.fields([
   { name: 'mainImage', maxCount: 1 },
   { name: 'images', maxCount: 10 }
-]), [
+]), handleMulterError, [
   body('nameAr').notEmpty().withMessage('Arabic name is required'),
   body('nameEn').notEmpty().withMessage('English name is required'),
   body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number'),
@@ -785,7 +838,7 @@ const autoSetStoreId = async (req, res, next) => {
 router.put('/:productId/variants/:variantId', upload.fields([
   { name: 'mainImage', maxCount: 1 },
   { name: 'images', maxCount: 10 }
-]), autoSetStoreId, [
+]), handleMulterError, autoSetStoreId, [
   body('storeId').isMongoId().withMessage('Valid store ID is required'),
   body('nameAr').optional().notEmpty().withMessage('Arabic name cannot be empty'),
   body('nameEn').optional().notEmpty().withMessage('English name cannot be empty'),
@@ -1679,6 +1732,7 @@ router.post(
     { name: 'mainImage', maxCount: 1 },
     { name: 'images', maxCount: 10 }
   ]),
+  handleMulterError,
   ProductController.create
 );
 
@@ -1930,6 +1984,7 @@ router.put(
     { name: 'mainImage', maxCount: 1 },
     { name: 'images', maxCount: 10 }
   ]),
+  handleMulterError,
   ProductController.update
 );
 
@@ -2120,7 +2175,21 @@ router.get('/sale', async (req, res) => {
 // ========== رفع صور المنتجات ========== //
 // استخدم memoryStorage بدلاً من diskStorage
 const imageStorage = multer.memoryStorage();
-const uploadProductImage = multer({ storage: imageStorage });
+const uploadProductImage = multer({
+  storage: imageStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only image files (PNG, JPG, JPEG)
+    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (allowedMimeTypes.includes(file.mimetype.toLowerCase())) {
+      cb(null, true);
+    } else {
+      cb(new Error('UNSUPPORTED_FILE_TYPE'), false);
+    }
+  },
+});
 
 /**
  * @swagger
@@ -2180,14 +2249,15 @@ const uploadProductImage = multer({ storage: imageStorage });
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/upload-main-image', uploadProductImage.single('image'), async (req, res) => {
+router.post('/upload-main-image', uploadProductImage.single('image'), handleMulterError, async (req, res) => {
   try {
     const { storeId } = req.body;
     
     if (!req.file) {
       return res.status(400).json({ 
         success: false, 
-        message: 'No file uploaded' 
+        message: 'No file uploaded',
+        messageAr: 'لم يتم رفع أي ملف'
       });
     }
 
@@ -2204,8 +2274,9 @@ router.post('/upload-main-image', uploadProductImage.single('image'), async (req
     //CONSOLE.error('Upload main image error:', err);
     res.status(500).json({ 
       success: false, 
-      error: 'Upload failed',
-      message: err.message 
+      message: 'Upload failed',
+      messageAr: 'فشل الرفع',
+      error: err.message 
     });
   }
 });
@@ -2275,14 +2346,15 @@ router.post('/upload-main-image', uploadProductImage.single('image'), async (req
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/upload-gallery-images', uploadProductImage.array('images', 10), async (req, res) => {
+router.post('/upload-gallery-images', uploadProductImage.array('images', 10), handleMulterError, async (req, res) => {
   try {
     const { storeId } = req.body;
     
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ 
         success: false, 
-        message: 'No files uploaded' 
+        message: 'No files uploaded',
+        messageAr: 'لم يتم رفع أي ملفات'
       });
     }
 
@@ -2307,8 +2379,9 @@ router.post('/upload-gallery-images', uploadProductImage.array('images', 10), as
     //CONSOLE.error('Upload gallery images error:', err);
     res.status(500).json({ 
       success: false, 
-      error: 'Upload failed',
-      message: err.message 
+      message: 'Upload failed',
+      messageAr: 'فشل الرفع',
+      error: err.message 
     });
   }
 });
@@ -2371,14 +2444,15 @@ router.post('/upload-gallery-images', uploadProductImage.array('images', 10), as
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/upload-single-image', uploadProductImage.single('image'), async (req, res) => {
+router.post('/upload-single-image', uploadProductImage.single('image'), handleMulterError, async (req, res) => {
   try {
     const { storeId } = req.body;
     
     if (!req.file) {
       return res.status(400).json({ 
         success: false, 
-        message: 'No file uploaded' 
+        message: 'No file uploaded',
+        messageAr: 'لم يتم رفع أي ملف'
       });
     }
 
@@ -2395,8 +2469,9 @@ router.post('/upload-single-image', uploadProductImage.single('image'), async (r
     //CONSOLE.error('Upload single image error:', err);
     res.status(500).json({ 
       success: false, 
-      error: 'Upload failed',
-      message: err.message 
+      message: 'Upload failed',
+      messageAr: 'فشل الرفع',
+      error: err.message 
     });
   }
 });

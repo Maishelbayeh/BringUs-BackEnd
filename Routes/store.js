@@ -12,21 +12,58 @@ const {
 } = require('../middleware/permissions');
 const multer = require('multer');
 
-// Configure multer for memory storage
+// Configure multer for memory storage with file validation
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Accept only image files
-    if (file.mimetype.startsWith('image/')) {
+    // Accept only image files (PNG, JPG, JPEG)
+    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (allowedMimeTypes.includes(file.mimetype.toLowerCase())) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'), false);
+      cb(new Error('UNSUPPORTED_FILE_TYPE'), false);
     }
   },
 });
+
+// Multer error handler middleware
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File size exceeds 10MB',
+        messageAr: 'حجم الملف يتجاوز 10 ميجابايت',
+        error: err.message
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: 'File upload error',
+      messageAr: 'خطأ في رفع الملف',
+      error: err.message
+    });
+  } else if (err) {
+    if (err.message === 'UNSUPPORTED_FILE_TYPE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported file type. Only PNG, JPG, and JPEG formats are allowed.',
+        messageAr: 'نوع الملف غير مدعوم. يُسمح فقط بتنسيقات PNG و JPG و JPEG.',
+        error: 'Invalid file format'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+      messageAr: 'خطأ في معالجة الملف',
+      error: err.message
+    });
+  }
+  next();
+};
 
 // All routes require authentication (applied after public routes)
 
@@ -247,7 +284,7 @@ router.get('/slug/:slug', StoreController.getStoreBySlug);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', upload.single('logo'), StoreController.createStore);
+router.post('/', upload.single('logo'), handleMulterError, StoreController.createStore);
 
 
 /**
@@ -312,13 +349,14 @@ router.post('/', upload.single('logo'), StoreController.createStore);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/upload-image', upload.single('logo'), async (req, res) => {
+router.post('/upload-image', upload.single('logo'), handleMulterError, async (req, res) => {
   try {
     // التحقق من وجود الملف
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        error: 'No image file provided'
+        message: 'No image file provided',
+        messageAr: 'لم يتم تقديم ملف صورة'
       });
     }
 
@@ -326,7 +364,8 @@ router.post('/upload-image', upload.single('logo'), async (req, res) => {
     if (!req.body.storeId) {
       return res.status(400).json({
         success: false,
-        error: 'Store ID is required'
+        message: 'Store ID is required',
+        messageAr: 'معرف المتجر مطلوب'
       });
     }
 
@@ -356,8 +395,9 @@ router.post('/upload-image', upload.single('logo'), async (req, res) => {
     console.error('❌ Error uploading image:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to upload image',
-      details: error.message
+      message: 'Failed to upload image',
+      messageAr: 'فشل في رفع الصورة',
+      error: error.message
     });
   }
 });
@@ -1113,13 +1153,14 @@ router.delete('/:storeId/customers/:customerId', protect, hasStoreAccess, hasPer
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/upload-multiple-images', protect, isActive, upload.array('images', 10), async (req, res) => {
+router.post('/upload-multiple-images', protect, isActive, upload.array('images', 10), handleMulterError, async (req, res) => {
   try {
     // التحقق من وجود الملفات
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'No image files provided'
+        message: 'No image files provided',
+        messageAr: 'لم يتم تقديم ملفات صور'
       });
     }
 
@@ -1127,7 +1168,8 @@ router.post('/upload-multiple-images', protect, isActive, upload.array('images',
     if (!req.body.storeId) {
       return res.status(400).json({
         success: false,
-        error: 'Store ID is required'
+        message: 'Store ID is required',
+        messageAr: 'معرف المتجر مطلوب'
       });
     }
 
@@ -1165,8 +1207,9 @@ router.post('/upload-multiple-images', protect, isActive, upload.array('images',
     //CONSOLE.error('❌ Error uploading multiple images:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to upload images',
-      details: error.message
+      message: 'Failed to upload images',
+      messageAr: 'فشل في رفع الصور',
+      error: error.message
     });
   }
 });

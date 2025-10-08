@@ -2181,7 +2181,9 @@ exports.deleteOrder = async (req, res) => {
     if (order.status === 'delivered' || order.status === 'shipped') {
       return res.status(400).json({ 
         success: false, 
-        message: 'Cannot delete orders that are already shipped or delivered' 
+        message: 'Cannot delete orders that are already shipped or delivered',
+        messageAr: 'لا يمكن حذف الطلبات التي تم شحنها أو تم تسليمها'
+
       });
     }
 

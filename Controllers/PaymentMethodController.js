@@ -4,18 +4,19 @@ const { addStoreFilter } = require('../middleware/storeIsolation');
 const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 const multer = require('multer');
 
-// Configure multer for memory storage
+// Configure multer for memory storage with file validation
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Check file type
-    if (file.mimetype.startsWith('image/')) {
+    // Accept only image files (PNG, JPG, JPEG)
+    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (allowedMimeTypes.includes(file.mimetype.toLowerCase())) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'), false);
+      cb(new Error('UNSUPPORTED_FILE_TYPE'), false);
     }
   },
 });
@@ -1338,7 +1339,9 @@ const deletePaymentMethod = async (req, res) => {
     if (!paymentMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Payment method not found'
+        message: 'Payment method not found',
+        messageAr: 'طريقة الدفع غير موجودة'
+
       });
     }
 
@@ -1346,6 +1349,7 @@ const deletePaymentMethod = async (req, res) => {
     if (paymentMethod.isDefault) {
       return res.status(400).json({
         success: false,
+        messageAr: 'لا يمكن حذف طريقة الدفع الافتراضية. يرجى تعيين طريقة أخرى كافتراضية أولاً.',
         message: 'Cannot delete the default payment method. Please set another method as default first.',
         error: 'Default method cannot be deleted'
       });

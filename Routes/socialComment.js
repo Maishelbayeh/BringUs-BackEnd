@@ -8,21 +8,58 @@ const SocialCommentController = require('../Controllers/SocialCommentController'
 const { protect } = require('../middleware/auth');
 const { uploadToCloudflare } = require('../utils/cloudflareUploader');
 
-// Configure multer for memory storage
+// Configure multer for memory storage with file validation
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Accept only image files
-    if (file.mimetype.startsWith('image/')) {
+    // Accept only image files (PNG, JPG, JPEG)
+    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (allowedMimeTypes.includes(file.mimetype.toLowerCase())) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'), false);
+      cb(new Error('UNSUPPORTED_FILE_TYPE'), false);
     }
   },
 });
+
+// Multer error handler middleware
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File size exceeds 10MB',
+        messageAr: 'حجم الملف يتجاوز 10 ميجابايت',
+        error: err.message
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: 'File upload error',
+      messageAr: 'خطأ في رفع الملف',
+      error: err.message
+    });
+  } else if (err) {
+    if (err.message === 'UNSUPPORTED_FILE_TYPE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported file type. Only PNG, JPG, and JPEG formats are allowed.',
+        messageAr: 'نوع الملف غير مدعوم. يُسمح فقط بتنسيقات PNG و JPG و JPEG.',
+        error: 'Invalid file format'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+      messageAr: 'خطأ في معالجة الملف',
+      error: err.message
+    });
+  }
+  next();
+};
 
 // Middleware to set current store for social comments and check permissions
 const setCurrentStoreAndCheckPermissions = async (req, res, next) => {
@@ -441,6 +478,7 @@ router.post(
   protect,
   setCurrentStoreAndCheckPermissions,
   upload.single('image'),
+  handleMulterError,
   SocialCommentController.uploadImage
 );
 

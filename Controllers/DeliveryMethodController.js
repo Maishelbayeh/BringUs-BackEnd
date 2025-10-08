@@ -563,7 +563,8 @@ const deleteDeliveryMethod = async (req, res) => {
     if (!deliveryMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Delivery method not found'
+        message: 'Delivery method not found',
+        messageAr: 'طريقة التوصيل غير موجودة'
       });
     }
 
@@ -572,6 +573,7 @@ const deleteDeliveryMethod = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Cannot delete the default delivery method. Please set another method as default first.',
+        messageAr: 'لا يمكن حذف طريقة التوصيل الافتراضية. يرجى تعيين طريقة أخرى كافتراضية أولاً.',
         error: 'Default method cannot be deleted'
       });
     }
@@ -588,7 +590,8 @@ const deleteDeliveryMethod = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting delivery method',
-      error: error.message
+      messageAr: 'خطأ في حذف طريقة التوصيل',
+          error: error.message
     });
   }
 };
@@ -654,6 +657,7 @@ const toggleActiveStatus = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Cannot deactivate the default delivery method. Please set another method as default first.',
+        messageAr: 'لا يمكن إلغاء تفعيل طريقة التوصيل الافتراضية. يرجى تعيين طريقة أخرى كافتراضية أولاً.',
         error: 'Default method cannot be inactive'
       });
     }
@@ -728,7 +732,9 @@ const setAsDefault = async (req, res) => {
     if (!deliveryMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Delivery method not found'
+        message: 'Delivery method not found',
+        messageAr: 'طريقة التوصيل غير موجودة'
+
       });
     }
 
@@ -757,6 +763,7 @@ const setAsDefault = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Default delivery method set successfully',
+      messageAr: 'تم تعيين طريقة التوصيل الافتراضية بنجاح',
       data: deliveryMethod
     });
   } catch (error) {
@@ -764,6 +771,7 @@ const setAsDefault = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error setting default delivery method',
+      messageAr: 'خطأ في تعيين طريقة التوصيل الافتراضية',
       error: error.message
     });
   }
