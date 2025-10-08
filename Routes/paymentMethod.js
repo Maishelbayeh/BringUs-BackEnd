@@ -774,7 +774,7 @@ router.delete('/:id/remove-payment-image/:imageIndex', protect, authorize('admin
 
 /**
  * @swagger
- * /api/stores/{storeId}/payment-methods/lahza/credentials/status:
+ * /api/payment-methods/stores/{storeId}/lahza/credentials/status:
  *   get:
  *     summary: Check Lahza credentials status
  *     description: Check if Lahza Merchant Code and Secret Key are configured for the store
@@ -874,6 +874,6 @@ router.delete('/:id/remove-payment-image/:imageIndex', protect, authorize('admin
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/stores/:storeId/payment-methods/lahza/credentials/status', protect, authorize('admin', 'superadmin'), verifyStoreAccess, checkLahzaCredentials);
+router.get('/stores/:storeId/lahza/credentials/status', protect, authorize('admin', 'superadmin'), verifyStoreAccess, checkLahzaCredentials);
 
 module.exports = router; 
