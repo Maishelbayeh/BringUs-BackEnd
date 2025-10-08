@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { getDefaultCategoryImage } = require('../utils/defaultImages');
 
 const categorySchema = new mongoose.Schema({
   nameAr: {
@@ -43,7 +44,7 @@ const categorySchema = new mongoose.Schema({
   // },
   image: {
     type: String,
-    default: null
+    default: getDefaultCategoryImage()
   },
   // icon: {
   //   type: String,

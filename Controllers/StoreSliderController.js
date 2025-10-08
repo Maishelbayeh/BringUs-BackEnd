@@ -279,16 +279,6 @@ const getStoreSliderById = async (req, res) => {
  */
 const createStoreSlider = async (req, res) => {
   try {
-    // Check for validation errors
-    // const errors = validationResult(req);
-    // if (!errors.isEmpty()) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: 'Validation failed',
-    //     errors: errors.array()
-    //   });
-    // }
-
     // Add store to the request body
     const sliderData = {
       ...req.body,
@@ -300,10 +290,47 @@ const createStoreSlider = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Store slider created successfully',
+      messageAr: 'تم إنشاء شريحة المتجر بنجاح',
       data: slider
     });
   } catch (error) {
     //CONSOLE.error('Create store slider error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      const message = messages.join(', ');
+      
+      // Create bilingual error message
+      let messageAr = 'فشل التحقق من صحة البيانات';
+      if (message.includes('Video URL must be a valid')) {
+        messageAr = 'رابط الفيديو يجب أن يكون رابط فيسبوك أو يوتيوب أو إنستغرام أو تيك توك أو تويتر صحيح';
+      } else if (message.includes('Image URL is required')) {
+        messageAr = 'رابط الصورة مطلوب لنوع الشريحة';
+      } else if (message.includes('Video URL is required') || message.includes('Video URL cannot be empty')) {
+        messageAr = 'رابط الفيديو مطلوب لنوع الفيديو';
+      }
+      
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
+        message: message,
+        messageAr: messageAr
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Store slider with this data already exists',
+        messageAr: 'شريحة المتجر بهذه البيانات موجودة بالفعل',
+        error: error.message
+      });
+    }
+    
+    // Generic server error
     res.status(500).json({
       success: false,
       message: 'Error creating store slider',
@@ -364,7 +391,7 @@ const updateStoreSlider = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
-        messageAr: 'فشل في التحقق من صحة البيانات',
+        messageAr: 'فشل التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
@@ -389,10 +416,57 @@ const updateStoreSlider = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Store slider updated successfully',
+      messageAr: 'تم تحديث شريحة المتجر بنجاح',
       data: slider
     });
   } catch (error) {
     //CONSOLE.error('Update store slider error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      const message = messages.join(', ');
+      
+      // Create bilingual error message
+      let messageAr = 'فشل التحقق من صحة البيانات';
+      if (message.includes('Video URL must be a valid')) {
+        messageAr = 'رابط الفيديو يجب أن يكون رابط فيسبوك أو يوتيوب أو إنستغرام أو تيك توك أو تويتر صحيح';
+      } else if (message.includes('Image URL is required')) {
+        messageAr = 'رابط الصورة مطلوب لنوع الشريحة';
+      } else if (message.includes('Video URL is required') || message.includes('Video URL cannot be empty')) {
+        messageAr = 'رابط الفيديو مطلوب لنوع الفيديو';
+      }
+      
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        errorAr: 'فشل التحقق من صحة البيانات',
+        message: message,
+        messageAr: messageAr
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Store slider with this data already exists',
+        messageAr: 'شريحة المتجر بهذه البيانات موجودة بالفعل',
+        error: error.message
+      });
+    }
+    
+    // Handle CastError (invalid ObjectId)
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid ID format',
+        messageAr: 'تنسيق المعرف غير صحيح',
+        error: error.message
+      });
+    }
+    
+    // Generic server error
     res.status(500).json({
       success: false,
       message: 'Error updating store slider',

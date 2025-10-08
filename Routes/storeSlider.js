@@ -243,13 +243,19 @@ const validateSliderType = (req, res, next) => {
   if (req.body.type === 'slider' && !req.body.imageUrl) {
     return res.status(400).json({
       success: false,
-      message: 'Image URL is required for slider type'
+      error: 'Validation failed',
+      errorAr: 'فشل التحقق من صحة البيانات',
+      message: 'Image URL is required for slider type',
+      messageAr: 'رابط الصورة مطلوب لنوع الشريحة'
     });
   }
   if (req.body.type === 'video' && !req.body.videoUrl) {
     return res.status(400).json({
       success: false,
-      message: 'Video URL is required for video type'
+      error: 'Validation failed',
+      errorAr: 'فشل التحقق من صحة البيانات',
+      message: 'Video URL is required for video type',
+      messageAr: 'رابط الفيديو مطلوب لنوع الفيديو'
     });
   }
   next();
@@ -577,7 +583,8 @@ router.post('/upload-image', protect, authorize('admin', 'superadmin'), verifySt
     if (!req.file) {
       return res.status(400).json({ 
         success: false, 
-        message: 'No file uploaded' 
+        message: 'No file uploaded',
+        messageAr: 'لم يتم رفع أي ملف'
       });
     }
 
@@ -594,8 +601,9 @@ router.post('/upload-image', protect, authorize('admin', 'superadmin'), verifySt
     //CONSOLE.error('Upload slider image error:', err);
     res.status(500).json({ 
       success: false, 
-      error: 'Upload failed',
-      message: err.message 
+      message: 'Upload failed',
+      messageAr: 'فشل الرفع',
+      error: err.message 
     });
   }
 });

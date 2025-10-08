@@ -1,5 +1,6 @@
 const Category = require('../Models/Category');
 const Store = require('../Models/Store');
+const { getDefaultCategoryImage } = require('../utils/defaultImages');
 
 exports.getAll = async (req, res) => {
   try {
@@ -151,11 +152,14 @@ exports.create = async (req, res) => {
       store: storeId
     };
 
-    // معالجة الصورة: حفظ الرابط مباشرة كـ string
+    // معالجة الصورة: حفظ الرابط مباشرة كـ string أو استخدام الصورة الافتراضية
     if (typeof req.body.image === 'string' && req.body.image) {
       categoryData.image = req.body.image;
     } else if (req.body.image && typeof req.body.image === 'object' && req.body.image.url) {
       categoryData.image = req.body.image.url;
+    } else if (!req.body.image || req.body.image === '') {
+      // Use default category image when no image is provided
+      categoryData.image = getDefaultCategoryImage();
     }
     
     //CONSOLE.log('Create category - Final categoryData:', categoryData);
@@ -243,12 +247,15 @@ exports.update = async (req, res) => {
       });
     }
 
-    // معالجة الصورة: حفظ الرابط مباشرة كـ string
+    // معالجة الصورة: حفظ الرابط مباشرة كـ string أو استخدام الصورة الافتراضية
     const updateData = { ...req.body };
     if (typeof req.body.image === 'string' && req.body.image) {
       updateData.image = req.body.image;
     } else if (req.body.image && typeof req.body.image === 'object' && req.body.image.url) {
       updateData.image = req.body.image.url;
+    } else if (!req.body.image || req.body.image === '') {
+      // Use default category image when no image is provided
+      updateData.image = 'https://pub-237eec0793554bacb7debfc287be3b32.r2.dev/default-images/1759906541382-269298623.jpg';
     }
     
     //CONSOLE.log('Update category - Final updateData:', updateData);

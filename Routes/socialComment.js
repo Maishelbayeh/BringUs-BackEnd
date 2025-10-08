@@ -73,46 +73,86 @@ const setCurrentStoreAndCheckPermissions = async (req, res, next) => {
       });
     }
 
-    // Superadmin can access any store, but for now we'll use the first available store
+    const Store = require('../Models/Store');
+    const Owner = require('../Models/Owner');
+    
+    // Get the target store ID from request body or params
+    const targetStoreId = req.body.store || req.body.storeId || req.params.storeId;
+
+    // Superadmin can access any store
     if (req.user.role === 'superadmin') {
-      const Store = require('../Models/Store');
-      const store = await Store.findOne({ status: 'active' });
-      if (store) {
+      if (targetStoreId) {
+        // Verify the specific store exists
+        const store = await Store.findById(targetStoreId);
+        if (!store) {
+          return res.status(404).json({
+            success: false,
+            message: 'Store not found',
+            messageAr: 'المتجر غير موجود'
+          });
+        }
         req.store = store;
-        req.owner = {
-          permissions: ['manage_store', 'manage_users', 'manage_products', 'manage_categories', 'manage_orders', 'manage_inventory', 'view_analytics', 'manage_settings'],
-          isPrimaryOwner: true
-        };
+      } else {
+        // If no specific store requested, use the first active store
+        const store = await Store.findOne({ status: 'active' });
+        if (store) {
+          req.store = store;
+        }
       }
+      req.owner = {
+        permissions: ['manage_store', 'manage_users', 'manage_products', 'manage_categories', 'manage_orders', 'manage_inventory', 'view_analytics', 'manage_settings'],
+        isPrimaryOwner: true
+      };
       return next();
     }
 
-    // For admin users, get their first store
+    // For admin users, check if they have access to the specific store
     if (req.user.role === 'admin') {
-      const Owner = require('../Models/Owner');
-      const owner = await Owner.findOne({
-        userId: req.user._id,
-        status: 'active'
-      }).populate('storeId');
+      let owner;
+      
+      if (targetStoreId) {
+        // Check if admin has access to the specific store
+        owner = await Owner.findOne({
+          userId: req.user._id,
+          storeId: targetStoreId,
+          status: 'active'
+        }).populate('storeId');
 
-      if (owner) {
-        req.store = owner.storeId;
-        req.owner = owner;
+        if (!owner) {
+          return res.status(403).json({
+            success: false,
+            message: 'You do not have access to this store',
+            messageAr: 'ليس لديك صلاحية للوصول إلى هذا المتجر'
+          });
+        }
       } else {
-        return res.status(403).json({
-          success: false,
-          message: 'No store access found',
-          messageAr: 'لا يوجد وصول للمتجر'
-        });
+        // If no specific store, get their first store
+        owner = await Owner.findOne({
+          userId: req.user._id,
+          status: 'active'
+        }).populate('storeId');
+
+        if (!owner) {
+          return res.status(403).json({
+            success: false,
+            message: 'No store access found',
+            messageAr: 'لا يوجد وصول للمتجر'
+          });
+        }
       }
+
+      req.store = owner.storeId;
+      req.owner = owner;
     }
 
     next();
   } catch (error) {
+    console.error('setCurrentStoreAndCheckPermissions error:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error',
-      messageAr: 'خطأ في الخادم'
+      messageAr: 'خطأ في الخادم',
+      error: error.message
     });
   }
 };
