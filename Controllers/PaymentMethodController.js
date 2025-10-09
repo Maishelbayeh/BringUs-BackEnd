@@ -320,7 +320,8 @@ const getPaymentMethodById = async (req, res) => {
     if (!paymentMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Payment method not found'
+        message: 'Payment method not found',
+        messageAr: 'طريقة الدفع غير موجودة'
       });
     }
 
@@ -1029,7 +1030,8 @@ const updatePaymentMethodWithFiles = async (req, res) => {
     if (!existingMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Payment method not found'
+        message: 'Payment method not found',
+        messageAr: 'طريقة الدفع غير موجودة'
       });
     }
 
@@ -1041,7 +1043,9 @@ const updatePaymentMethodWithFiles = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Cannot deactivate the default payment method. Please set another method as default first.',
-        error: 'Default method cannot be inactive'
+        messageAr: 'لا يمكن إلغاء تفعيل طريقة الدفع الافتراضية. يرجى تعيين طريقة أخرى كافتراضية أولاً.',
+        error: 'Default method cannot be inactive',
+        errorAr: 'الطريقة الافتراضية لا يمكن أن تكون غير نشطة'
       });
     }
 
@@ -1185,7 +1189,9 @@ const updatePaymentMethodWithFiles = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Cannot deactivate the default payment method. Please set another method as default first.',
-        error: 'Default method cannot be inactive'
+        messageAr: 'لا يمكن إلغاء تفعيل طريقة الدفع الافتراضية. يرجى تعيين طريقة أخرى كافتراضية أولاً.',
+        error: 'Default method cannot be inactive',
+        errorAr: 'الطريقة الافتراضية لا يمكن أن تكون غير نشطة'
       });
     }
     
@@ -1494,7 +1500,8 @@ const toggleActiveStatus = async (req, res) => {
     if (!paymentMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Payment method not found'
+        message: 'Payment method not found',
+        messageAr: 'طريقة الدفع غير موجودة'
       });
     }
 
@@ -1503,7 +1510,9 @@ const toggleActiveStatus = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Cannot deactivate the default payment method. Please set another method as default first.',
-        error: 'Default method cannot be inactive'
+        messageAr: 'لا يمكن إلغاء تفعيل طريقة الدفع الافتراضية. يرجى تعيين طريقة أخرى كافتراضية أولاً.',
+        error: 'Default method cannot be inactive',
+        errorAr: 'الطريقة الافتراضية لا يمكن أن تكون غير نشطة'
       });
     }
 
@@ -1572,7 +1581,8 @@ const setAsDefault = async (req, res) => {
     if (!paymentMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Payment method not found'
+        message: 'Payment method not found',
+        messageAr: 'طريقة الدفع غير موجودة'
       });
     }
 
@@ -1684,7 +1694,8 @@ const uploadLogo = async (req, res) => {
     if (!paymentMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Payment method not found'
+        message: 'Payment method not found',
+        messageAr: 'طريقة الدفع غير موجودة'
       });
     }
 
@@ -1790,7 +1801,8 @@ const uploadQrCode = async (req, res) => {
     if (!paymentMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Payment method not found'
+        message: 'Payment method not found',
+        messageAr: 'طريقة الدفع غير موجودة'
       });
     }
 
@@ -1928,7 +1940,8 @@ const uploadPaymentImage = async (req, res) => {
     if (!paymentMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Payment method not found'
+        message: 'Payment method not found',
+        messageAr: 'طريقة الدفع غير موجودة'
       });
     }
 
@@ -2032,7 +2045,8 @@ const removePaymentImage = async (req, res) => {
     if (!paymentMethod) {
       return res.status(404).json({
         success: false,
-        message: 'Payment method not found'
+        message: 'Payment method not found',
+        messageAr: 'طريقة الدفع غير موجودة'
       });
     }
 

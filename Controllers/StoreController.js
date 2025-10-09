@@ -341,7 +341,11 @@ class StoreController {
         if (!store) {
           return error(res, { message: 'Store not found', messageAr: 'المتجر غير موجود', statusCode: 404 });
         }
-        return success(res, { data: store, message: 'Store updated successfully' });
+        return res.status(200).json({
+          success: true,
+          message: 'Store updated successfully',
+          messageAr: 'تم تحديث المتجر بنجاح'
+        });
       } catch (dbError) {
         console.error('Update store - Database error:', dbError);
         console.error('Update store - Database error name:', dbError.name);

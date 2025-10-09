@@ -51,8 +51,8 @@ exports.hasStoreAccess = async (req, res, next) => {
       });
     }
     
-    // TEMPORARY: Superadmin has access to all stores
-    if (req.user.role === 'superadmin') {
+    // Superadmin and Admin have access to all stores
+    if (req.user.role === 'superadmin' || req.user.role === 'admin') {
       if (!storeId) {
         return res.status(400).json({
           success: false,
@@ -71,7 +71,7 @@ exports.hasStoreAccess = async (req, res, next) => {
       }
       req.store = store;
       
-      // Create a mock owner for superadmin
+      // Create a mock owner for superadmin/admin
       req.owner = {
         userId: req.user._id,
         storeId: store._id,
@@ -86,7 +86,7 @@ exports.hasStoreAccess = async (req, res, next) => {
         isPrimaryOwner: true,
         status: 'active'
       };
-      //CONSOLE.log('🔓 Store access bypassed - Superadmin access granted');
+      //CONSOLE.log('🔓 Store access bypassed - Superadmin/Admin access granted');
       return next();
     }
 

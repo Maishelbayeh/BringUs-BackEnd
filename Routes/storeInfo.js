@@ -457,6 +457,14 @@ router.get('/token-debug',
  *               whatsappNumber:
  *                 type: string
  *                 example: "+1234567890"
+ *               lahzaToken:
+ *                 type: string
+ *                 description: Lahza Merchant Code (can be sent at root level or inside settings)
+ *                 example: "sk_test_aJgxg75kYKtW6qVuTgijJyzpuhszRSvc4"
+ *               lahzaSecretKey:
+ *                 type: string
+ *                 description: Lahza Secret Key (can be sent at root level or inside settings)
+ *                 example: "sk_test_aJgxg75kYKtW6qVuTgijJyzpuhszRSvc4"
  *     responses:
  *       200:
  *         description: Store information updated successfully
@@ -644,6 +652,22 @@ router.patch('/update',
             // Settings
             if (req.body.settings !== undefined) {
                 updateData.settings = { ...store.settings, ...req.body.settings };
+            }
+
+            // Handle Lahza credentials sent at root level
+            if (req.body.lahzaToken !== undefined || req.body.lahzaSecretKey !== undefined) {
+                // Initialize settings if not already set
+                if (!updateData.settings) {
+                    updateData.settings = { ...store.settings };
+                }
+                
+                if (req.body.lahzaToken !== undefined) {
+                    updateData.settings.lahzaToken = req.body.lahzaToken;
+                }
+                
+                if (req.body.lahzaSecretKey !== undefined) {
+                    updateData.settings.lahzaSecretKey = req.body.lahzaSecretKey;
+                }
             }
 
             // WhatsApp number

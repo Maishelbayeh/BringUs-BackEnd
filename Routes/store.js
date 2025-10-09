@@ -130,6 +130,11 @@ const handleMulterError = (err, req, res, next) => {
 router.get('/slug/:slug', StoreController.getStoreBySlug);
 
 /**
+ * Get store by ID route
+ */
+router.get('/:id', protect, StoreController.getStore);
+
+/**
  * @swagger
  * /api/stores:
  *   post:

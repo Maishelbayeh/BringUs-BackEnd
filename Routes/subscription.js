@@ -244,7 +244,7 @@ router.get('/stores/:storeId', protect,  checkStoreSubscription);
  *                 type: string
  *                 description: The subscription plan ID
  *                 example: "507f1f77bcf86cd799439011"
- *               referenceId
+ *               referenceId:
  *                 type: string
  *                 description: Reference ID for the subscription
  *                 example: "1234567890"

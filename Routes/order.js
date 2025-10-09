@@ -1730,7 +1730,8 @@ router.get('/store/:storeId/wholesaler-discount/:userId', async (req, res) => {
  *                       description: Product ID
  *                     quantity:
  *                       type: number
- *                       description: Quantity (default: 1)
+ *                       description: Quantity
+ *                       default: 1
  *     responses:
  *       200:
  *         description: Price calculation completed successfully
