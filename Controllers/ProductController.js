@@ -1147,7 +1147,7 @@ exports.createVariant = async (req, res) => {
       .populate('category')
       .populate('categories')
       .populate('productLabels')
-      .populate('specifications')
+      .populate('specifications', 'titleAr titleEn values')
       .populate('unit')
       .populate('store', 'name domain');
 
@@ -1198,7 +1198,7 @@ exports.getVariants = async (req, res) => {
       .populate('category', 'nameAr nameEn fullPath fullPathAr')
       .populate('categories', 'nameAr nameEn fullPath fullPathAr')
       .populate('productLabels', 'nameAr nameEn color')
-      .populate('specifications', 'titleAr titleEn descriptionAr descriptionEn')
+      .populate('specifications', 'titleAr titleEn values')
       .populate('unit', 'nameAr nameEn symbol')
       .populate('store', 'nameAr nameEn slug domain');
 
@@ -2954,7 +2954,7 @@ exports.updateVariant = async (req, res) => {
     ).populate('category')
      .populate('categories')
      .populate('productLabels')
-     .populate('specifications')
+     .populate('specifications', 'titleAr titleEn values')
      .populate('unit')
      .populate('store', 'name domain');
 
