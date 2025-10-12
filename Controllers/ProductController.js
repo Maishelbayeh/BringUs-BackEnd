@@ -1546,7 +1546,8 @@ exports.getWithoutVariants = async (req, res) => {
       sort = 'newest',
       search,
       colors,
-      productLabels
+      productLabels,
+      variant = 'false' // New parameter to include variants
     } = req.query;
 
     // Build filter object - exclude variant products
@@ -1692,10 +1693,13 @@ exports.getWithoutVariants = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Add filter to exclude variant products (products that are variants of other products)
+    // Only exclude variants if variant parameter is not 'true'
+    if (variant !== 'true') {
     // We'll use a more efficient approach by checking if the product ID exists in any other product's variants array
     filter._id = { 
       $nin: await Product.distinct('variants', { store: storeId }) 
     };
+    }
 
     // Execute query
     const products = await Product.find(filter)
@@ -1771,8 +1775,8 @@ exports.getProductWithVariants = async (req, res) => {
       });
     }
 
-    // Find the main product
-    const product = await Product.findOne({ 
+    // Find the requested product
+    let requestedProduct = await Product.findOne({ 
       _id: productId, 
       store: storeId,
       isActive: true
@@ -1784,31 +1788,65 @@ exports.getProductWithVariants = async (req, res) => {
     .populate('unit', 'nameAr nameEn symbol')
     .populate('store', 'name domain');
 
-    if (!product) {
+    if (!requestedProduct) {
       return res.status(404).json({
         success: false,
-        error: 'Product not found'
+        error: 'Product not found',
+        messageAr: 'المنتج غير موجود'
       });
     }
 
-    // Get variants if the product has any
+    let parentProduct = null;
     let variants = [];
     let variantsCount = 0;
+    let isVariant = false;
 
-    if (product.variants && product.variants.length > 0) {
-      variants = await Product.find({ 
-        _id: { $in: product.variants },
+    // Check if the requested product is a variant (not a parent)
+    if (requestedProduct.isParent === false) {
+      isVariant = true;
+      
+      // Find the parent product
+      parentProduct = await Product.findOne({ 
+        variants: requestedProduct._id,
         store: storeId,
         isActive: true
       })
-      .select('_id mainImage') // Only select ID and main image
-      .sort({ createdAt: 1 }); // Sort variants by creation date
+      .populate('category', 'nameAr nameEn')
+      .populate('categories', 'nameAr nameEn')
+      .populate('productLabels', 'nameAr nameEn color')
+      .populate('specifications', 'descriptionAr descriptionEn')
+      .populate('unit', 'nameAr nameEn symbol')
+      .populate('store', 'name domain');
 
-      variantsCount = variants.length;
+      if (parentProduct) {
+        // Get all variants (siblings) excluding the current one
+        variants = await Product.find({ 
+          _id: { $in: parentProduct.variants, $ne: requestedProduct._id },
+          store: storeId,
+          isActive: true
+        })
+        .select('_id mainImage nameAr nameEn price stock availableQuantity')
+        .sort({ createdAt: 1 });
+
+        variantsCount = variants.length;
+      }
+    } else {
+      // It's a parent product, get its variants
+      if (requestedProduct.variants && requestedProduct.variants.length > 0) {
+        variants = await Product.find({ 
+          _id: { $in: requestedProduct.variants },
+          store: storeId,
+          isActive: true
+        })
+        .select('_id mainImage nameAr nameEn price stock availableQuantity')
+        .sort({ createdAt: 1 });
+
+        variantsCount = variants.length;
+      }
     }
 
-    // تحويل الألوان من JSON string إلى array للمنتج الرئيسي
-    const processedProduct = parseProductColors(product);
+    // تحويل الألوان من JSON string إلى array للمنتج المطلوب
+    const processedProduct = parseProductColors(requestedProduct);
     
     // Ensure attributes is a clean array
     if (processedProduct.attributes && Array.isArray(processedProduct.attributes)) {
@@ -1819,19 +1857,39 @@ exports.getProductWithVariants = async (req, res) => {
       processedProduct.attributes = [];
     }
     
-    // No need to process colors for variants since we only have ID and mainImage
+    // Process parent product if exists
+    let processedParent = null;
+    if (parentProduct) {
+      processedParent = parseProductColors(parentProduct);
+      
+      // Ensure attributes is a clean array for parent
+      if (processedParent.attributes && Array.isArray(processedParent.attributes)) {
+        processedParent.attributes = processedParent.attributes.filter(attr => 
+          attr && typeof attr === 'object' && attr.name && attr.value
+        );
+      } else {
+        processedParent.attributes = [];
+      }
+    }
+    
+    // Process variants to include more details
     const processedVariants = variants.map(variant => ({
       _id: variant._id,
-      mainImage: variant.mainImage
+      mainImage: variant.mainImage,
+      nameAr: variant.nameAr,
+      nameEn: variant.nameEn,
+      price: variant.price,
+      stock: variant.stock,
+      availableQuantity: variant.availableQuantity
     }));
 
-    // Increment views for the main product using findOneAndUpdate to avoid validation issues
+    // Increment views for the requested product using findOneAndUpdate to avoid validation issues
     const updatedProduct = await Product.findOneAndUpdate(
-      { _id: product._id },
+      { _id: requestedProduct._id },
       { 
         $inc: { views: 1 },
         $set: { 
-          attributes: Array.isArray(product.attributes) ? product.attributes : []
+          attributes: Array.isArray(requestedProduct.attributes) ? requestedProduct.attributes : []
         }
       },
       { 
@@ -1840,19 +1898,27 @@ exports.getProductWithVariants = async (req, res) => {
       }
     );
     
-    if (product.attributes && typeof product.attributes === 'string') {
-      console.warn(`⚠️ Found invalid attributes format for product ${product._id}:`, product.attributes);
+    if (requestedProduct.attributes && typeof requestedProduct.attributes === 'string') {
+      console.warn(`⚠️ Found invalid attributes format for product ${requestedProduct._id}:`, requestedProduct.attributes);
     }
     
-    console.log(`👁️ Incremented views for product ${product.nameEn}: ${updatedProduct.views}`);
+    console.log(`👁️ Incremented views for product ${requestedProduct.nameEn}: ${updatedProduct.views}`);
+
+    // Build response based on whether it's a variant or parent
+    const responseData = {
+      product: processedProduct,
+      variants: processedVariants,
+      variantsCount: variantsCount
+    };
+
+    // If it's a variant, add parent information
+    if (isVariant && processedParent) {
+      responseData.parentProduct = processedParent;
+    }
 
     res.json({
       success: true,
-      data: {
-        product: processedProduct,
-        variants: processedVariants,
-        variantsCount: variantsCount
-      }
+      data: responseData
     });
   } catch (error) {
     console.error('Get product with variants error:', error);

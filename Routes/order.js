@@ -661,18 +661,23 @@ router.put('/:id/status', [
       order.actualDeliveryDate = new Date();
     }
 
-    // Handle cancellation
+    // Handle cancellation - restore stock to inventory
     if (status === 'cancelled' && order.status !== 'cancelled') {
       order.cancelledAt = new Date();
       order.cancelledBy = req.user._id;
 
-      // Restore product stock
+      // Restore product stock properly including specifications
       for (const item of order.items) {
         const product = await Product.findById(item.productId);
         if (product) {
-          product.stock += item.quantity;
-          product.soldCount -= item.quantity;
-          await product.save();
+          // Use the proper restore function that handles both stock and availableQuantity and specifications
+          await OrderController.restoreProductStock(
+            product, 
+            item.quantity, 
+            item.selectedSpecifications || []
+          );
+        } else {
+          console.warn(`Product ${item.productId} not found for stock restoration`);
         }
       }
     }
@@ -748,7 +753,17 @@ router.put('/:id/cancel', [
     if (!['pending', 'confirmed'].includes(order.status)) {
       return res.status(400).json({
         success: false,
-        message: 'Order cannot be cancelled at this stage'
+        message: 'Order cannot be cancelled at this stage',
+        messageAr: 'لا يمكن إلغاء الطلب في هذه المرحلة'
+      });
+    }
+
+    // Prevent double cancellation and stock restoration
+    if (order.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Order is already cancelled',
+        messageAr: 'الطلب ملغي بالفعل'
       });
     }
 
@@ -758,13 +773,18 @@ router.put('/:id/cancel', [
     order.cancelledBy = req.user._id;
     order.cancellationReason = req.body.reason;
 
-    // Restore product stock
+    // Restore product stock properly including specifications
     for (const item of order.items) {
       const product = await Product.findById(item.productId);
       if (product) {
-        product.stock += item.quantity;
-        product.soldCount -= item.quantity;
-        await product.save();
+        // Use the proper restore function that handles both stock and availableQuantity and specifications
+        await OrderController.restoreProductStock(
+          product, 
+          item.quantity, 
+          item.selectedSpecifications || []
+        );
+      } else {
+        console.warn(`Product ${item.productId} not found for stock restoration`);
       }
     }
 

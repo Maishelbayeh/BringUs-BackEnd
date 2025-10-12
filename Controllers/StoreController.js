@@ -459,7 +459,9 @@ class StoreController {
         {
           $match: {
             'user.id': { $in: customerIds },
-            'store.id': new mongoose.Types.ObjectId(storeId)
+            'store.id': new mongoose.Types.ObjectId(storeId),
+            // Exclude cancelled orders - only include pending, shipped, delivered
+            status: { $in: ['pending', 'shipped', 'delivered'] }
           }
         },
         {
@@ -530,7 +532,9 @@ class StoreController {
             {
              $match: {
                'store.id': new mongoose.Types.ObjectId(storeId),
-               guestId: { $ne: null, $exists: true }
+               guestId: { $ne: null, $exists: true },
+               // Exclude cancelled orders - only include pending, shipped, delivered
+               status: { $in: ['pending', 'shipped', 'delivered'] }
              }
             },
                           {
@@ -542,7 +546,7 @@ class StoreController {
                   email: { $first: '$user.email' },
                   phone: { $first: '$user.phone' },
                   orderCount: { $sum: 1 },
-                  totalSpent: { $sum: '$totalPrice' },
+                  totalSpent: { $sum: '$pricing.total' },
                   lastOrderDate: { $max: '$createdAt' },
                   firstOrderDate: { $min: '$createdAt' }
                 }
@@ -685,6 +689,9 @@ class StoreController {
       }
 
       // Get unique guest customers from orders
+      // Add status filter to exclude cancelled orders
+      matchConditions.status = { $in: ['pending', 'shipped', 'delivered'] };
+      
       const guestOrders = await Order.aggregate([
         {
           $match: matchConditions
@@ -697,10 +704,10 @@ class StoreController {
             email: { $first: '$user.email' },
             phone: { $first: '$user.phone' },
             orderCount: { $sum: 1 },
-            totalSpent: { $sum: '$totalPrice' },
+            totalSpent: { $sum: '$pricing.total' },
             lastOrderDate: { $max: '$createdAt' },
             firstOrderDate: { $min: '$createdAt' },
-            averageOrderValue: { $avg: '$totalPrice' }
+            averageOrderValue: { $avg: '$pricing.total' }
           }
         },
         {

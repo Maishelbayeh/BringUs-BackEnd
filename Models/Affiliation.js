@@ -73,14 +73,14 @@ const affiliationSchema = new mongoose.Schema({
     unique: true,
     required: [true, 'Affiliate code is required'],
     trim: true,
-    uppercase: true,
-    match: [/^[A-Z0-9]{6,10}$/, 'Affiliate code must be 6-10 alphanumeric characters']
+    match: [/^[A-Za-z0-9]{8,12}$/, 'Affiliate code must be 8-12 alphanumeric characters']
   },
   
   affiliateLink: {
     type: String,
     required: [true, 'Affiliate link is required'],
-    trim: true
+    trim: true,
+    unique: true // Ensure unique affiliate links
   },
   
   // Performance tracking
@@ -221,6 +221,8 @@ const affiliationSchema = new mongoose.Schema({
 // Indexes for performance
 affiliationSchema.index({ store: 1, email: 1 }, { unique: true });
 affiliationSchema.index({ store: 1, affiliateCode: 1 }, { unique: true });
+affiliationSchema.index({ affiliateLink: 1 }, { unique: true }); // Global unique index for affiliate links
+affiliationSchema.index({ affiliateCode: 1 }, { unique: true }); // Global unique index for affiliate codes
 affiliationSchema.index({ store: 1, status: 1 });
 affiliationSchema.index({ store: 1, 'bankInfo.iban': 1 });
 affiliationSchema.index({ store: 1, lastActivity: -1 });
@@ -248,16 +250,9 @@ affiliationSchema.virtual('performanceScore').get(function() {
   return Math.round((this.totalOrders / this.totalSales) * 100);
 });
 
-// Pre-save middleware to generate affiliate code if not provided
+// Pre-save middleware - Note: affiliateCode and affiliateLink should be generated in controller
+// This middleware only updates calculated fields
 affiliationSchema.pre('save', function(next) {
-  if (!this.affiliateCode) {
-    this.affiliateCode = generateAffiliateCode();
-  }
-  
-  if (!this.affiliateLink) {
-    this.affiliateLink = `${'https://bringus-main.onrender.com'}/ref/${this.affiliateCode}`;
-  }
-  
   // Update balance
   this.balance = this.totalCommission - this.totalPaid;
   
@@ -269,20 +264,70 @@ affiliationSchema.pre('save', function(next) {
   next();
 });
 
-// Static method to generate unique affiliate code
+// Static method to generate unique affiliate code (8-character mixed case)
 affiliationSchema.statics.generateUniqueAffiliateCode = async function() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let code;
   let isUnique = false;
+  let attempts = 0;
+  const maxAttempts = 10;
   
-  while (!isUnique) {
-    code = generateAffiliateCode();
+  while (!isUnique && attempts < maxAttempts) {
+    // Generate random 8-character code
+    code = Array.from(
+      { length: 8 }, 
+      () => chars[Math.floor(Math.random() * chars.length)]
+    ).join('');
+    
     const existing = await this.findOne({ affiliateCode: code });
     if (!existing) {
       isUnique = true;
     }
+    attempts++;
+  }
+  
+  // Fallback: use timestamp + random if max attempts reached
+  if (!isUnique) {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 6);
+    code = (timestamp + random).substring(0, 8);
   }
   
   return code;
+};
+
+// Static method to generate unique affiliate link with store slug
+affiliationSchema.statics.generateUniqueAffiliateLink = async function(storeSlug) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let attempts = 0;
+  const maxAttempts = 10;
+  const baseDomain = process.env.FRONTEND_URL || 'https://bringus-main.onrender.com';
+  
+  while (attempts < maxAttempts) {
+    // Generate random 8-character code
+    const code = Array.from(
+      { length: 8 }, 
+      () => chars[Math.floor(Math.random() * chars.length)]
+    ).join('');
+    
+    const affiliateLink = `${baseDomain}/${storeSlug}/affiliate/${code}`;
+    
+    // Check if link already exists in database
+    const exists = await this.findOne({ affiliateLink });
+    if (!exists) {
+      return { affiliateLink, affiliateCode: code };
+    }
+    
+    attempts++;
+  }
+  
+  // Fallback: use timestamp + random
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 6);
+  const fallbackCode = (timestamp + random).substring(0, 8);
+  const fallbackLink = `${baseDomain}/${storeSlug}/affiliate/${fallbackCode}`;
+  
+  return { affiliateLink: fallbackLink, affiliateCode: fallbackCode };
 };
 
 // Static method to get affiliate statistics for a store

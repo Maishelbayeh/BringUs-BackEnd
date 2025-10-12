@@ -204,7 +204,7 @@ exports.reduceProductStock = async (product, quantity, selectedSpecifications = 
  * @param {Number} quantity - Quantity to restore
  * @param {Array} selectedSpecifications - Array of selected specifications
  */
-const restoreProductStock = async (product, quantity, selectedSpecifications = []) => {
+exports.restoreProductStock = async (product, quantity, selectedSpecifications = []) => {
   try {
     // التحقق من أن الكمية موجبة
     if (quantity <= 0) {
@@ -1098,10 +1098,25 @@ exports.updateOrderStatus = async (req, res) => {
       order.actualDeliveryDate = new Date();
     }
 
-    // Handle cancellation
+    // Handle cancellation - restore stock to inventory
     if (status === 'cancelled' && order.status !== 'cancelled') {
       order.cancelledAt = new Date();
       order.cancelledBy = req.user?.id || 'system';
+      
+      // Restore product stock for all items in the order
+      for (const item of order.items) {
+        const product = await Product.findById(item.productId);
+        if (product) {
+          // Use the proper restore function that handles both stock and availableQuantity and specifications
+          await exports.restoreProductStock(
+            product, 
+            item.quantity, 
+            item.selectedSpecifications || []
+          );
+        } else {
+          console.warn(`Product ${item.productId} not found for stock restoration during status update`);
+        }
+      }
     }
 
     await order.save();
@@ -2654,7 +2669,9 @@ exports.getAffiliateOrderStats = async (req, res) => {
 
     const filter = {
       'store.id': storeId,
-      'affiliateTracking.isAffiliateOrder': true
+      'affiliateTracking.isAffiliateOrder': true,
+      // Exclude cancelled orders - only include pending, shipped, delivered
+      status: { $in: ['pending', 'shipped', 'delivered'] }
     };
 
     if (startDate && endDate) {
@@ -3029,7 +3046,9 @@ exports.getTopUsersByProductsSold = async (req, res) => {
       {
         $match: {
           'store.id': new mongoose.Types.ObjectId(storeId),
-          'user.id': { $exists: true, $ne: null }
+          'user.id': { $exists: true, $ne: null },
+          // Exclude cancelled orders - only include pending, shipped, delivered
+          status: { $in: ['pending', 'shipped', 'delivered'] }
         }
       },
       {
@@ -3037,10 +3056,21 @@ exports.getTopUsersByProductsSold = async (req, res) => {
       },
       {
         $group: {
-          _id: '$user.id',
+          _id: {
+            userId: '$user.id',
+            orderId: '$_id'
+          },
+          userId: { $first: '$user.id' },
           totalProductsSold: { $sum: '$items.quantity' },
-          totalOrders: { $addToSet: '$_id' },
-          totalRevenue: { $sum: '$pricing.total' }
+          orderTotal: { $first: '$pricing.total' }
+        }
+      },
+      {
+        $group: {
+          _id: '$userId',
+          totalProductsSold: { $sum: '$totalProductsSold' },
+          totalOrders: { $addToSet: '$_id.orderId' },
+          totalRevenue: { $sum: '$orderTotal' }
         }
       },
       {
@@ -3127,7 +3157,9 @@ exports.getCategoriesRevenue = async (req, res) => {
     const categoriesRevenue = await Order.aggregate([
       {
         $match: {
-          'store.id': new mongoose.Types.ObjectId(storeId)
+          'store.id': new mongoose.Types.ObjectId(storeId),
+          // Exclude cancelled orders - only include pending, shipped, delivered
+          status: { $in: ['pending', 'shipped', 'delivered'] }
         }
       },
       {
@@ -3206,7 +3238,9 @@ exports.getTopProducts = async (req, res) => {
     const topProducts = await Order.aggregate([
       {
         $match: {
-          'store.id': new mongoose.Types.ObjectId(storeId)
+          'store.id': new mongoose.Types.ObjectId(storeId),
+          // Exclude cancelled orders - only include pending, shipped, delivered
+          status: { $in: ['pending', 'shipped', 'delivered'] }
         }
       },
       {

@@ -3,6 +3,29 @@ const Store = require('../Models/Store');
 const User = require('../Models/User');
 const { success, error } = require('../utils/response');
 
+/**
+ * Normalize email address consistently
+ * - Converts to lowercase
+ * - Removes dots from Gmail addresses (Gmail ignores dots)
+ * - Trims whitespace
+ */
+const normalizeEmail = (email) => {
+  if (!email) return email;
+  
+  // Trim and convert to lowercase
+  let normalized = email.trim().toLowerCase();
+  
+  // For Gmail addresses, remove dots from the local part (before @)
+  const [localPart, domain] = normalized.split('@');
+  if (domain === 'gmail.com' || domain === 'googlemail.com') {
+    // Remove all dots from the local part
+    const normalizedLocal = localPart.replace(/\./g, '');
+    normalized = `${normalizedLocal}@${domain}`;
+  }
+  
+  return normalized;
+};
+
 // Get all wholesalers for a store
 const getAllWholesalers = async (req, res) => {
   try {
@@ -65,7 +88,8 @@ const getAllWholesalers = async (req, res) => {
           verifiedWholesalers: 0
         }
       },
-      message: 'Wholesalers retrieved successfully'
+      message: 'Wholesalers retrieved successfully',
+      messageAr: 'تم جلب تجار الجملة بنجاح'
     });
 
   } catch (err) {
@@ -94,7 +118,7 @@ const getWholesalerById = async (req, res) => {
     const wholesalerResponse = wholesaler.toObject();
     delete wholesalerResponse.password;
 
-    return success(res, { data: wholesalerResponse, message: 'Wholesaler retrieved successfully' });
+    return success(res, { data: wholesalerResponse, message: 'Wholesaler retrieved successfully', messageAr: 'تم جلب تاجر الجملة بنجاح' });
 
   } catch (err) {
     //CONSOLE.error('Error getting wholesaler:', err);
@@ -114,14 +138,17 @@ const createWholesaler = async (req, res) => {
       return error(res, { message: 'Store not found', messageAr: 'المتجر غير موجود', statusCode: 404 });
     }
 
+    // Normalize email for consistent storage and duplicate checking
+    const normalizedEmail = normalizeEmail(wholesalerData.email);
+
     // Check if email already exists in both Wholesaler and User models
     const existingWholesaler = await Wholesaler.findOne({
-      email: wholesalerData.email,
+      email: normalizedEmail,
       store: storeId
     });
 
     const existingUser = await User.findOne({
-      email: wholesalerData.email
+      email: normalizedEmail
     });
 
     if (existingWholesaler || existingUser) {
@@ -137,7 +164,7 @@ const createWholesaler = async (req, res) => {
     const userData = {
       firstName: wholesalerData.firstName,
       lastName: wholesalerData.lastName,
-      email: wholesalerData.email,
+      email: normalizedEmail,
       password: wholesalerData.password, // Plain password - will be hashed by User model
       phone: wholesalerData.mobile,
       role: 'wholesaler',
@@ -149,9 +176,10 @@ const createWholesaler = async (req, res) => {
 
     const user = await User.create(userData);
 
-    // Add store ID and user ID to wholesaler data
+    // Add store ID, user ID, and normalized email to wholesaler data
     wholesalerData.store = storeId;
     wholesalerData.userId = user._id;
+    wholesalerData.email = normalizedEmail;
     
     // Set default status to Active if not provided
     if (!wholesalerData.status) {
@@ -168,14 +196,14 @@ const createWholesaler = async (req, res) => {
     const wholesalerResponse = wholesaler.toObject();
     delete wholesalerResponse.password;
 
-    return success(res, { data: wholesalerResponse, message: 'Wholesaler created successfully', statusCode: 201 });
+    return success(res, { data: wholesalerResponse, message: 'Wholesaler created successfully', messageAr: 'تم إنشاء تاجر الجملة بنجاح', statusCode: 201 });
 
   } catch (err) {
     //CONSOLE.error('Error creating wholesaler:', err);
     
     if (err.name === 'ValidationError') {
       const errors = Object.values(err.errors).map(e => e.message);
-      return error(res, { message: errors.join(', '), statusCode: 400 });
+      return error(res, { message: errors.join(', '), messageAr: 'خطأ في التحقق من صحة البيانات', statusCode: 400 });
     }
     
     return error(res, { message: 'Failed to create wholesaler', messageAr: 'فشل في إنشاء تاجر الجملة', statusCode: 500 });
@@ -199,21 +227,28 @@ const updateWholesaler = async (req, res) => {
     }
 
     // Check if email is being updated and if it already exists
-    if (updateData.email && updateData.email !== wholesaler.email) {
-      const existingWholesaler = await Wholesaler.findOne({
-        email: updateData.email,
-        store: storeId,
-        _id: { $ne: wholesalerId }
-      });
+    if (updateData.email) {
+      const normalizedEmail = normalizeEmail(updateData.email);
+      
+      if (normalizedEmail !== wholesaler.email) {
+        const existingWholesaler = await Wholesaler.findOne({
+          email: normalizedEmail,
+          store: storeId,
+          _id: { $ne: wholesalerId }
+        });
 
-      const existingUser = await User.findOne({
-        email: updateData.email,
-        _id: { $ne: wholesaler.userId }
-      });
+        const existingUser = await User.findOne({
+          email: normalizedEmail,
+          _id: { $ne: wholesaler.userId }
+        });
 
-      if (existingWholesaler || existingUser) {
-        return error(res, { message: 'Email already exists', messageAr: 'البريد الإلكتروني موجود بالفعل', statusCode: 400 });
+        if (existingWholesaler || existingUser) {
+          return error(res, { message: 'Email already exists', messageAr: 'البريد الإلكتروني موجود بالفعل', statusCode: 400 });
+        }
       }
+      
+      // Use normalized email
+      updateData.email = normalizedEmail;
     }
 
     // Update wholesaler fields
@@ -246,14 +281,14 @@ const updateWholesaler = async (req, res) => {
     const wholesalerResponse = wholesaler.toObject();
     delete wholesalerResponse.password;
 
-    return success(res, { data: wholesalerResponse, message: 'Wholesaler updated successfully' });
+    return success(res, { data: wholesalerResponse, message: 'Wholesaler updated successfully', messageAr: 'تم تحديث تاجر الجملة بنجاح' });
 
   } catch (err) {
     //CONSOLE.error('Error updating wholesaler:', err);
     
     if (err.name === 'ValidationError') {
       const errors = Object.values(err.errors).map(e => e.message);
-      return error(res, { message: errors.join(', '), statusCode: 400 });
+      return error(res, { message: errors.join(', '), messageAr: 'خطأ في التحقق من صحة البيانات', statusCode: 400 });
     }
     
     return error(res, { message: 'Failed to update wholesaler', messageAr: 'فشل في تحديث تاجر الجملة', statusCode: 500 });
@@ -282,7 +317,7 @@ const deleteWholesaler = async (req, res) => {
       await User.findByIdAndDelete(wholesaler.userId);
     }
 
-    return success(res, { data: null, message: 'Wholesaler deleted successfully' });
+    return success(res, { data: null, message: 'Wholesaler deleted successfully', messageAr: 'تم حذف تاجر الجملة بنجاح' });
 
   } catch (err) {
     //CONSOLE.error('Error deleting wholesaler:', err);
@@ -316,7 +351,7 @@ const verifyWholesaler = async (req, res) => {
     await wholesaler.populate('store', 'name domain');
     await wholesaler.populate('verifiedBy', 'firstName lastName');
 
-    return success(res, { data: wholesaler, message: 'Wholesaler verified successfully' });
+    return success(res, { data: wholesaler, message: 'Wholesaler verified successfully', messageAr: 'تم التحقق من تاجر الجملة بنجاح' });
 
   } catch (err) {
     //CONSOLE.error('Error verifying wholesaler:', err);
@@ -346,7 +381,7 @@ const updateWholesalerStatus = async (req, res) => {
     await wholesaler.populate('store', 'name domain');
     await wholesaler.populate('verifiedBy', 'firstName lastName');
 
-    return success(res, { data: wholesaler, message: 'Wholesaler status updated successfully' });
+    return success(res, { data: wholesaler, message: 'Wholesaler status updated successfully', messageAr: 'تم تحديث حالة تاجر الجملة بنجاح' });
 
   } catch (err) {
     //CONSOLE.error('Error updating wholesaler status:', err);
@@ -372,7 +407,8 @@ const getWholesalerStats = async (req, res) => {
         },
         topWholesalers
       },
-      message: 'Wholesaler statistics retrieved successfully'
+      message: 'Wholesaler statistics retrieved successfully',
+      messageAr: 'تم جلب إحصائيات تجار الجملة بنجاح'
     });
 
   } catch (err) {
@@ -407,8 +443,10 @@ const bulkUpdateStatus = async (req, res) => {
     );
 
     return success(res, {
-      updatedCount: result.modifiedCount
-    }, `${result.modifiedCount} wholesalers status updated successfully`);
+      data: { updatedCount: result.modifiedCount },
+      message: `${result.modifiedCount} wholesalers status updated successfully`,
+      messageAr: `تم تحديث حالة ${result.modifiedCount} تجار جملة بنجاح`
+    });
 
   } catch (err) {
     //CONSOLE.error('Error bulk updating wholesaler status:', err);
@@ -446,8 +484,10 @@ const bulkDelete = async (req, res) => {
     }
 
     return success(res, {
-      deletedCount: result.deletedCount
-    }, `${result.deletedCount} wholesalers deleted successfully`);
+      data: { deletedCount: result.deletedCount },
+      message: `${result.deletedCount} wholesalers deleted successfully`,
+      messageAr: `تم حذف ${result.deletedCount} تجار جملة بنجاح`
+    });
 
   } catch (err) {
     //CONSOLE.error('Error bulk deleting wholesalers:', err);

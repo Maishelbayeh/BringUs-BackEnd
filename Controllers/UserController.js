@@ -6,6 +6,29 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
 /**
+ * Normalize email address consistently across all operations
+ * - Converts to lowercase
+ * - Removes dots from Gmail addresses (Gmail ignores dots)
+ * - Trims whitespace
+ */
+const normalizeEmail = (email) => {
+  if (!email) return email;
+  
+  // Trim and convert to lowercase
+  let normalized = email.trim().toLowerCase();
+  
+  // For Gmail addresses, remove dots from the local part (before @)
+  const [localPart, domain] = normalized.split('@');
+  if (domain === 'gmail.com' || domain === 'googlemail.com') {
+    // Remove all dots from the local part
+    const normalizedLocal = localPart.replace(/\./g, '');
+    normalized = `${normalizedLocal}@${domain}`;
+  }
+  
+  return normalized;
+};
+
+/**
  * @swagger
  * components:
  *   schemas:
@@ -151,9 +174,12 @@ const createUser = async (req, res) => {
 
     const { firstName, lastName, email, password, phone, role, store, addresses, status } = req.body;
 
+    // Normalize email for consistent storage and duplicate checking
+    const normalizedEmail = normalizeEmail(email);
+
     // Check if user already exists in the same store
     const existingUser = await User.findOne({ 
-      email: email,
+      email: normalizedEmail,
       store: store ,
       role: role  // Ensure the role is the same as the user being created
 
@@ -169,7 +195,7 @@ const createUser = async (req, res) => {
     // For admin and superadmin roles, check if email already exists with these roles globally
     if (role === 'admin' || role === 'superadmin') {
       const existingAdminUser = await User.findOne({ 
-        email: email,
+        email: normalizedEmail,
         role: role
       });
       if (existingAdminUser) {
@@ -185,7 +211,7 @@ const createUser = async (req, res) => {
     const userData = {
       firstName,
       lastName,
-      email,
+      email: normalizedEmail,  // Use normalized email
       password,
       phone,
       role: role || 'client',
@@ -757,14 +783,17 @@ const updateUser = async (req, res) => {
     }
 
     // Check if email is being changed and if it already exists
-    if (email && email !== existingUser.email) {
-      const emailExists = await User.findOne({ email, _id: { $ne: id } });
-      if (emailExists) {
-        return res.status(409).json({
-          success: false,
-          message: 'Email already exists',
-          messageAr: 'البريد الإلكتروني موجود بالفعل'
-        });
+    if (email) {
+      const normalizedEmail = normalizeEmail(email);
+      if (normalizedEmail !== existingUser.email) {
+        const emailExists = await User.findOne({ email: normalizedEmail, _id: { $ne: id } });
+        if (emailExists) {
+          return res.status(409).json({
+            success: false,
+            message: 'Email already exists',
+            messageAr: 'البريد الإلكتروني موجود بالفعل'
+          });
+        }
       }
     }
 
@@ -772,7 +801,7 @@ const updateUser = async (req, res) => {
     const updateData = {};
     if (firstName !== undefined) updateData.firstName = firstName.trim();
     if (lastName !== undefined) updateData.lastName = lastName.trim();
-    if (email !== undefined) updateData.email = email.trim().toLowerCase();
+    if (email !== undefined) updateData.email = normalizeEmail(email);
     if (phone !== undefined) updateData.phone = phone;
     if (role !== undefined) updateData.role = role;
     if (status !== undefined) updateData.status = status;
@@ -1030,14 +1059,17 @@ const updateCurrentUserProfile = async (req, res) => {
     }
 
     // Check if email is being changed and if it already exists
-    if (email && email !== existingUser.email) {
-      const emailExists = await User.findOne({ email, _id: { $ne: userId } });
-      if (emailExists) {
-        return res.status(409).json({
-          success: false,
-          message: 'Email already exists',
-          messageAr: 'البريد الإلكتروني موجود بالفعل'
-        });
+    if (email) {
+      const normalizedEmail = normalizeEmail(email);
+      if (normalizedEmail !== existingUser.email) {
+        const emailExists = await User.findOne({ email: normalizedEmail, _id: { $ne: userId } });
+        if (emailExists) {
+          return res.status(409).json({
+            success: false,
+            message: 'Email already exists',
+            messageAr: 'البريد الإلكتروني موجود بالفعل'
+          });
+        }
       }
     }
 
@@ -1045,7 +1077,7 @@ const updateCurrentUserProfile = async (req, res) => {
     const updateData = {};
     if (firstName !== undefined) updateData.firstName = firstName.trim();
     if (lastName !== undefined) updateData.lastName = lastName.trim();
-    if (email !== undefined) updateData.email = email.trim().toLowerCase();
+    if (email !== undefined) updateData.email = normalizeEmail(email);
     if (phone !== undefined) updateData.phone = phone;
 
     // Handle addresses - filter out addresses with empty required fields
@@ -1122,8 +1154,11 @@ const sendEmailVerification = async (req, res) => {
       });
     }
 
+    // Normalize email for consistent lookup
+    const normalizedEmail = normalizeEmail(email);
+
     // Check if user exists
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -1243,8 +1278,11 @@ const verifyEmail = async (req, res) => {
       });
     }
 
+    // Normalize email for consistent lookup
+    const normalizedEmail = normalizeEmail(email);
+
     // Find user
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -1339,8 +1377,11 @@ const resendEmailVerification = async (req, res) => {
       });
     }
 
+    // Normalize email for consistent lookup
+    const normalizedEmail = normalizeEmail(email);
+
     // Check if user exists
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -1475,8 +1516,11 @@ const checkEmailVerificationStatus = async (req, res) => {
       });
     }
 
+    // Normalize email for consistent lookup
+    const normalizedEmail = normalizeEmail(email);
+
     // Find user
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -1527,8 +1571,11 @@ const forgotPassword = async (req, res) => {
       });
     }
 
+    // Normalize email for consistent lookup
+    const normalizedEmail = normalizeEmail(email);
+
     // Find user
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,

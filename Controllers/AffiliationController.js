@@ -585,15 +585,44 @@ const createAffiliate = async (req, res) => {
       });
     }
     
-    // Extract store ID from token using the new middleware
+    // Extract store ID with multiple fallback strategies
+    let storeId = null;
+    
+    // Strategy 1: Try to get from token
     const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
-    const storeId = await getStoreIdFromHeaders(req.headers);
-    console.log('storeId', storeId);
+    storeId = await getStoreIdFromHeaders(req.headers);
+    console.log('storeId from token:', storeId);
+    
+    // Strategy 2: If not in token, try req.user.store (from authenticated user)
+    if (!storeId && req.user && req.user.store) {
+      storeId = req.user.store;
+      console.log('storeId from req.user.store:', storeId);
+    }
+    
+    // Strategy 3: If still not found, look up user's Owner record
+    if (!storeId && req.user) {
+      const Owner = require('../Models/Owner');
+      const owner = await Owner.findOne({ 
+        userId: req.user._id,
+        status: 'active'
+      });
+      if (owner && owner.storeId) {
+        storeId = owner.storeId;
+        console.log('storeId from Owner record:', storeId);
+      }
+    }
+    
+    // Strategy 4: Check if storeId is provided in request body or query (for superadmin)
+    if (!storeId && req.user && req.user.role === 'superadmin') {
+      storeId = req.body.store || req.query.storeId;
+      console.log('storeId from request (superadmin):', storeId);
+    }
+    
     if (!storeId) {
       return res.status(400).json({
         success: false,
-        message: 'Store ID not found in token',
-        messageAr: 'معرف المتجر غير موجود في الرمز المميز'
+        message: 'Store ID not found. Please ensure you are logged in with a store-associated account or provide storeId in the request.',
+        messageAr: 'معرف المتجر غير موجود. يرجى التأكد من تسجيل الدخول بحساب مرتبط بمتجر أو توفير معرف المتجر في الطلب.'
       });
     }
     
@@ -645,16 +674,18 @@ const createAffiliate = async (req, res) => {
 
     const user = await User.create(userData);
 
-    // Generate unique affiliate code
-    const affiliateCode = await Affiliation.generateUniqueAffiliateCode();
+    // Generate unique affiliate link and code using the Model's static method
+    // This ensures 100% uniqueness by checking the database
+    const { affiliateLink, affiliateCode } = await Affiliation.generateUniqueAffiliateLink(domain);
+    
+    console.log('✅ Generated unique affiliate link:', affiliateLink);
+    console.log('✅ Generated unique affiliate code:', affiliateCode);
 
-    const affiliateLink = `${baseDomain}/${domain}/affiliate/${affiliateCode}`;
-
-    // Add store and userId to the request body
+    // Add store, userId, and generated link/code to the request body
     const affiliateData = {
       ...req.body,
-      affiliateLink,
-      affiliateCode,
+      affiliateLink,    // Backend-generated, guaranteed unique
+      affiliateCode,    // Backend-generated, guaranteed unique
       store: storeId,
       userId: user._id
     };
@@ -752,9 +783,25 @@ const updateAffiliate = async (req, res) => {
 
     // Check if email is being updated and if it already exists
     if (req.body.email && req.body.email !== affiliate.email) {
-      // Extract store ID from token
+      // Extract store ID with fallbacks
+      let storeId = null;
       const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
-      const storeId = await getStoreIdFromHeaders(req.headers);
+      storeId = await getStoreIdFromHeaders(req.headers);
+      
+      if (!storeId && req.user && req.user.store) {
+        storeId = req.user.store;
+      }
+      
+      if (!storeId) {
+        const Owner = require('../Models/Owner');
+        const owner = await Owner.findOne({ 
+          userId: req.user._id,
+          status: 'active'
+        });
+        if (owner && owner.storeId) {
+          storeId = owner.storeId;
+        }
+      }
       
       if (!storeId) {
         return res.status(400).json({
@@ -1123,9 +1170,25 @@ const createAffiliatePayment = async (req, res) => {
       });
     }
 
-    // Extract store ID from token
+    // Extract store ID with fallbacks
+    let storeId = null;
     const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
-    const storeId = await getStoreIdFromHeaders(req.headers);
+    storeId = await getStoreIdFromHeaders(req.headers);
+    
+    if (!storeId && req.user && req.user.store) {
+      storeId = req.user.store;
+    }
+    
+    if (!storeId) {
+      const Owner = require('../Models/Owner');
+      const owner = await Owner.findOne({ 
+        userId: req.user._id,
+        status: 'active'
+      });
+      if (owner && owner.storeId) {
+        storeId = owner.storeId;
+      }
+    }
     
     if (!storeId) {
       return res.status(400).json({

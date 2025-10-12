@@ -620,6 +620,10 @@ const createPaymentMethodWithFiles = async (req, res) => {
     const isActiveBoolean = isActive === 'true' || isActive === true;
     const isDefaultBoolean = isDefault === 'true' || isDefault === true;
 
+
+
+    
+
     if (isDefaultBoolean && !isActiveBoolean) {
       return res.status(400).json({
         success: false,
