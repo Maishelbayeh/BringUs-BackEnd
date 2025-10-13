@@ -197,6 +197,8 @@ exports.getCartByGuestId = async (req, res) => {
     if (!cart) {
       return res.json({
         success: true,
+        message: 'Guest cart retrieved successfully',
+        messageAr: 'تم جلب سلة الضيف بنجاح',
         data: { items: [] },
         count: 0
       });
@@ -204,6 +206,8 @@ exports.getCartByGuestId = async (req, res) => {
 
     return res.json({
       success: true,
+      message: 'Guest cart retrieved successfully',
+      messageAr: 'تم جلب سلة الضيف بنجاح',
       data: cart,
       count: cart.items.length
     });
@@ -241,21 +245,120 @@ exports.getCart = async (req, res) => {
       return availableStock > 0;
     });
     
+    // Get ProductSpecification model to fetch proper bilingual values
+    const ProductSpecification = require('../Models/ProductSpecification');
+    
+    // Collect all unique specification IDs
+    const specificationIds = new Set();
+    cart.items.forEach(item => {
+      if (item.selectedSpecifications) {
+        item.selectedSpecifications.forEach(spec => {
+          if (spec.specificationId) {
+            specificationIds.add(spec.specificationId.toString());
+          }
+        });
+      }
+    });
+    
+    // Fetch all specifications at once for efficiency
+    const specifications = await ProductSpecification.find({
+      _id: { $in: Array.from(specificationIds) }
+    });
+    
+    // Create a map for quick lookup
+    const specMap = {};
+    specifications.forEach(spec => {
+      specMap[spec._id.toString()] = spec;
+    });
+    
+    // Process cart items to add bilingual data and clean Mongoose internal fields
+    const processedCart = {
+      _id: cart._id,
+      user: cart.user,
+      guestId: cart.guestId,
+      store: cart.store,
+      createdAt: cart.createdAt,
+      updatedAt: cart.updatedAt,
+      items: cart.items.map(item => {
+        const itemObj = item.toObject ? item.toObject() : item;
+        const productObj = item.product?.toObject ? item.product.toObject() : item.product;
+        
+        return {
+          product: productObj,
+          quantity: itemObj.quantity || item.quantity,
+          priceAtAdd: itemObj.priceAtAdd || item.priceAtAdd,
+          variant: itemObj.variant || item.variant,
+          addedAt: itemObj.addedAt || item.addedAt,
+          // Clean and format selectedSpecifications with proper bilingual values
+          selectedSpecifications: (itemObj.selectedSpecifications || item.selectedSpecifications || []).map(spec => {
+            const specObj = spec.toObject ? spec.toObject() : spec;
+            const cleanSpec = specObj._doc || specObj;
+            
+            // Get the ProductSpecification to find proper Ar/En values
+            const specification = specMap[cleanSpec.specificationId?.toString()];
+            let valueAr = cleanSpec.valueAr;
+            let valueEn = cleanSpec.valueEn;
+            let titleAr = cleanSpec.titleAr;
+            let titleEn = cleanSpec.titleEn;
+            
+            if (specification) {
+              titleAr = specification.titleAr;
+              titleEn = specification.titleEn;
+              
+              // Find the value in the specification's values array
+              const value = specification.values?.find(v => 
+                v.valueAr === cleanSpec.value || 
+                v.valueEn === cleanSpec.value ||
+                v.valueAr === cleanSpec.valueAr ||
+                v.valueEn === cleanSpec.valueEn
+              );
+              
+              if (value) {
+                valueAr = value.valueAr;
+                valueEn = value.valueEn;
+              }
+            }
+            
+            return {
+              specificationId: cleanSpec.specificationId,
+              valueId: cleanSpec.valueId,
+              titleAr: titleAr || cleanSpec.title || '',
+              titleEn: titleEn || cleanSpec.title || '',
+              valueAr: valueAr || cleanSpec.value || '',
+              valueEn: valueEn || cleanSpec.value || ''
+            };
+          }),
+          // Clean selectedColors
+          selectedColors: itemObj.selectedColors || item.selectedColors || []
+        };
+      })
+    };
+    
     if (cart.items.length !== originalLength) {
       await cart.save();
-      await cart.populate('items.product');
       
       return res.json({ 
         success: true, 
-        data: cart,
-        message: `Removed ${removedItems.length} unavailable items from cart`,
+        data: processedCart,
+        message: `Removed ${removedItems.length} unavailable item${removedItems.length !== 1 ? 's' : ''} from cart`,
+        messageAr: `تم إزالة ${removedItems.length} منتج${removedItems.length > 2 ? 'ات' : ''} غير متوفر من السلة`,
         removedItemsCount: removedItems.length
       });
     }
     
-    return res.json({ success: true, data: cart });
+    return res.json({ 
+      success: true, 
+      message: 'Cart retrieved successfully',
+      messageAr: 'تم جلب السلة بنجاح',
+      data: processedCart 
+    });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching cart',
+      messageAr: 'خطأ في جلب السلة',
+      error: error.message 
+    });
   }
 };
  
@@ -274,38 +377,97 @@ exports.addToCart = async (req, res) => {
     } = req.body;
     
     if (!product || !quantity || quantity < 1) {
-      return res.status(400).json({ success: false, message: 'Product and quantity are required' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Product and quantity are required',
+        messageAr: 'المنتج والكمية مطلوبان'
+      });
     }
     
-    // التحقق من صحة selectedSpecifications
+    // Get ProductSpecification model to fetch proper bilingual values
+    const ProductSpecification = require('../Models/ProductSpecification');
+    
+    // Fetch specifications with bilingual values
+    let enrichedSpecifications = [];
     if (selectedSpecifications && selectedSpecifications.length > 0) {
       for (const spec of selectedSpecifications) {
         if (!spec.specificationId || !spec.valueId) {
           return res.status(400).json({ 
             success: false, 
-            message: 'selectedSpecifications must include specificationId and valueId' 
+            message: 'selectedSpecifications must include specificationId and valueId',
+            messageAr: 'يجب أن تتضمن المواصفات المحددة معرف المواصفة ومعرف القيمة'
+          });
+        }
+        
+        // Fetch the specification from database to get bilingual values
+        const specificationDoc = await ProductSpecification.findById(spec.specificationId);
+        if (specificationDoc) {
+          // Find the matching value in the specification's values array
+          const matchingValue = specificationDoc.values?.find(v => 
+            spec.valueId.includes(v.valueAr) || 
+            spec.valueId.includes(v.valueEn) ||
+            v.valueAr === spec.value ||
+            v.valueEn === spec.value ||
+            v.valueAr === spec.valueAr ||
+            v.valueEn === spec.valueEn
+          );
+          
+          if (matchingValue) {
+            enrichedSpecifications.push({
+              specificationId: spec.specificationId,
+              valueId: spec.valueId,
+              titleAr: specificationDoc.titleAr,
+              titleEn: specificationDoc.titleEn,
+              valueAr: matchingValue.valueAr,
+              valueEn: matchingValue.valueEn
+            });
+          } else {
+            // Fallback if no matching value found
+            enrichedSpecifications.push({
+              specificationId: spec.specificationId,
+              valueId: spec.valueId,
+              titleAr: spec.titleAr || specificationDoc.titleAr || '',
+              titleEn: spec.titleEn || specificationDoc.titleEn || '',
+              valueAr: spec.valueAr || spec.value || '',
+              valueEn: spec.valueEn || spec.value || ''
+            });
+          }
+        } else {
+          // If specification not found, use what was provided
+          enrichedSpecifications.push({
+            specificationId: spec.specificationId,
+            valueId: spec.valueId,
+            titleAr: spec.titleAr || spec.title || '',
+            titleEn: spec.titleEn || spec.title || '',
+            valueAr: spec.valueAr || spec.value || '',
+            valueEn: spec.valueEn || spec.value || ''
           });
         }
       }
     }
     
     const prod = await Product.findOne({ _id: product, store: req.store._id });
-    if (!prod) return res.status(404).json({ success: false, message: 'Product not found in this store' });
+    if (!prod) return res.status(404).json({ 
+      success: false, 
+      message: 'Product not found in this store',
+      messageAr: 'المنتج غير موجود في هذا المتجر'
+    });
     
     // التحقق من أن المنتج نشط
     if (!prod.isActive) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Product is not available' 
+        message: 'Product is not available',
+        messageAr: 'المنتج غير متوفر'
       });
     }
     
     // التحقق من توفر المخزون بناءً على الـ specifications المختارة
-    const availableStock = getAvailableStock(prod, selectedSpecifications);
+    const availableStock = getAvailableStock(prod, enrichedSpecifications);
     
     // التحقق من وجود جميع الـ specifications المختارة
-    if (selectedSpecifications && selectedSpecifications.length > 0) {
-      for (const selectedSpec of selectedSpecifications) {
+    if (enrichedSpecifications && enrichedSpecifications.length > 0) {
+      for (const selectedSpec of enrichedSpecifications) {
         // Try multiple validation approaches
         let specValue = prod.specificationValues.find(spec => 
           spec.specificationId.toString() === selectedSpec.specificationId &&
@@ -342,7 +504,8 @@ exports.addToCart = async (req, res) => {
         if (!specValue) {
           return res.status(400).json({ 
             success: false, 
-            message: `Selected specification not found: ${selectedSpec.valueId}` 
+            message: `Selected specification not found: ${selectedSpec.valueId}`,
+            messageAr: `المواصفة المحددة غير موجودة: ${selectedSpec.valueId}`
           });
         }
       }
@@ -351,7 +514,8 @@ exports.addToCart = async (req, res) => {
     if (availableStock <= 0) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Selected product variant is out of stock' 
+        message: 'Selected product variant is out of stock',
+        messageAr: 'نوع المنتج المحدد غير متوفر في المخزون'
       });
     }
     
@@ -359,7 +523,8 @@ exports.addToCart = async (req, res) => {
     if (quantity > availableStock) {
       return res.status(400).json({ 
         success: false, 
-        message: `Only ${availableStock} items available in stock for selected specifications` 
+        message: `Only ${availableStock} item${availableStock !== 1 ? 's' : ''} available in stock for selected specifications`,
+        messageAr: `فقط ${availableStock} قطعة متوفرة في المخزون للمواصفات المحددة`
       });
     }
     
@@ -374,7 +539,7 @@ exports.addToCart = async (req, res) => {
       variant,
       priceAtAdd: prod.isOnSale && prod.salePercentage > 0 ? 
         prod.price - (prod.price * prod.salePercentage / 100) : prod.price,
-      selectedSpecifications,
+      selectedSpecifications: enrichedSpecifications,
       selectedColors
     };
     
@@ -391,7 +556,8 @@ exports.addToCart = async (req, res) => {
     if (totalQuantity > availableStock) {
       return res.status(400).json({ 
         success: false, 
-        message: `Cannot add ${quantity} items. Total quantity (${totalQuantity}) exceeds available stock (${availableStock}) for selected specifications` 
+        message: `Cannot add ${quantity} item${quantity !== 1 ? 's' : ''}. Total quantity (${totalQuantity}) exceeds available stock (${availableStock}) for selected specifications`,
+        messageAr: `لا يمكن إضافة ${quantity} قطعة. الكمية الإجمالية (${totalQuantity}) تتجاوز المخزون المتاح (${availableStock}) للمواصفات المحددة`
       });
     }
     
@@ -405,12 +571,18 @@ exports.addToCart = async (req, res) => {
     
     await cart.save();
     await cart.populate('items.product');
-    return res.json({ success: true, data: cart });
+    return res.json({ 
+      success: true, 
+      message: 'Product added to cart successfully',
+      messageAr: 'تمت إضافة المنتج إلى السلة بنجاح',
+      data: cart 
+    });
   } catch (error) {
     console.error('addToCart error:', error);
     return res.status(500).json({ 
       success: false, 
-      message: 'Something went wrong!',
+      message: 'Error adding product to cart',
+      messageAr: 'خطأ في إضافة المنتج إلى السلة',
       error: error.message 
     });
   }
@@ -427,28 +599,45 @@ exports.updateCartItem = async (req, res) => {
     } = req.body;
     
     if (!quantity || quantity < 0) {
-      return res.status(400).json({ success: false, message: 'Quantity must be 0 or greater' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Quantity must be 0 or greater',
+        messageAr: 'الكمية يجب أن تكون 0 أو أكثر'
+      });
     }
     
     const query = getCartQuery(req);
     let cart = await Cart.findOne(query);
-    if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
+    if (!cart) return res.status(404).json({ 
+      success: false, 
+      message: 'Cart not found',
+      messageAr: 'السلة غير موجودة'
+    });
     
     const itemIndex = cart.items.findIndex(i => i.product.toString() === productId);
-    if (itemIndex === -1) return res.status(404).json({ success: false, message: 'Product not in cart' });
+    if (itemIndex === -1) return res.status(404).json({ 
+      success: false, 
+      message: 'Product not in cart',
+      messageAr: 'المنتج غير موجود في السلة'
+    });
     
     // التحقق من المخزون إذا كانت الكمية أكبر من صفر
     if (quantity > 0) {
       const product = await Product.findOne({ _id: productId, store: req.store._id });
       if (!product) {
-        return res.status(404).json({ success: false, message: 'Product not found' });
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Product not found',
+          messageAr: 'المنتج غير موجود'
+        });
       }
       
       // التحقق من أن المنتج نشط
       if (!product.isActive) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Product is not available' 
+          message: 'Product is not available',
+          messageAr: 'المنتج غير متوفر'
         });
       }
       
@@ -494,7 +683,8 @@ exports.updateCartItem = async (req, res) => {
           if (!specValue) {
             return res.status(400).json({ 
               success: false, 
-              message: `Selected specification not found: ${selectedSpec.valueId}` 
+              message: `Selected specification not found: ${selectedSpec.valueId}`,
+              messageAr: `المواصفة المحددة غير موجودة: ${selectedSpec.valueId}`
             });
           }
         }
@@ -503,14 +693,16 @@ exports.updateCartItem = async (req, res) => {
       if (availableStock <= 0) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Selected product variant is out of stock' 
+          message: 'Selected product variant is out of stock',
+          messageAr: 'نوع المنتج المحدد غير متوفر في المخزون'
         });
       }
       
       if (quantity > availableStock) {
         return res.status(400).json({ 
           success: false, 
-          message: `Only ${availableStock} items available in stock for selected specifications` 
+          message: `Only ${availableStock} item${availableStock !== 1 ? 's' : ''} available in stock for selected specifications`,
+          messageAr: `فقط ${availableStock} قطعة متوفرة في المخزون للمواصفات المحددة`
         });
       }
     }
@@ -526,9 +718,19 @@ exports.updateCartItem = async (req, res) => {
     
     await cart.save();
     await cart.populate('items.product');
-    return res.json({ success: true, data: cart });
+    return res.json({ 
+      success: true, 
+      message: 'Cart item updated successfully',
+      messageAr: 'تم تحديث عنصر السلة بنجاح',
+      data: cart 
+    });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Error updating cart item',
+      messageAr: 'خطأ في تحديث عنصر السلة',
+      error: error.message 
+    });
   }
 };
 
@@ -537,15 +739,33 @@ exports.removeCartItem = async (req, res) => {
     const { productId } = req.params;
     const query = getCartQuery(req);
     let cart = await Cart.findOne(query);
-    if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
+    if (!cart) return res.status(404).json({ 
+      success: false, 
+      message: 'Cart not found',
+      messageAr: 'السلة غير موجودة'
+    });
     const itemIndex = cart.items.findIndex(i => i.product.toString() === productId);
-    if (itemIndex === -1) return res.status(404).json({ success: false, message: 'Product not in cart' });
+    if (itemIndex === -1) return res.status(404).json({ 
+      success: false, 
+      message: 'Product not in cart',
+      messageAr: 'المنتج غير موجود في السلة'
+    });
     cart.items.splice(itemIndex, 1);
     await cart.save();
     await cart.populate('items.product');
-    return res.json({ success: true, data: cart });
+    return res.json({ 
+      success: true, 
+      message: 'Product removed from cart successfully',
+      messageAr: 'تمت إزالة المنتج من السلة بنجاح',
+      data: cart 
+    });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Error removing product from cart',
+      messageAr: 'خطأ في إزالة المنتج من السلة',
+      error: error.message 
+    });
   }
 };
 
@@ -553,13 +773,27 @@ exports.clearCart = async (req, res) => {
   try {
     const query = getCartQuery(req);
     let cart = await Cart.findOne(query);
-    if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
+    if (!cart) return res.status(404).json({ 
+      success: false, 
+      message: 'Cart not found',
+      messageAr: 'السلة غير موجودة'
+    });
     cart.items = [];
     await cart.save();
     await cart.populate('items.product');
-    return res.json({ success: true, data: cart });
+    return res.json({ 
+      success: true, 
+      message: 'Cart cleared successfully',
+      messageAr: 'تم تفريغ السلة بنجاح',
+      data: cart 
+    });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Error clearing cart',
+      messageAr: 'خطأ في تفريغ السلة',
+      error: error.message 
+    });
   }
 };
 

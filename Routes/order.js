@@ -1266,7 +1266,8 @@ router.put('/:orderId/status', [
  */
 router.put('/:orderId/payment-status', [
   authenticateToken,
-  body('paymentStatus').isIn(['unpaid', 'paid']).withMessage('Valid payment status is required'),
+  body('paymentStatus').optional().isIn(['unpaid', 'paid']).withMessage('Valid payment status must be unpaid or paid'),
+  body('status').optional().isIn(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']).withMessage('Valid status is required'),
   body('notes').optional().isString().withMessage('Notes must be a string')
 ], async (req, res) => {
   try {
@@ -1281,7 +1282,7 @@ router.put('/:orderId/payment-status', [
     }
 
     // Check if user is admin or store owner
-    if (req.user.role !== 'admin' && req.user.role !== 'store_owner') {
+    if (req.user.role !== 'admin' && req.user.role !== 'store_owner' && req.user.role !== 'superadmin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin or store owner only.',
@@ -1300,6 +1301,34 @@ router.put('/:orderId/payment-status', [
     });
   }
 });
+
+/**
+ * @swagger
+ * /api/orders/{orderId}/restore-stock:
+ *   post:
+ *     summary: Manually restore stock for a cancelled order
+ *     description: Restore product stock and specification quantities for a cancelled order
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Order ID or Order Number
+ *     responses:
+ *       200:
+ *         description: Stock restored successfully
+ *       400:
+ *         description: Order must be cancelled
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/:orderId/restore-stock', authenticateToken, OrderController.restoreStockForCancelledOrder);
 
 /**
  * @swagger

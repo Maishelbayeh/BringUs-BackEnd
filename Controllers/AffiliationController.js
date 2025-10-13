@@ -5,6 +5,29 @@ const { validationResult } = require('express-validator');
 const { addStoreFilter } = require('../middleware/storeIsolation');
 
 /**
+ * Normalize email address consistently
+ * - Converts to lowercase
+ * - Removes dots from Gmail addresses (Gmail ignores dots)
+ * - Trims whitespace
+ */
+const normalizeEmail = (email) => {
+  if (!email) return email;
+  
+  // Trim and convert to lowercase
+  let normalized = email.trim().toLowerCase();
+  
+  // For Gmail addresses, remove dots from the local part (before @)
+  const [localPart, domain] = normalized.split('@');
+  if (domain === 'gmail.com' || domain === 'googlemail.com') {
+    // Remove all dots from the local part
+    const normalizedLocal = localPart.replace(/\./g, '');
+    normalized = `${normalizedLocal}@${domain}`;
+  }
+  
+  return normalized;
+};
+
+/**
  * @swagger
  * components:
  *   schemas:
@@ -640,22 +663,41 @@ const createAffiliate = async (req, res) => {
     const domain = store.slug;
     const baseDomain = 'https://bringus-main.onrender.com';
     console.log('domain', domain);
-    // Check if email already exists in the current store only
-    const existingAffiliate = await Affiliation.findOne({
-      email: req.body.email,
+    
+    // Normalize email for consistent storage and duplicate checking
+    const normalizedEmail = normalizeEmail(req.body.email);
+
+    // CRITICAL SECURITY: Check if email already exists in the same store (ANY ROLE)
+    const existingUserInStore = await User.findOne({
+      email: normalizedEmail,
       store: storeId
+      // Do NOT filter by role - email must be unique per store
     });
 
-    const existingUser = await User.findOne({
-      email: req.body.email,
-      store: storeId
-    });
-
-    if (existingAffiliate || existingUser) {
-      return res.status(400).json({
+    if (existingUserInStore) {
+      return res.status(409).json({
         success: false,
-        message: 'Email already exists in this store',
-        messageAr: 'البريد الإلكتروني موجود بالفعل في هذا المتجر'
+        message: `This email is already registered in this store as ${existingUserInStore.role}. Please use a different email.`,
+        messageAr: `هذا البريد الإلكتروني مسجل بالفعل في هذا المتجر بدور ${existingUserInStore.role}. يرجى استخدام بريد إلكتروني مختلف.`,
+        error: {
+          code: 'DUPLICATE_EMAIL_IN_STORE',
+          existingRole: existingUserInStore.role,
+          newRole: 'affiliate'
+        }
+      });
+    }
+
+    // Check if email already exists in Affiliation model for this store
+    const existingAffiliate = await Affiliation.findOne({
+      email: normalizedEmail,
+      store: storeId
+    });
+
+    if (existingAffiliate) {
+      return res.status(409).json({
+        success: false,
+        message: 'Email already exists as affiliate in this store',
+        messageAr: 'البريد الإلكتروني موجود بالفعل كمسوق بالعمولة في هذا المتجر'
       });
     }
 
@@ -663,7 +705,7 @@ const createAffiliate = async (req, res) => {
     const userData = {
       firstName: req.body.firstName,
       lastName: req.body.lastName,
-      email: req.body.email,
+      email: normalizedEmail,
       password: req.body.password, // Plain password - will be hashed by User model
       phone: req.body.mobile,
       role: 'affiliate',
@@ -681,9 +723,10 @@ const createAffiliate = async (req, res) => {
     console.log('✅ Generated unique affiliate link:', affiliateLink);
     console.log('✅ Generated unique affiliate code:', affiliateCode);
 
-    // Add store, userId, and generated link/code to the request body
+    // Add store, userId, normalized email, and generated link/code to the request body
     const affiliateData = {
       ...req.body,
+      email: normalizedEmail,  // Use normalized email
       affiliateLink,    // Backend-generated, guaranteed unique
       affiliateCode,    // Backend-generated, guaranteed unique
       store: storeId,
@@ -782,53 +825,70 @@ const updateAffiliate = async (req, res) => {
     }
 
     // Check if email is being updated and if it already exists
-    if (req.body.email && req.body.email !== affiliate.email) {
-      // Extract store ID with fallbacks
-      let storeId = null;
-      const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
-      storeId = await getStoreIdFromHeaders(req.headers);
+    if (req.body.email) {
+      const normalizedEmail = normalizeEmail(req.body.email);
       
-      if (!storeId && req.user && req.user.store) {
-        storeId = req.user.store;
-      }
-      
-      if (!storeId) {
-        const Owner = require('../Models/Owner');
-        const owner = await Owner.findOne({ 
-          userId: req.user._id,
-          status: 'active'
-        });
-        if (owner && owner.storeId) {
-          storeId = owner.storeId;
+      if (normalizedEmail !== affiliate.email) {
+        // Extract store ID with fallbacks
+        let storeId = null;
+        const { getStoreIdFromHeaders } = require('../middleware/storeAuth');
+        storeId = await getStoreIdFromHeaders(req.headers);
+        
+        if (!storeId && req.user && req.user.store) {
+          storeId = req.user.store;
         }
-      }
-      
-      if (!storeId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Store ID not found in token',
-          messageAr: 'معرف المتجر غير موجود في الرمز المميز'
+        
+        if (!storeId) {
+          const Owner = require('../Models/Owner');
+          const owner = await Owner.findOne({ 
+            userId: req.user._id,
+            status: 'active'
+          });
+          if (owner && owner.storeId) {
+            storeId = owner.storeId;
+          }
+        }
+        
+        if (!storeId) {
+          return res.status(400).json({
+            success: false,
+            message: 'Store ID not found in token',
+            messageAr: 'معرف المتجر غير موجود في الرمز المميز'
+          });
+        }
+        
+        // CRITICAL SECURITY: Check if email exists in same store (ANY ROLE)
+        const existingUserInStore = await User.findOne({
+          email: normalizedEmail,
+          store: storeId,
+          _id: { $ne: affiliate.userId }
         });
-      }
-      
-      const existingAffiliate = await Affiliation.findOne({
-        email: req.body.email,
-        store: storeId,
-        _id: { $ne: req.params.id }
-      });
 
-      const existingUser = await User.findOne({
-        email: req.body.email,
-        store: storeId,
-        _id: { $ne: affiliate.userId }
-      });
+        if (existingUserInStore) {
+          return res.status(409).json({
+            success: false,
+            message: `This email is already registered in this store as ${existingUserInStore.role}. Please use a different email.`,
+            messageAr: `هذا البريد الإلكتروني مسجل بالفعل في هذا المتجر بدور ${existingUserInStore.role}. يرجى استخدام بريد إلكتروني مختلف.`
+          });
+        }
 
-      if (existingAffiliate || existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email already exists in this store',
-          messageAr: 'البريد الإلكتروني موجود بالفعل في هذا المتجر'
+        // Check if email exists in Affiliation model for this store
+        const existingAffiliate = await Affiliation.findOne({
+          email: normalizedEmail,
+          store: storeId,
+          _id: { $ne: req.params.id }
         });
+
+        if (existingAffiliate) {
+          return res.status(409).json({
+            success: false,
+            message: 'Email already exists as affiliate in this store',
+            messageAr: 'البريد الإلكتروني موجود بالفعل كمسوق بالعمولة في هذا المتجر'
+          });
+        }
+        
+        // Use normalized email
+        req.body.email = normalizedEmail;
       }
     }
 
@@ -842,7 +902,7 @@ const updateAffiliate = async (req, res) => {
       if (user) {
         if (req.body.firstName) user.firstName = req.body.firstName;
         if (req.body.lastName) user.lastName = req.body.lastName;
-        if (req.body.email) user.email = req.body.email;
+        if (req.body.email) user.email = normalizeEmail(req.body.email);
         if (req.body.password) user.password = req.body.password; // Plain password - will be hashed by User model's pre-save hook
         if (req.body.mobile) user.phone = req.body.mobile;
         

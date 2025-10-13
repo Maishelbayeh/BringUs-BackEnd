@@ -76,8 +76,12 @@ const setCurrentStoreAndCheckPermissions = async (req, res, next) => {
     const Store = require('../Models/Store');
     const Owner = require('../Models/Owner');
     
-    // Get the target store ID from request body or params
-    const targetStoreId = req.body.store || req.body.storeId || req.params.storeId;
+    // Get the target store ID from request body, params, or user token
+    const targetStoreId = req.body.store || req.body.storeId || req.params.storeId || req.user.store || req.user.storeId;
+    
+    console.log(`🔍 [setCurrentStoreAndCheckPermissions] User: ${req.user.email}, Role: ${req.user.role}`);
+    console.log(`🔍 [setCurrentStoreAndCheckPermissions] Target Store ID: ${targetStoreId}`);
+    console.log(`🔍 [setCurrentStoreAndCheckPermissions] req.user.store: ${req.user.store}`);
 
     // Superadmin can access any store
     if (req.user.role === 'superadmin') {
@@ -109,16 +113,37 @@ const setCurrentStoreAndCheckPermissions = async (req, res, next) => {
     // For admin users, check if they have access to the specific store
     if (req.user.role === 'admin') {
       let owner;
+      let storeToUse = null;
       
       if (targetStoreId) {
-        // Check if admin has access to the specific store
+        // Check if admin has access to the specific store via Owner table
         owner = await Owner.findOne({
           userId: req.user._id,
           storeId: targetStoreId,
           status: 'active'
         }).populate('storeId');
 
-        if (!owner) {
+        // If no owner record found, check if user.store matches targetStoreId
+        if (!owner && req.user.store && req.user.store.toString() === targetStoreId.toString()) {
+          console.log(`✅ Admin has access to store via user.store: ${targetStoreId}`);
+          const store = await Store.findById(targetStoreId);
+          if (store) {
+            storeToUse = store;
+            // Create virtual owner object for admins without Owner record
+            req.owner = {
+              userId: req.user._id,
+              storeId: store._id,
+              permissions: ['manage_store', 'manage_users', 'manage_products', 'manage_categories', 'manage_orders', 'manage_inventory', 'view_analytics', 'manage_settings'],
+              isPrimaryOwner: false,
+              status: 'active'
+            };
+          }
+        } else if (owner) {
+          storeToUse = owner.storeId;
+          req.owner = owner;
+        }
+
+        if (!storeToUse) {
           return res.status(403).json({
             success: false,
             message: 'You do not have access to this store',
@@ -126,13 +151,33 @@ const setCurrentStoreAndCheckPermissions = async (req, res, next) => {
           });
         }
       } else {
-        // If no specific store, get their first store
+        // If no specific store, try to get from Owner table first
         owner = await Owner.findOne({
           userId: req.user._id,
           status: 'active'
         }).populate('storeId');
 
-        if (!owner) {
+        if (owner) {
+          storeToUse = owner.storeId;
+          req.owner = owner;
+        } else if (req.user.store) {
+          // Fallback to user.store if no Owner record
+          console.log(`✅ Using user.store as fallback: ${req.user.store}`);
+          const store = await Store.findById(req.user.store);
+          if (store) {
+            storeToUse = store;
+            // Create virtual owner object
+            req.owner = {
+              userId: req.user._id,
+              storeId: store._id,
+              permissions: ['manage_store', 'manage_users', 'manage_products', 'manage_categories', 'manage_orders', 'manage_inventory', 'view_analytics', 'manage_settings'],
+              isPrimaryOwner: false,
+              status: 'active'
+            };
+          }
+        }
+
+        if (!storeToUse) {
           return res.status(403).json({
             success: false,
             message: 'No store access found',
@@ -141,8 +186,7 @@ const setCurrentStoreAndCheckPermissions = async (req, res, next) => {
         }
       }
 
-      req.store = owner.storeId;
-      req.owner = owner;
+      req.store = storeToUse;
     }
 
     next();

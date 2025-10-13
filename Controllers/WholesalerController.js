@@ -141,18 +141,34 @@ const createWholesaler = async (req, res) => {
     // Normalize email for consistent storage and duplicate checking
     const normalizedEmail = normalizeEmail(wholesalerData.email);
 
-    // Check if email already exists in both Wholesaler and User models
+    // CRITICAL SECURITY: Check if email already exists in the same store (ANY ROLE)
+    // Check in User model for any user in this store with this email
+    const existingUserInStore = await User.findOne({
+      email: normalizedEmail,
+      store: storeId
+      // Do NOT filter by role - email must be unique per store
+    });
+
+    if (existingUserInStore) {
+      return error(res, { 
+        message: `This email is already registered in this store as ${existingUserInStore.role}. Please use a different email.`,
+        messageAr: `هذا البريد الإلكتروني مسجل بالفعل في هذا المتجر بدور ${existingUserInStore.role}. يرجى استخدام بريد إلكتروني مختلف.`,
+        statusCode: 409 
+      });
+    }
+
+    // Check if email already exists in Wholesaler model for this store
     const existingWholesaler = await Wholesaler.findOne({
       email: normalizedEmail,
       store: storeId
     });
 
-    const existingUser = await User.findOne({
-      email: normalizedEmail
-    });
-
-    if (existingWholesaler || existingUser) {
-      return error(res, { message: 'Email already exists', messageAr: 'البريد الإلكتروني موجود بالفعل', statusCode: 400 });
+    if (existingWholesaler) {
+      return error(res, { 
+        message: 'Email already exists as wholesaler in this store',
+        messageAr: 'البريد الإلكتروني موجود بالفعل كتاجر جملة في هذا المتجر',
+        statusCode: 409 
+      });
     }
 
     // Check if password is provided
@@ -231,19 +247,34 @@ const updateWholesaler = async (req, res) => {
       const normalizedEmail = normalizeEmail(updateData.email);
       
       if (normalizedEmail !== wholesaler.email) {
+        // CRITICAL SECURITY: Check if email exists in same store (ANY ROLE)
+        const existingUserInStore = await User.findOne({
+          email: normalizedEmail,
+          store: storeId,
+          _id: { $ne: wholesaler.userId }
+        });
+
+        if (existingUserInStore) {
+          return error(res, { 
+            message: `This email is already registered in this store as ${existingUserInStore.role}. Please use a different email.`,
+            messageAr: `هذا البريد الإلكتروني مسجل بالفعل في هذا المتجر بدور ${existingUserInStore.role}. يرجى استخدام بريد إلكتروني مختلف.`,
+            statusCode: 409 
+          });
+        }
+
+        // Check if email exists in Wholesaler model for this store
         const existingWholesaler = await Wholesaler.findOne({
           email: normalizedEmail,
           store: storeId,
           _id: { $ne: wholesalerId }
         });
 
-        const existingUser = await User.findOne({
-          email: normalizedEmail,
-          _id: { $ne: wholesaler.userId }
-        });
-
-        if (existingWholesaler || existingUser) {
-          return error(res, { message: 'Email already exists', messageAr: 'البريد الإلكتروني موجود بالفعل', statusCode: 400 });
+        if (existingWholesaler) {
+          return error(res, { 
+            message: 'Email already exists as wholesaler in this store',
+            messageAr: 'البريد الإلكتروني موجود بالفعل كتاجر جملة في هذا المتجر',
+            statusCode: 409 
+          });
         }
       }
       

@@ -12,6 +12,25 @@ const mongoose = require('mongoose');
  * @param {Array} selectedSpecifications - Array of selected specifications
  * @returns {Object} - Validation result with success status and message
  */
+/**
+ * Get product image with priority order
+ * Priority: mainImage > images[0] > null
+ */
+const getProductImage = (item) => {
+  // Try mainImage first (most recent products have this)
+  if (item.productSnapshot?.mainImage) {
+    return item.productSnapshot.mainImage;
+  }
+  
+  // Try images array as fallback (older products)
+  if (item.productSnapshot?.images && item.productSnapshot.images.length > 0) {
+    return item.productSnapshot.images[0];
+  }
+  
+  // Return null if no image found
+  return null;
+};
+
 const validateProductStock = (product, quantity, selectedSpecifications = []) => {
   // التحقق من أن الكمية موجبة
   if (quantity <= 0) {
@@ -444,14 +463,25 @@ exports.getOrdersByStore = async (req, res) => {
       price: order.pricing?.total,
       date: order.createdAt,
       paid: order.paymentStatus === 'paid',
+      paymentStatus: order.paymentStatus,
+      paymentStatusAr: order.paymentStatus === 'paid' ? 'مدفوع' : 'غير مدفوع',
+      paymentStatusEn: order.paymentStatus === 'paid' ? 'Paid' : 'Unpaid',
       status: order.status,
+      statusAr: ({'pending': 'قيد المراجعة', 'confirmed': 'مؤكد', 'shipped': 'تم الشحن', 'delivered': 'تم التسليم', 'cancelled': 'ملغي'})[order.status] || order.status,
+      statusEn: ({'pending': 'Pending', 'confirmed': 'Confirmed', 'shipped': 'Shipped', 'delivered': 'Delivered', 'cancelled': 'Cancelled'})[order.status] || order.status,
       itemsCount: order.items.length,
       notes: order.notes?.customer || order.notes?.admin || '',
       items: order.items.map(item => ({
-        image: item.productSnapshot?.images?.[0],
+        image: getProductImage(item),
+        mainImage: item.productSnapshot?.mainImage,
+        images: item.productSnapshot?.images || [],
         name: item.productSnapshot?.nameEn || item.productSnapshot?.nameAr,
+        nameAr: item.productSnapshot?.nameAr,
+        nameEn: item.productSnapshot?.nameEn,
         quantity: item.quantity,
         unit: item.productSnapshot?.unit?.nameEn,
+        unitAr: item.productSnapshot?.unit?.nameAr,
+        unitEn: item.productSnapshot?.unit?.nameEn,
         pricePerUnit: item.price,
         total: item.totalPrice,
         color: item.productSnapshot?.color,
@@ -647,6 +677,7 @@ exports.createOrder = async (req, res) => {
         productSnapshot: {
           nameAr: product.nameAr,
           nameEn: product.nameEn,
+          mainImage: product.mainImage, // ✅ Copy mainImage
           images: product.images,
           price: currentPrice,
           unit: product.unit,
@@ -921,6 +952,7 @@ exports.createOrderFromCart = async (req, res) => {
         productSnapshot: {
           nameAr: product.nameAr,
           nameEn: product.nameEn,
+          mainImage: product.mainImage, // ✅ Copy mainImage
           images: product.images,
           price: pushPrice,
           unit: product.unit,
@@ -1099,38 +1131,131 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     // Handle cancellation - restore stock to inventory
-    if (status === 'cancelled' && order.status !== 'cancelled') {
-      order.cancelledAt = new Date();
-      order.cancelledBy = req.user?.id || 'system';
+    const stockChanges = [];
+    console.log(`🔍 [updateOrderStatus] Checking cancellation: status=${status}, current order.status=${order.status}, stockRestored=${order.stockRestored}`);
+    
+    // Restore stock if: order is/will be cancelled AND stock has not been restored yet
+    if (status === 'cancelled' && !order.stockRestored) {
+      console.log(`✅ [updateOrderStatus] Order is being cancelled - restoring stock for ${order.items.length} items`);
+      
+      if (order.status !== 'cancelled') {
+        order.cancelledAt = new Date();
+        order.cancelledBy = req.user?.id || 'system';
+      }
       
       // Restore product stock for all items in the order
       for (const item of order.items) {
         const product = await Product.findById(item.productId);
         if (product) {
+          // Capture stock before restoration
+          const beforeStock = {
+            productId: product._id,
+            productName: product.nameEn,
+            productNameAr: product.nameAr,
+            stock: product.stock,
+            availableQuantity: product.availableQuantity,
+            specifications: []
+          };
+
+          // Capture specification quantities before restoration
+          if (item.selectedSpecifications && item.selectedSpecifications.length > 0) {
+            for (const selectedSpec of item.selectedSpecifications) {
+              const specValue = product.specificationValues.find(spec => 
+                spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+                spec.valueId === selectedSpec.valueId
+              );
+              if (specValue) {
+                beforeStock.specifications.push({
+                  specificationId: selectedSpec.specificationId,
+                  valueId: selectedSpec.valueId,
+                  title: specValue.title || selectedSpec.titleEn,
+                  value: specValue.value || selectedSpec.valueEn,
+                  quantityBefore: specValue.quantity
+                });
+              }
+            }
+          }
+
           // Use the proper restore function that handles both stock and availableQuantity and specifications
           await exports.restoreProductStock(
             product, 
             item.quantity, 
             item.selectedSpecifications || []
           );
+
+          // Reload product to get updated values
+          const updatedProduct = await Product.findById(product._id);
+
+          // Capture stock after restoration
+          const afterStock = {
+            productId: updatedProduct._id,
+            productName: updatedProduct.nameEn,
+            productNameAr: updatedProduct.nameAr,
+            stock: updatedProduct.stock,
+            availableQuantity: updatedProduct.availableQuantity,
+            specifications: []
+          };
+
+          // Capture specification quantities after restoration
+          if (item.selectedSpecifications && item.selectedSpecifications.length > 0) {
+            for (const selectedSpec of item.selectedSpecifications) {
+              const specValue = updatedProduct.specificationValues.find(spec => 
+                spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+                spec.valueId === selectedSpec.valueId
+              );
+              if (specValue) {
+                afterStock.specifications.push({
+                  specificationId: selectedSpec.specificationId,
+                  valueId: selectedSpec.valueId,
+                  title: specValue.title || selectedSpec.titleEn,
+                  value: specValue.value || selectedSpec.valueEn,
+                  quantityAfter: specValue.quantity
+                });
+              }
+            }
+          }
+
+          stockChanges.push({
+            before: beforeStock,
+            after: afterStock,
+            restored: item.quantity
+          });
         } else {
           console.warn(`Product ${item.productId} not found for stock restoration during status update`);
         }
+      }
+      
+      // Mark stock as restored if successful
+      if (stockChanges.length > 0) {
+        order.stockRestored = true;
+        console.log(`✅ [updateOrderStatus] Stock restored successfully, marking order.stockRestored = true`);
       }
     }
 
     await order.save();
 
-    res.json({
+    const response = {
       success: true,
       message: 'Order status updated successfully',
+      messageAr: 'تم تحديث حالة الطلب بنجاح',
       data: {
         orderId: order._id,
         orderNumber: order.orderNumber,
         status: order.status,
+        statusAr: ({'pending': 'قيد المراجعة', 'confirmed': 'مؤكد', 'shipped': 'تم الشحن', 'delivered': 'تم التسليم', 'cancelled': 'ملغي'})[order.status] || order.status,
+        statusEn: ({'pending': 'Pending', 'confirmed': 'Confirmed', 'shipped': 'Shipped', 'delivered': 'Delivered', 'cancelled': 'Cancelled'})[order.status] || order.status,
         updatedAt: order.updatedAt
       }
-    });
+    };
+
+    // Add stock changes information if stock was restored
+    if (stockChanges.length > 0) {
+      response.stockRestoration = stockChanges;
+      response.message = 'Order status updated and stock restored successfully';
+      response.messageAr = 'تم تحديث حالة الطلب واستعادة الكمية بنجاح';
+    }
+
+    res.json(response);
 
   } catch (error) {
     console.error('Update order status error:', error);
@@ -1150,29 +1275,47 @@ exports.updateOrderStatus = async (req, res) => {
 exports.updatePaymentStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { paymentStatus, notes } = req.body;
+    const { paymentStatus, status, notes } = req.body;
 
     if (!orderId) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Order ID is required' 
+        message: 'Order ID is required',
+        messageAr: 'معرف الطلب مطلوب'
       });
     }
 
-    if (!paymentStatus) {
+    // Check if at least one status is provided
+    if (!paymentStatus && !status) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Payment status is required' 
+        message: 'Payment status or order status is required',
+        messageAr: 'حالة الدفع أو حالة الطلب مطلوبة'
       });
     }
 
-    // Validate payment status
-    const validPaymentStatuses = ['unpaid', 'paid'];
-    if (!validPaymentStatuses.includes(paymentStatus)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid payment status. Must be one of: unpaid, paid' 
-      });
+    // Validate payment status if provided
+    if (paymentStatus) {
+      const validPaymentStatuses = ['unpaid', 'paid'];
+      if (!validPaymentStatuses.includes(paymentStatus)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid payment status. Must be one of: unpaid, paid',
+          messageAr: 'حالة الدفع غير صحيحة. يجب أن تكون: غير مدفوع، مدفوع'
+        });
+      }
+    }
+
+    // Validate order status if provided
+    if (status) {
+      const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid status. Must be one of: pending, confirmed, shipped, delivered, cancelled',
+          messageAr: 'حالة غير صحيحة. يجب أن تكون واحدة من: معلق، مؤكد، شحن، تم التسليم، ملغي'
+        });
+      }
     }
 
     // Check if orderId is a valid ObjectId or orderNumber
@@ -1188,12 +1331,130 @@ exports.updatePaymentStatus = async (req, res) => {
     if (!order) {
       return res.status(404).json({ 
         success: false, 
-        message: 'Order not found' 
+        message: 'Order not found',
+        messageAr: 'الطلب غير موجود'
       });
     }
 
-    // Update payment status
-    order.paymentStatus = paymentStatus;
+    console.log(`🔍 [updatePaymentStatus] Checking cancellation: status=${status}, current order.status=${order.status}, stockRestored=${order.stockRestored}`);
+
+    // Handle cancellation - restore stock to inventory
+    const stockChanges = [];
+    // Restore stock if: order is/will be cancelled AND stock has not been restored yet
+    if ((status === 'cancelled' || order.status === 'cancelled') && !order.stockRestored) {
+      console.log(`✅ [updatePaymentStatus] Order is/will be cancelled - restoring stock for ${order.items.length} items`);
+      
+      if (status === 'cancelled' && order.status !== 'cancelled') {
+        order.cancelledAt = new Date();
+        order.cancelledBy = req.user?.id || 'system';
+      }
+      
+      // Restore product stock for all items in the order
+      for (const item of order.items) {
+        console.log(`🔄 [updatePaymentStatus] Processing item: ${item.productId}, quantity: ${item.quantity}`);
+        console.log(`📋 [updatePaymentStatus] Selected specifications:`, item.selectedSpecifications);
+        
+        const product = await Product.findById(item.productId);
+        if (product) {
+          // Capture stock before restoration
+          const beforeStock = {
+            productId: product._id,
+            productName: product.nameEn,
+            productNameAr: product.nameAr,
+            stock: product.stock,
+            availableQuantity: product.availableQuantity,
+            specifications: []
+          };
+
+          // Capture specification quantities before restoration
+          if (item.selectedSpecifications && item.selectedSpecifications.length > 0) {
+            for (const selectedSpec of item.selectedSpecifications) {
+              const specValue = product.specificationValues.find(spec => 
+                spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+                spec.valueId === selectedSpec.valueId
+              );
+              if (specValue) {
+                beforeStock.specifications.push({
+                  specificationId: selectedSpec.specificationId,
+                  valueId: selectedSpec.valueId,
+                  title: specValue.title || selectedSpec.titleEn,
+                  value: specValue.value || selectedSpec.valueEn,
+                  quantityBefore: specValue.quantity
+                });
+              }
+            }
+          }
+
+          // Restore stock
+          await exports.restoreProductStock(
+            product, 
+            item.quantity, 
+            item.selectedSpecifications || []
+          );
+
+          // Reload product to get updated values
+          const updatedProduct = await Product.findById(product._id);
+
+          // Capture stock after restoration
+          const afterStock = {
+            productId: updatedProduct._id,
+            productName: updatedProduct.nameEn,
+            productNameAr: updatedProduct.nameAr,
+            stock: updatedProduct.stock,
+            availableQuantity: updatedProduct.availableQuantity,
+            specifications: []
+          };
+
+          // Capture specification quantities after restoration
+          if (item.selectedSpecifications && item.selectedSpecifications.length > 0) {
+            for (const selectedSpec of item.selectedSpecifications) {
+              const specValue = updatedProduct.specificationValues.find(spec => 
+                spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+                spec.valueId === selectedSpec.valueId
+              );
+              if (specValue) {
+                afterStock.specifications.push({
+                  specificationId: selectedSpec.specificationId,
+                  valueId: selectedSpec.valueId,
+                  title: specValue.title || selectedSpec.titleEn,
+                  value: specValue.value || selectedSpec.valueEn,
+                  quantityAfter: specValue.quantity
+                });
+              }
+            }
+          }
+
+          stockChanges.push({
+            before: beforeStock,
+            after: afterStock,
+            restored: item.quantity
+          });
+        } else {
+          console.warn(`Product ${item.productId} not found for stock restoration`);
+        }
+      }
+      
+      // Mark stock as restored
+      if (stockChanges.length > 0) {
+        order.stockRestored = true;
+        console.log(`✅ [updatePaymentStatus] Stock restored successfully, marking order.stockRestored = true`);
+      }
+    }
+
+    // Update payment status if provided
+    if (paymentStatus) {
+      order.paymentStatus = paymentStatus;
+    }
+
+    // Update order status if provided
+    if (status) {
+      order.status = status;
+      
+      // Set delivery date if status is delivered
+      if (status === 'delivered') {
+        order.actualDeliveryDate = new Date();
+      }
+    }
     
     // Add admin notes if provided
     if (notes) {
@@ -1205,22 +1466,205 @@ exports.updatePaymentStatus = async (req, res) => {
 
     await order.save();
 
-    res.json({
+    const response = {
       success: true,
-      message: 'Payment status updated successfully',
+      message: 'Order updated successfully',
+      messageAr: 'تم تحديث الطلب بنجاح',
       data: {
         orderId: order._id,
         orderNumber: order.orderNumber,
         paymentStatus: order.paymentStatus,
+        paymentStatusAr: order.paymentStatus === 'paid' ? 'مدفوع' : 'غير مدفوع',
+        paymentStatusEn: order.paymentStatus === 'paid' ? 'Paid' : 'Unpaid',
+        status: order.status,
+        statusAr: ({'pending': 'قيد المراجعة', 'confirmed': 'مؤكد', 'shipped': 'تم الشحن', 'delivered': 'تم التسليم', 'cancelled': 'ملغي'})[order.status] || order.status,
+        statusEn: ({'pending': 'Pending', 'confirmed': 'Confirmed', 'shipped': 'Shipped', 'delivered': 'Delivered', 'cancelled': 'Cancelled'})[order.status] || order.status,
         updatedAt: order.updatedAt
       }
-    });
+    };
+
+    // Add stock changes information if stock was restored
+    if (stockChanges.length > 0) {
+      response.stockRestoration = stockChanges;
+      response.message = 'Order updated and stock restored successfully';
+      response.messageAr = 'تم تحديث الطلب واستعادة الكمية بنجاح';
+    }
+
+    res.json(response);
 
   } catch (error) {
     console.error('Update payment status error:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Error updating payment status',
+      messageAr: 'خطأ في تحديث حالة الدفع',
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * Manually restore stock for a cancelled order
+ * @route POST /api/orders/:orderId/restore-stock
+ */
+exports.restoreStockForCancelledOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Order ID is required',
+        messageAr: 'معرف الطلب مطلوب'
+      });
+    }
+
+    // Check if orderId is a valid ObjectId or orderNumber
+    let order;
+    if (mongoose.Types.ObjectId.isValid(orderId)) {
+      order = await Order.findById(orderId);
+    } else {
+      order = await Order.findOne({ orderNumber: orderId });
+    }
+
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Order not found',
+        messageAr: 'الطلب غير موجود'
+      });
+    }
+
+    // Check if order is cancelled
+    if (order.status !== 'cancelled') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Order must be cancelled to restore stock',
+        messageAr: 'يجب أن يكون الطلب ملغياً لاستعادة الكمية'
+      });
+    }
+
+    // Check if stock was already restored
+    if (order.stockRestored) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Stock has already been restored for this cancelled order',
+        messageAr: 'تمت استعادة الكمية بالفعل لهذا الطلب الملغي'
+      });
+    }
+
+    console.log(`🔄 [restoreStock] Manually restoring stock for cancelled order ${order.orderNumber}`);
+
+    const stockChanges = [];
+    
+    // Restore product stock for all items in the order
+    for (const item of order.items) {
+      console.log(`🔄 [restoreStock] Processing item: ${item.productId}, quantity: ${item.quantity}`);
+      console.log(`📋 [restoreStock] Selected specifications:`, item.selectedSpecifications);
+      
+      const product = await Product.findById(item.productId);
+      if (product) {
+        // Capture stock before restoration
+        const beforeStock = {
+          productId: product._id,
+          productName: product.nameEn,
+          productNameAr: product.nameAr,
+          stock: product.stock,
+          availableQuantity: product.availableQuantity,
+          specifications: []
+        };
+
+        // Capture specification quantities before restoration
+        if (item.selectedSpecifications && item.selectedSpecifications.length > 0) {
+          for (const selectedSpec of item.selectedSpecifications) {
+            const specValue = product.specificationValues.find(spec => 
+              spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+              spec.valueId === selectedSpec.valueId
+            );
+            if (specValue) {
+              beforeStock.specifications.push({
+                specificationId: selectedSpec.specificationId,
+                valueId: selectedSpec.valueId,
+                title: specValue.title || selectedSpec.titleEn,
+                value: specValue.value || selectedSpec.valueEn,
+                quantityBefore: specValue.quantity
+              });
+            }
+          }
+        }
+
+        // Restore stock
+        await exports.restoreProductStock(
+          product, 
+          item.quantity, 
+          item.selectedSpecifications || []
+        );
+
+        // Reload product to get updated values
+        const updatedProduct = await Product.findById(product._id);
+
+        // Capture stock after restoration
+        const afterStock = {
+          productId: updatedProduct._id,
+          productName: updatedProduct.nameEn,
+          productNameAr: updatedProduct.nameAr,
+          stock: updatedProduct.stock,
+          availableQuantity: updatedProduct.availableQuantity,
+          specifications: []
+        };
+
+        // Capture specification quantities after restoration
+        if (item.selectedSpecifications && item.selectedSpecifications.length > 0) {
+          for (const selectedSpec of item.selectedSpecifications) {
+            const specValue = updatedProduct.specificationValues.find(spec => 
+              spec.specificationId.toString() === selectedSpec.specificationId.toString() &&
+              spec.valueId === selectedSpec.valueId
+            );
+            if (specValue) {
+              afterStock.specifications.push({
+                specificationId: selectedSpec.specificationId,
+                valueId: selectedSpec.valueId,
+                title: specValue.title || selectedSpec.titleEn,
+                value: specValue.value || selectedSpec.valueEn,
+                quantityAfter: specValue.quantity
+              });
+            }
+          }
+        }
+
+        stockChanges.push({
+          before: beforeStock,
+          after: afterStock,
+          restored: item.quantity
+        });
+      } else {
+        console.warn(`Product ${item.productId} not found for stock restoration`);
+      }
+    }
+
+    // Mark stock as restored
+    order.stockRestored = true;
+    await order.save();
+    console.log(`✅ [restoreStock] Stock restored successfully, marked order.stockRestored = true`);
+
+    res.json({
+      success: true,
+      message: 'Stock restored successfully for cancelled order',
+      messageAr: 'تم استعادة الكمية بنجاح للطلب الملغي',
+      data: {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        itemsProcessed: order.items.length,
+        stockRestoration: stockChanges
+      }
+    });
+
+  } catch (error) {
+    console.error('Restore stock error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error restoring stock',
+      messageAr: 'خطأ في استعادة الكمية',
       error: error.message 
     });
   }
@@ -1339,6 +1783,9 @@ exports.getOrderDetails = async (req, res) => {
     if (includeItems === 'true') {
       response.items = order.items.map(item => ({
         productId: item.productId,
+        image: getProductImage(item),
+        mainImage: item.productSnapshot?.mainImage,
+        images: item.productSnapshot?.images || [],
         name: item.name,
         sku: item.sku,
         quantity: item.quantity,
@@ -1485,11 +1932,22 @@ exports.getMyOrders = async (req, res) => {
       }
     }
 
+    // Map status translations
+    const statusTranslations = {
+      'pending': { en: 'Pending', ar: 'قيد المراجعة' },
+      'confirmed': { en: 'Confirmed', ar: 'مؤكد' },
+      'shipped': { en: 'Shipped', ar: 'تم الشحن' },
+      'delivered': { en: 'Delivered', ar: 'تم التسليم' },
+      'cancelled': { en: 'Cancelled', ar: 'ملغي' }
+    };
+
     // Shape the response for the frontend
     const shapedOrders = orders.map(order => ({
       id: order.orderNumber,
       orderNumber: order.orderNumber,
       storeName: order.store?.nameEn,
+      storeNameAr: order.store?.nameAr,
+      storeNameEn: order.store?.nameEn,
       storeId: order.store?._id,
       storePhone: order.store?.whatsappNumber,
       storeUrl: order.store ? `/store/${order.store.slug}` : '',
@@ -1497,7 +1955,12 @@ exports.getMyOrders = async (req, res) => {
       price: order.pricing?.total,
       date: order.createdAt,
       paid: order.paymentStatus === 'paid',
+      paymentStatus: order.paymentStatus,
+      paymentStatusAr: order.paymentStatus === 'paid' ? 'مدفوع' : 'غير مدفوع',
+      paymentStatusEn: order.paymentStatus === 'paid' ? 'Paid' : 'Unpaid',
       status: order.status,
+      statusAr: statusTranslations[order.status]?.ar || order.status,
+      statusEn: statusTranslations[order.status]?.en || order.status,
       itemsCount: order.items.length,
       notes: order.notes?.customer || order.notes?.admin || '',
       deliveryArea: order.deliveryArea ? {
@@ -1507,10 +1970,16 @@ exports.getMyOrders = async (req, res) => {
         estimatedDays: order.deliveryArea.estimatedDays || 0
       } : null,
       items: order.items.map(item => ({
-        image: item.productSnapshot?.images?.[0],
+        image: getProductImage(item),
+        mainImage: item.productSnapshot?.mainImage,
+        images: item.productSnapshot?.images || [],
         name: item.productSnapshot?.nameEn || item.name,
+        nameAr: item.productSnapshot?.nameAr || item.name,
+        nameEn: item.productSnapshot?.nameEn || item.name,
         quantity: item.quantity,
         unit: item.productSnapshot?.unit?.nameEn,
+        unitAr: item.productSnapshot?.unit?.nameAr,
+        unitEn: item.productSnapshot?.unit?.nameEn,
         pricePerUnit: item.price,
         total: item.totalPrice,
         color: item.productSnapshot?.color,
@@ -1643,11 +2112,22 @@ exports.getMyOrderById = async (req, res) => {
       });
     }
 
+    // Map status translations
+    const statusTranslations = {
+      'pending': { en: 'Pending', ar: 'قيد المراجعة' },
+      'confirmed': { en: 'Confirmed', ar: 'مؤكد' },
+      'shipped': { en: 'Shipped', ar: 'تم الشحن' },
+      'delivered': { en: 'Delivered', ar: 'تم التسليم' },
+      'cancelled': { en: 'Cancelled', ar: 'ملغي' }
+    };
+
     // Shape the response
     const shapedOrder = {
       id: order._id,
       orderNumber: order.orderNumber,
       storeName: order.store?.nameEn,
+      storeNameAr: order.store?.nameAr,
+      storeNameEn: order.store?.nameEn,
       storeId: order.store?._id,
       storePhone: order.store?.whatsappNumber,
       storeUrl: order.store ? `/store/${order.store.slug}` : '',
@@ -1655,7 +2135,12 @@ exports.getMyOrderById = async (req, res) => {
       price: order.pricing?.total,
       date: order.createdAt,
       paid: order.paymentStatus === 'paid',
+      paymentStatus: order.paymentStatus,
+      paymentStatusAr: order.paymentStatus === 'paid' ? 'مدفوع' : 'غير مدفوع',
+      paymentStatusEn: order.paymentStatus === 'paid' ? 'Paid' : 'Unpaid',
       status: order.status,
+      statusAr: statusTranslations[order.status]?.ar || order.status,
+      statusEn: statusTranslations[order.status]?.en || order.status,
       itemsCount: order.items.length,
       notes: order.notes?.customer || order.notes?.admin || '',
       deliveryArea: order.deliveryArea ? {
@@ -1666,11 +2151,17 @@ exports.getMyOrderById = async (req, res) => {
       } : null,
       items: order.items.map(item => ({
         productId: item.productId,
-        image: item.productSnapshot?.images?.[0],
+        image: getProductImage(item),
+        mainImage: item.productSnapshot?.mainImage,
+        images: item.productSnapshot?.images || [],
         name: item.productSnapshot?.nameEn || item.name,
+        nameAr: item.productSnapshot?.nameAr || item.name,
+        nameEn: item.productSnapshot?.nameEn || item.name,
         sku: item.sku,
         quantity: item.quantity,
         unit: item.productSnapshot?.unit?.nameEn,
+        unitAr: item.productSnapshot?.unit?.nameAr,
+        unitEn: item.productSnapshot?.unit?.nameEn,
         pricePerUnit: item.price,
         total: item.totalPrice,
         color: item.productSnapshot?.color,
@@ -1813,11 +2304,22 @@ exports.getOrdersByCustomerId = async (req, res) => {
       });
     }
 
+    // Map status translations
+    const statusTranslations = {
+      'pending': { en: 'Pending', ar: 'قيد المراجعة' },
+      'confirmed': { en: 'Confirmed', ar: 'مؤكد' },
+      'shipped': { en: 'Shipped', ar: 'تم الشحن' },
+      'delivered': { en: 'Delivered', ar: 'تم التسليم' },
+      'cancelled': { en: 'Cancelled', ar: 'ملغي' }
+    };
+
     // Shape the response for the frontend
     const shapedOrders = orders.map(order => ({
       id: order.orderNumber,
       orderNumber: order.orderNumber,
       storeName: order.store?.nameEn,
+      storeNameAr: order.store?.nameAr,
+      storeNameEn: order.store?.nameEn,
       storeId: order.store?._id,
       storePhone: order.store?.whatsappNumber,
       storeUrl: order.store ? `/store/${order.store.slug}` : '',
@@ -1825,7 +2327,12 @@ exports.getOrdersByCustomerId = async (req, res) => {
       price: order.pricing?.total,
       date: order.createdAt,
       paid: order.paymentStatus === 'paid',
+      paymentStatus: order.paymentStatus,
+      paymentStatusAr: order.paymentStatus === 'paid' ? 'مدفوع' : 'غير مدفوع',
+      paymentStatusEn: order.paymentStatus === 'paid' ? 'Paid' : 'Unpaid',
       status: order.status,
+      statusAr: statusTranslations[order.status]?.ar || order.status,
+      statusEn: statusTranslations[order.status]?.en || order.status,
       itemsCount: order.items.length,
       notes: order.notes?.customer || order.notes?.admin || '',
       deliveryArea: order.deliveryArea ? {
@@ -1835,10 +2342,16 @@ exports.getOrdersByCustomerId = async (req, res) => {
         estimatedDays: order.deliveryArea.estimatedDays || 0
       } : null,
       items: order.items.map(item => ({
-        image: item.productSnapshot?.images?.[0],
+        image: getProductImage(item),
+        mainImage: item.productSnapshot?.mainImage,
+        images: item.productSnapshot?.images || [],
         name: item.productSnapshot?.nameEn || item.name,
+        nameAr: item.productSnapshot?.nameAr || item.name,
+        nameEn: item.productSnapshot?.nameEn || item.name,
         quantity: item.quantity,
         unit: item.productSnapshot?.unit?.nameEn,
+        unitAr: item.productSnapshot?.unit?.nameAr,
+        unitEn: item.productSnapshot?.unit?.nameEn,
         pricePerUnit: item.price,
         total: item.totalPrice,
         color: item.productSnapshot?.color,
@@ -2047,6 +2560,7 @@ exports.createGuestOrder = async (req, res) => {
         productSnapshot: {
           nameAr: product.nameAr,
           nameEn: product.nameEn,
+          mainImage: product.mainImage, // ✅ Copy mainImage
           images: product.images,
           price: currentPrice,
           unit: product.unit,
@@ -2670,8 +3184,9 @@ exports.getAffiliateOrderStats = async (req, res) => {
     const filter = {
       'store.id': storeId,
       'affiliateTracking.isAffiliateOrder': true,
-      // Exclude cancelled orders - only include pending, shipped, delivered
-      status: { $in: ['pending', 'shipped', 'delivered'] }
+      // Include: Pending, Confirmed, Shipped, Delivered (both Paid and Unpaid)
+      // Exclude: CANCELLED
+      status: { $in: ['pending', 'confirmed', 'shipped', 'delivered'] }
     };
 
     if (startDate && endDate) {
@@ -2983,12 +3498,20 @@ exports.getOrderPercentage = async (req, res) => {
       });
     }
 
-    // Get total orders for the store
-    const totalOrders = await Order.countDocuments({ 'store.id': storeId });
+    // Include: Pending, Confirmed, Shipped, Delivered (both Paid and Unpaid)
+    // Exclude: CANCELLED
+    const statusFilter = { status: { $in: ['pending', 'confirmed', 'shipped', 'delivered'] } };
     
-    // Get guest orders (where user.id is null or user is guest)
+    // Get total orders for the store (excluding cancelled)
+    const totalOrders = await Order.countDocuments({ 
+      'store.id': storeId,
+      ...statusFilter
+    });
+    
+    // Get guest orders (where user.id is null or user is guest, excluding cancelled)
     const guestOrders = await Order.countDocuments({ 
       'store.id': storeId,
+      ...statusFilter,
       $or: [
         { 'user.id': null },
         { 'user.id': { $exists: false } },
@@ -3005,6 +3528,8 @@ exports.getOrderPercentage = async (req, res) => {
 
     res.json({
       success: true,
+      message: 'Order percentages retrieved successfully',
+      messageAr: 'تم جلب نسب الطلبيات بنجاح',
       data: {
         totalOrders,
         guestOrders,
@@ -3021,6 +3546,7 @@ exports.getOrderPercentage = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Error fetching order percentage',
+      messageAr: 'خطأ في جلب نسب الطلبيات',
       error: error.message 
     });
   }
@@ -3041,41 +3567,37 @@ exports.getTopUsersByProductsSold = async (req, res) => {
       });
     }
 
-    // Aggregate to get top users by products sold
+    // Aggregate to get top users by products sold and revenue
     const topUsers = await Order.aggregate([
       {
         $match: {
           'store.id': new mongoose.Types.ObjectId(storeId),
           'user.id': { $exists: true, $ne: null },
-          // Exclude cancelled orders - only include pending, shipped, delivered
-          status: { $in: ['pending', 'shipped', 'delivered'] }
-        }
-      },
-      {
-        $unwind: '$items'
-      },
-      {
-        $group: {
-          _id: {
-            userId: '$user.id',
-            orderId: '$_id'
-          },
-          userId: { $first: '$user.id' },
-          totalProductsSold: { $sum: '$items.quantity' },
-          orderTotal: { $first: '$pricing.total' }
+          // Include: Pending, Confirmed, Shipped, Delivered (both Paid and Unpaid)
+          // Exclude: CANCELLED
+          status: { $in: ['pending', 'confirmed', 'shipped', 'delivered'] }
         }
       },
       {
         $group: {
-          _id: '$userId',
-          totalProductsSold: { $sum: '$totalProductsSold' },
-          totalOrders: { $addToSet: '$_id.orderId' },
-          totalRevenue: { $sum: '$orderTotal' }
+          _id: '$user.id',
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: '$pricing.total' },
+          orders: { $push: '$$ROOT' }
         }
       },
       {
-        $addFields: {
-          orderCount: { $size: '$totalOrders' }
+        $unwind: '$orders'
+      },
+      {
+        $unwind: '$orders.items'
+      },
+      {
+        $group: {
+          _id: '$_id',
+          totalOrders: { $first: '$totalOrders' },
+          totalRevenue: { $first: '$totalRevenue' },
+          totalProductsSold: { $sum: '$orders.items.quantity' }
         }
       },
       {
@@ -3097,12 +3619,12 @@ exports.getTopUsersByProductsSold = async (req, res) => {
           email: '$userInfo.email',
           phone: '$userInfo.phone',
           totalProductsSold: 1,
-          orderCount: 1,
+          orderCount: '$totalOrders',
           totalRevenue: 1
         }
       },
       {
-        $sort: { totalProductsSold: -1 }
+        $sort: { totalRevenue: -1 }
       },
       {
         $limit: 10
@@ -3111,6 +3633,8 @@ exports.getTopUsersByProductsSold = async (req, res) => {
 
     res.json({
       success: true,
+      message: 'Top customers retrieved successfully',
+      messageAr: 'تم جلب أفضل العملاء بنجاح',
       data: topUsers
     });
 
@@ -3118,7 +3642,8 @@ exports.getTopUsersByProductsSold = async (req, res) => {
     console.error('Get top users error:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Error fetching top users',
+      message: 'Error fetching top customers',
+      messageAr: 'خطأ في جلب أفضل العملاء',
       error: error.message 
     });
   }
@@ -3158,8 +3683,9 @@ exports.getCategoriesRevenue = async (req, res) => {
       {
         $match: {
           'store.id': new mongoose.Types.ObjectId(storeId),
-          // Exclude cancelled orders - only include pending, shipped, delivered
-          status: { $in: ['pending', 'shipped', 'delivered'] }
+          // Include: Pending, Confirmed, Shipped, Delivered (both Paid and Unpaid)
+          // Exclude: CANCELLED
+          status: { $in: ['pending', 'confirmed', 'shipped', 'delivered'] }
         }
       },
       {
@@ -3239,8 +3765,9 @@ exports.getTopProducts = async (req, res) => {
       {
         $match: {
           'store.id': new mongoose.Types.ObjectId(storeId),
-          // Exclude cancelled orders - only include pending, shipped, delivered
-          status: { $in: ['pending', 'shipped', 'delivered'] }
+          // Include: Pending, Confirmed, Shipped, Delivered (both Paid and Unpaid)
+          // Exclude: CANCELLED
+          status: { $in: ['pending', 'confirmed', 'shipped', 'delivered'] }
         }
       },
       {
@@ -3252,7 +3779,8 @@ exports.getTopProducts = async (req, res) => {
           productName: { $first: '$items.productSnapshot.nameEn' },
           productNameAr: { $first: '$items.productSnapshot.nameAr' },
           productSku: { $first: '$items.sku' },
-          productImage: { $first: '$items.productSnapshot.images' },
+          mainImage: { $first: '$items.productSnapshot.mainImage' },
+          images: { $first: '$items.productSnapshot.images' },
           totalQuantitySold: { $sum: '$items.quantity' },
           totalRevenue: { $sum: '$items.totalPrice' },
           averagePrice: { $avg: '$items.price' },
@@ -3263,7 +3791,40 @@ exports.getTopProducts = async (req, res) => {
       {
         $addFields: {
           orderCount: { $size: '$orderCount' },
-          mainImage: { $arrayElemAt: ['$productImage', 0] }
+          // Build productImage array with mainImage first, then gallery images
+          // This ensures mainImage is always at index 0 if it exists
+          productImage: {
+            $cond: {
+              if: { 
+                $and: [
+                  { $ne: ['$mainImage', null] },
+                  { $ne: ['$mainImage', ''] }
+                ]
+              },
+              then: {
+                $concatArrays: [
+                  ['$mainImage'],                    // mainImage first
+                  { $ifNull: ['$images', []] }       // then gallery images
+                ]
+              },
+              else: { $ifNull: ['$images', []] }     // only gallery if no mainImage
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          productName: 1,
+          productNameAr: 1,
+          productSku: 1,
+          productImage: 1,                           // Array with mainImage first, then gallery
+          mainImage: 1,                              // Keep mainImage separately for direct access
+          totalQuantitySold: 1,
+          totalRevenue: 1,
+          averagePrice: 1,
+          orderCount: 1,
+          categories: 1
         }
       },
       {
@@ -3276,9 +3837,38 @@ exports.getTopProducts = async (req, res) => {
 
     console.log('🔍 Top Products Result:', topProducts.length);
 
+    // Fetch actual product data for products that don't have images in snapshot
+    const enrichedProducts = await Promise.all(topProducts.map(async (item) => {
+      // If productImage is empty or mainImage is missing, fetch from actual product
+      if (!item.productImage || item.productImage.length === 0 || !item.mainImage) {
+        try {
+          const product = await Product.findById(item._id).select('mainImage images');
+          if (product) {
+            // Build complete image list: mainImage first, then gallery images
+            const allImages = [];
+            if (product.mainImage) {
+              allImages.push(product.mainImage);
+            }
+            if (product.images && Array.isArray(product.images)) {
+              allImages.push(...product.images);
+            }
+            
+            return {
+              ...item,
+              mainImage: product.mainImage || item.mainImage,
+              productImage: allImages.length > 0 ? allImages : item.productImage
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching product images:', error);
+        }
+      }
+      return item;
+    }));
+
     res.json({
       success: true,
-      data: topProducts
+      data: enrichedProducts
     });
 
   } catch (error) {

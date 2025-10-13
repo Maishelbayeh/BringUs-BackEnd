@@ -256,7 +256,11 @@ const orderSchema = new mongoose.Schema({
     type: String, // Changed from ObjectId to String
     ref: 'User'
   },
-  cancellationReason: String
+  cancellationReason: String,
+  stockRestored: {
+    type: Boolean,
+    default: false
+  }
 }, {
   timestamps: true
 });

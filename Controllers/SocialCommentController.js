@@ -11,7 +11,11 @@ exports.getSocialComments = async (req, res) => {
   try {
     const storeId = req.store?._id || req.store;
     const comments = await SocialComment.find({ store: storeId });
-    return response.success(res, { data: comments });
+    return response.success(res, { 
+      data: comments,
+      message: 'Testimonials retrieved successfully',
+      messageAr: 'تم جلب الشهادات بنجاح'
+    });
   } catch (err) {
     return response.error(res, { 
       message: err.message || 'Failed to fetch testimonials',
@@ -37,7 +41,7 @@ exports.createSocialComment = async (req, res) => {
     } = req.body;
 
     const newComment = new SocialComment({
-      store: store,
+      store: store || req.store?._id || req.store,
       platform,
       image,
       personName,
@@ -46,7 +50,12 @@ exports.createSocialComment = async (req, res) => {
       active,
     });
     await newComment.save();
-    return response.success(res, { data: newComment });
+    return response.success(res, { 
+      data: newComment,
+      message: 'Testimonial created successfully',
+      messageAr: 'تم إنشاء الشهادة بنجاح',
+      statusCode: 201
+    });
   } catch (err) {
     return response.error(res, { 
       message: err.message || 'Failed to create testimonial',
@@ -73,7 +82,11 @@ exports.updateSocialComment = async (req, res) => {
       messageAr: 'الشهادة غير موجودة',
       statusCode: 404 
     });
-    return response.success(res, { data: updated });
+    return response.success(res, { 
+      data: updated,
+      message: 'Testimonial updated successfully',
+      messageAr: 'تم تحديث الشهادة بنجاح'
+    });
   } catch (err) {
     return response.error(res, { 
       message: err.message || 'Failed to update testimonial',
@@ -95,7 +108,11 @@ exports.deleteSocialComment = async (req, res) => {
       messageAr: 'الشهادة غير موجودة',
       statusCode: 404 
     });
-    return response.success(res, { data: deleted });
+    return response.success(res, { 
+      data: deleted,
+      message: 'Testimonial deleted successfully',
+      messageAr: 'تم حذف الشهادة بنجاح'
+    });
   } catch (err) {
     return response.error(res, { 
       message: err.message || 'Failed to delete testimonial',
@@ -124,7 +141,11 @@ exports.uploadImage = async (req, res) => {
       'social-comments'
     );
 
-    return response.success(res, { data: { url: result.url, key: result.key } });
+    return response.success(res, { 
+      data: { url: result.url, key: result.key },
+      message: 'Image uploaded successfully',
+      messageAr: 'تم رفع الصورة بنجاح'
+    });
   } catch (err) {
     console.error('Image upload error:', err);
     return response.error(res, { 
@@ -148,7 +169,11 @@ exports.getSocialCommentsByStoreId = async (req, res) => {
       });
     }
     const comments = await SocialComment.find({ store: storeId });
-    return response.success(res, { data: comments });
+    return response.success(res, { 
+      data: comments,
+      message: 'Testimonials retrieved successfully',
+      messageAr: 'تم جلب الشهادات بنجاح'
+    });
   } catch (err) {
     return response.error(res, { 
       message: err.message || 'Failed to fetch testimonials by storeId',

@@ -92,6 +92,70 @@ const parseProductColors = (product) => {
   return productObj;
 };
 
+// Helper function to enrich specificationValues with bilingual data
+const enrichSpecificationValues = async (specificationValues) => {
+  if (!specificationValues || specificationValues.length === 0) return [];
+  
+  const ProductSpecification = require('../Models/ProductSpecification');
+  
+  // Collect unique specification IDs
+  const specificationIds = [...new Set(specificationValues.map(sv => sv.specificationId.toString()))];
+  
+  // Fetch all specifications at once for efficiency
+  const specifications = await ProductSpecification.find({
+    _id: { $in: specificationIds }
+  });
+  
+  // Create a map for quick lookup
+  const specMap = {};
+  specifications.forEach(spec => {
+    specMap[spec._id.toString()] = spec;
+  });
+  
+  // Enrich each specification value
+  return specificationValues.map(specValue => {
+    const specification = specMap[specValue.specificationId.toString()];
+    
+    let titleAr = specValue.title || '';
+    let titleEn = specValue.title || '';
+    let valueAr = specValue.value || '';
+    let valueEn = specValue.value || '';
+    
+    if (specification) {
+      titleAr = specification.titleAr;
+      titleEn = specification.titleEn;
+      
+      // Find matching value in specification's values array
+      const matchingValue = specification.values?.find(v => 
+        v.valueAr === specValue.value || 
+        v.valueEn === specValue.value ||
+        specValue.valueId?.includes(v.valueAr) ||
+        specValue.valueId?.includes(v.valueEn)
+      );
+      
+      if (matchingValue) {
+        valueAr = matchingValue.valueAr;
+        valueEn = matchingValue.valueEn;
+      }
+    }
+    
+    return {
+      specificationId: specValue.specificationId,
+      valueId: specValue.valueId,
+      titleAr,
+      titleEn,
+      valueAr,
+      valueEn,
+      title: specValue.title, // Keep original for backward compatibility
+      value: specValue.value, // Keep original for backward compatibility
+      quantity: specValue.quantity || 0,
+      price: specValue.price || 0,
+      _id: specValue._id,
+      id: specValue.id
+    };
+  });
+};
+
 // دالة لحساب السعر الإجمالي للمنتج مع الصفات والألوان
 exports.calculateProductPrice = async (req, res) => {
   try {
@@ -365,47 +429,8 @@ exports.getAll = async (req, res) => {
       const productObj = parseProductColors(product);
       
       // Enhance specification values with bilingual support
-      if (productObj.specificationValues && Array.isArray(productObj.specificationValues)) {
-        // Get all specification IDs to populate bilingual data
-        const specIds = productObj.specificationValues.map(spec => spec.specificationId);
-        
-        // Populate specification data with bilingual support
-        const ProductSpecification = require('../Models/ProductSpecification');
-        const specifications = await ProductSpecification.find({ _id: { $in: specIds } });
-        
-        // Create a map for quick lookup
-        const specMap = {};
-        specifications.forEach(spec => {
-          specMap[spec._id.toString()] = spec;
-        });
-        
-        // Map specification values with proper bilingual data
-        productObj.specificationValues = productObj.specificationValues.map(spec => {
-          const specData = specMap[spec.specificationId.toString()];
-          if (specData) {
-            // Find the matching value in the specification
-            const matchingValue = specData.values.find(val => 
-              val.valueAr === spec.value || val.valueEn === spec.value
-            );
-            
-            return {
-              ...spec,
-              titleAr: specData.titleAr || spec.title || '',
-              titleEn: specData.titleEn || spec.title || '',
-              valueAr: matchingValue ? matchingValue.valueAr : spec.value || '',
-              valueEn: matchingValue ? matchingValue.valueEn : spec.value || ''
-            };
-          } else {
-            // Fallback to existing data if specification not found
-            return {
-              ...spec,
-              titleAr: spec.title || '',
-              titleEn: spec.title || '',
-              valueAr: spec.value || '',
-              valueEn: spec.value || ''
-            };
-          }
-        });
+      if (productObj.specificationValues && productObj.specificationValues.length > 0) {
+        productObj.specificationValues = await enrichSpecificationValues(productObj.specificationValues);
       }
       
       // Add bilingual support for stock status
@@ -479,47 +504,8 @@ exports.getById = async (req, res) => {
     const productObj = parseProductColors(product);
     
     // Enhance specification values with bilingual support
-    if (productObj.specificationValues && Array.isArray(productObj.specificationValues)) {
-      // Get all specification IDs to populate bilingual data
-      const specIds = productObj.specificationValues.map(spec => spec.specificationId);
-      
-      // Populate specification data with bilingual support
-      const ProductSpecification = require('../Models/ProductSpecification');
-      const specifications = await ProductSpecification.find({ _id: { $in: specIds } });
-      
-      // Create a map for quick lookup
-      const specMap = {};
-      specifications.forEach(spec => {
-        specMap[spec._id.toString()] = spec;
-      });
-      
-      // Map specification values with proper bilingual data
-      productObj.specificationValues = productObj.specificationValues.map(spec => {
-        const specData = specMap[spec.specificationId.toString()];
-        if (specData) {
-          // Find the matching value in the specification
-          const matchingValue = specData.values.find(val => 
-            val.valueAr === spec.value || val.valueEn === spec.value
-          );
-          
-          return {
-            ...spec,
-            titleAr: specData.titleAr || spec.title || '',
-            titleEn: specData.titleEn || spec.title || '',
-            valueAr: matchingValue ? matchingValue.valueAr : spec.value || '',
-            valueEn: matchingValue ? matchingValue.valueEn : spec.value || ''
-          };
-        } else {
-          // Fallback to existing data if specification not found
-          return {
-            ...spec,
-            titleAr: spec.title || '',
-            titleEn: spec.title || '',
-            valueAr: spec.value || '',
-            valueEn: spec.value || ''
-          };
-        }
-      });
+    if (productObj.specificationValues && productObj.specificationValues.length > 0) {
+      productObj.specificationValues = await enrichSpecificationValues(productObj.specificationValues);
     }
     
     // Add bilingual support for stock status
@@ -1434,7 +1420,16 @@ exports.getWithVariants = async (req, res) => {
       .populate('variants', '_id'); // Only populate variant IDs
     
     // تحويل الألوان من JSON string إلى array لكل منتج
-    const processedProducts = products.map(product => parseProductColors(product));
+    const processedProducts = await Promise.all(products.map(async (product) => {
+      const productObj = parseProductColors(product);
+      
+      // Enhance specification values with bilingual support
+      if (productObj.specificationValues && productObj.specificationValues.length > 0) {
+        productObj.specificationValues = await enrichSpecificationValues(productObj.specificationValues);
+      }
+      
+      return productObj;
+    }));
       
     res.json({
       success: true,
@@ -1848,6 +1843,11 @@ exports.getProductWithVariants = async (req, res) => {
     // تحويل الألوان من JSON string إلى array للمنتج المطلوب
     const processedProduct = parseProductColors(requestedProduct);
     
+    // Enrich specificationValues with bilingual data
+    if (processedProduct.specificationValues && processedProduct.specificationValues.length > 0) {
+      processedProduct.specificationValues = await enrichSpecificationValues(processedProduct.specificationValues);
+    }
+    
     // Ensure attributes is a clean array
     if (processedProduct.attributes && Array.isArray(processedProduct.attributes)) {
       processedProduct.attributes = processedProduct.attributes.filter(attr => 
@@ -1861,6 +1861,11 @@ exports.getProductWithVariants = async (req, res) => {
     let processedParent = null;
     if (parentProduct) {
       processedParent = parseProductColors(parentProduct);
+      
+      // Enrich specificationValues with bilingual data for parent
+      if (processedParent.specificationValues && processedParent.specificationValues.length > 0) {
+        processedParent.specificationValues = await enrichSpecificationValues(processedParent.specificationValues);
+      }
       
       // Ensure attributes is a clean array for parent
       if (processedParent.attributes && Array.isArray(processedParent.attributes)) {
@@ -3934,8 +3939,8 @@ exports.getAlmostSoldProducts = async (req, res) => {
       page = 1, 
       limit = 20, 
       threshold = null,
-      sortBy = 'stock',
-      sortOrder = 'asc',
+      sortBy = 'availableQuantity',  // Default to availableQuantity for better accuracy
+      sortOrder = 'asc',               // Ascending: most critical (lowest stock) first
       specification = null
     } = req.query;
     
@@ -3985,9 +3990,18 @@ exports.getAlmostSoldProducts = async (req, res) => {
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Build sort object
+    // Build sort object - default to availableQuantity ascending (most critical first)
     const sortObj = {};
-    sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    if (sortBy === 'stock' || sortBy === 'availableQuantity') {
+      sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    } else if (sortBy) {
+      sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    } else {
+      sortObj.availableQuantity = 1; // Default: lowest available quantity first
+    }
+
+    console.log(`🔍 [getAlmostSoldProducts] Filter:`, JSON.stringify(filter));
+    console.log(`🔍 [getAlmostSoldProducts] Sort:`, sortObj);
 
     // Execute query
     const products = await Product.find(filter)
@@ -4001,6 +4015,8 @@ exports.getAlmostSoldProducts = async (req, res) => {
       .sort(sortObj)
       .skip(skip)
       .limit(parseInt(limit));
+
+    console.log(`🔍 [getAlmostSoldProducts] Found ${products.length} products`);
 
     // Get total count
     const total = await Product.countDocuments(filter);
@@ -4017,17 +4033,34 @@ exports.getAlmostSoldProducts = async (req, res) => {
         product.availableQuantity - product.lowStockThreshold
       );
       
+      // Add availability info for frontend
+      productObj.stockInfo = {
+        stock: product.stock,
+        availableQuantity: product.availableQuantity,
+        soldCount: product.soldCount,
+        lowStockThreshold: product.lowStockThreshold,
+        urgency: product.availableQuantity <= 5 ? 'critical' : 
+                 product.availableQuantity <= 10 ? 'high' : 'medium'
+      };
+      
       return productObj;
     });
+
+    console.log(`✅ [getAlmostSoldProducts] Processed ${processedProducts.length} products`);
 
     // Calculate pagination info
     const totalPages = Math.ceil(total / parseInt(limit));
     const hasNextPage = parseInt(page) < totalPages;
     const hasPrevPage = parseInt(page) > 1;
 
+    console.log(`🔍 [getAlmostSoldProducts] Total: ${total}, Returning: ${processedProducts.length}`);
+
     res.json({
       success: true,
+      message: `Found ${total} product${total !== 1 ? 's' : ''} that ${total !== 1 ? 'are' : 'is'} almost sold out`,
+      messageAr: `تم العثور على ${total} منتج${total > 2 ? 'ات' : ''} توشك على النفاد`,
       data: processedProducts,
+      count: processedProducts.length,
       pagination: {
         currentPage: parseInt(page),
         totalPages,
@@ -4039,7 +4072,9 @@ exports.getAlmostSoldProducts = async (req, res) => {
       summary: {
         totalAlmostSold: total,
         threshold: threshold || 'lowStockThreshold',
-        message: `Found ${total} products that are almost sold out`
+        thresholdValue: threshold ? parseInt(threshold) : null,
+        message: `Found ${total} product${total !== 1 ? 's' : ''} that ${total !== 1 ? 'are' : 'is'} almost sold out`,
+        messageAr: `تم العثور على ${total} منتج${total > 2 ? 'ات' : ''} توشك على النفاد`
       }
     });
   } catch (error) {
@@ -4047,7 +4082,7 @@ exports.getAlmostSoldProducts = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching almost sold products',
-      messageAr: 'خطأ في جلب المنتجات قاربة النفاد',
+      messageAr: 'خطأ في جلب المنتجات التي توشك على النفاد',
       error: error.message
     });
   }

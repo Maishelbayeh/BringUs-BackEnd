@@ -382,11 +382,25 @@ router.post('/login', [
 
     const { email, password, storeSlug } = req.body;
     
+    // Normalize email for consistent lookup
+    const normalizeEmail = (email) => {
+      if (!email) return email;
+      let normalized = email.trim().toLowerCase();
+      const [localPart, domain] = normalized.split('@');
+      if (domain === 'gmail.com' || domain === 'googlemail.com') {
+        const normalizedLocal = localPart.replace(/\./g, '');
+        normalized = `${normalizedLocal}@${domain}`;
+      }
+      return normalized;
+    };
+    
+    const normalizedEmail = normalizeEmail(email);
+    
     // Handle different login scenarios based on role and storeSlug
     let user = null;
     let store = null;
     
-    console.log(`🔍 Login attempt for email: ${email}, storeSlug: ${storeSlug || 'none'}`);
+    console.log(`🔍 Login attempt for email: ${normalizedEmail}, storeSlug: ${storeSlug || 'none'}`);
     
     if (storeSlug) {
       // Find store by slug
@@ -405,17 +419,39 @@ router.post('/login', [
       console.log(`✅ Store found: ${store.nameEn || store.nameAr} (${store.slug})`);
       
       // Find user with email and store
-      user = await User.findOne({ email, store: store._id }).select('+password').populate('store');
+      user = await User.findOne({ email: normalizedEmail, store: store._id }).select('+password').populate('store');
       
       if (user) {
         console.log(`✅ User found in store: ${user.firstName} ${user.lastName} (${user.role})`);
       } else {
-        console.log(`❌ User not found with email: ${email} in store: ${store.slug}`);
+        console.log(`❌ User not found with email: ${normalizedEmail} in store: ${store.slug}`);
       }
     } else {
-      // For superadmin or users without store, find by email only
-      console.log('🔍 Searching for user by email only (superadmin or no store)');
-      user = await User.findOne({ email }).select('+password').populate('store');
+      // Check if multiple accounts exist with this email
+      const allUsers = await User.find({ email: normalizedEmail });
+      
+      if (allUsers.length > 1) {
+        // Multiple accounts exist - require storeSlug to disambiguate
+        console.log(`⚠️ Multiple accounts found for email: ${normalizedEmail} (${allUsers.length} accounts)`);
+        return res.status(400).json({
+          success: false,
+          message: 'Multiple accounts found. Please specify storeSlug to login.',
+          messageAr: 'تم العثور على حسابات متعددة. يرجى تحديد storeSlug لتسجيل الدخول.',
+          error: {
+            code: 'MULTIPLE_ACCOUNTS',
+            accountCount: allUsers.length,
+            availableAccounts: allUsers.map(u => ({
+              role: u.role,
+              storeId: u.store,
+              requiresStoreSlug: true
+            }))
+          }
+        });
+      }
+      
+      // For superadmin or single account users, find by email only
+      console.log('🔍 Searching for user by email only (superadmin or single account)');
+      user = await User.findOne({ email: normalizedEmail }).select('+password').populate('store');
       
       if (user) {
         console.log(`✅ User found: ${user.firstName} ${user.lastName} (${user.role})`);
@@ -425,14 +461,14 @@ router.post('/login', [
           console.log('   No store assigned');
         }
       } else {
-        console.log(`❌ User not found with email: ${email}`);
+        console.log(`❌ User not found with email: ${normalizedEmail}`);
       }
     }
     
     if (!user) {
       // If no user found and storeSlug was provided, check if user exists in other stores
       if (storeSlug) {
-        const allUsers = await User.find({ email }).populate('store', 'nameAr nameEn slug status');
+        const allUsers = await User.find({ email: normalizedEmail }).populate('store', 'nameAr nameEn slug status');
         if (allUsers.length > 0) {
           return res.status(400).json({
             success: false,
@@ -932,10 +968,24 @@ router.post('/login-any', [
 
     const { email, password } = req.body;
     
-    console.log(`🔍 Login-any attempt for email: ${email}`);
+    // Normalize email for consistent lookup
+    const normalizeEmailFunc = (email) => {
+      if (!email) return email;
+      let normalized = email.trim().toLowerCase();
+      const [localPart, domain] = normalized.split('@');
+      if (domain === 'gmail.com' || domain === 'googlemail.com') {
+        const normalizedLocal = localPart.replace(/\./g, '');
+        normalized = `${normalizedLocal}@${domain}`;
+      }
+      return normalized;
+    };
+    
+    const normalizedEmail = normalizeEmailFunc(email);
+    
+    console.log(`🔍 Login-any attempt for email: ${normalizedEmail}`);
     
     // Find all users with this email
-    const users = await User.find({ email }).select('+password').populate('store', 'nameAr nameEn slug status');
+    const users = await User.find({ email: normalizedEmail }).select('+password').populate('store', 'nameAr nameEn slug status');
     
     if (users.length === 0) {
       return res.status(401).json({

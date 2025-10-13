@@ -177,19 +177,27 @@ const createUser = async (req, res) => {
     // Normalize email for consistent storage and duplicate checking
     const normalizedEmail = normalizeEmail(email);
 
-    // Check if user already exists in the same store
-    const existingUser = await User.findOne({ 
-      email: normalizedEmail,
-      store: store ,
-      role: role  // Ensure the role is the same as the user being created
-
-    });
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: 'User already exists with this email in this store',
-        messageAr: 'المستخدم موجود بالفعل بهذا البريد الإلكتروني في هذا المتجر'
+    // CRITICAL SECURITY: Check if email already exists in the same store (ANY ROLE)
+    // This prevents cross-role account conflicts and security issues
+    if (store) {
+      const existingUserInStore = await User.findOne({ 
+        email: normalizedEmail,
+        store: store
+        // ❌ DO NOT check role - email must be unique per store regardless of role
       });
+      
+      if (existingUserInStore) {
+        return res.status(409).json({
+          success: false,
+          message: `This email is already registered in this store as ${existingUserInStore.role}. Please use a different email.`,
+          messageAr: `هذا البريد الإلكتروني مسجل بالفعل في هذا المتجر بدور ${existingUserInStore.role}. يرجى استخدام بريد إلكتروني مختلف.`,
+          error: {
+            code: 'DUPLICATE_EMAIL_IN_STORE',
+            existingRole: existingUserInStore.role,
+            newRole: role
+          }
+        });
+      }
     }
 
     // For admin and superadmin roles, check if email already exists with these roles globally
