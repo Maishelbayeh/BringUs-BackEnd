@@ -302,6 +302,18 @@ router.post('/register', [
  *               password:
  *                 type: string
  *                 example: "123123"
+ *               storeSlug:
+ *                 type: string
+ *                 description: Optional store slug to specify which store to login to (prevents conflicts when user has multiple accounts)
+ *                 example: "my-store"
+ *               url:
+ *                 type: string
+ *                 description: Optional URL from which the login request is made (used to auto-detect store)
+ *                 example: "https://my-store.example.com/login"
+ *               rememberMe:
+ *                 type: boolean
+ *                 description: If true, token expires in 30 days instead of 7 days
+ *                 example: true
  *     responses:
  *       200:
  *         description: Login successful
@@ -368,7 +380,9 @@ router.post('/register', [
 router.post('/login', [
   body('email').isEmail().normalizeEmail().withMessage('Please enter a valid email'),
   body('password').notEmpty().withMessage('Password is required'),
-  body('storeSlug').optional().isString().withMessage('Store slug must be a string')
+  body('storeSlug').optional().isString().withMessage('Store slug must be a string'),
+  body('url').optional().isString().withMessage('URL must be a string'),
+  body('rememberMe').optional().isBoolean().withMessage('Remember me must be a boolean')
 ], async (req, res) => {
   try {
     // Check for validation errors
@@ -380,7 +394,8 @@ router.post('/login', [
       });
     }
 
-    const { email, password, storeSlug } = req.body;
+    const { email, password, url, rememberMe = false } = req.body;
+    let { storeSlug } = req.body;
     
     // Normalize email for consistent lookup
     const normalizeEmail = (email) => {
@@ -396,11 +411,39 @@ router.post('/login', [
     
     const normalizedEmail = normalizeEmail(email);
     
+    // If URL is provided but storeSlug is not, try to extract storeSlug from URL
+    if (url && !storeSlug) {
+      try {
+        const urlObj = new URL(url);
+        
+        // Try to extract from subdomain (e.g., store1.example.com)
+        const subdomain = urlObj.hostname.split('.')[0];
+        if (subdomain && subdomain !== 'www' && subdomain !== 'bringus' && subdomain !== 'localhost') {
+          storeSlug = subdomain;
+          console.log(`📍 Extracted storeSlug from subdomain: ${storeSlug}`);
+        }
+        
+        // Try to extract from path (e.g., /store/store1)
+        if (!storeSlug) {
+          const pathMatch = urlObj.pathname.match(/\/store\/([^\/]+)/);
+          if (pathMatch && pathMatch[1]) {
+            storeSlug = pathMatch[1];
+            console.log(`📍 Extracted storeSlug from path: ${storeSlug}`);
+          }
+        }
+      } catch (err) {
+        console.log(`⚠️ Could not parse URL: ${url}`);
+      }
+    }
+    
     // Handle different login scenarios based on role and storeSlug
     let user = null;
     let store = null;
     
-    console.log(`🔍 Login attempt for email: ${normalizedEmail}, storeSlug: ${storeSlug || 'none'}`);
+    console.log(`🔍 Login attempt for email: ${normalizedEmail}`);
+    console.log(`   storeSlug: ${storeSlug || 'none'}`);
+    console.log(`   url: ${url || 'none'}`);
+    console.log(`   rememberMe: ${rememberMe}`);
     
     if (storeSlug) {
       // Find store by slug
@@ -524,8 +567,76 @@ router.post('/login', [
       });
     }
 
+    // Check if URL is admin panel and user has appropriate role
+    if (url) {
+      const adminUrls = [
+        'https://bringus.onrender.com',
+        'https://bringus.onrender.com/',
+        'http://localhost:3000',
+        'http://localhost:3000/'
+      ];
+      
+      const clientUrls = [
+        'https://bringus-main.onrender.com',
+        'https://bringus-main.onrender.com/',
+        'http://localhost:3001',
+        'http://localhost:3001/'
+      ];
+      
+      const isAdminUrl = adminUrls.some(adminUrl => 
+        url.toLowerCase().startsWith(adminUrl.toLowerCase())
+      );
+      
+      const isClientUrl = clientUrls.some(clientUrl => 
+        url.toLowerCase().startsWith(clientUrl.toLowerCase())
+      );
+      
+      // Check admin panel access
+      if (isAdminUrl && user.role !== 'admin' && user.role !== 'superadmin') {
+        console.log(`❌ Access denied: ${user.role} tried to access admin panel from ${url}`);
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. This panel is only for admin and superadmin users.',
+          messageAr: 'رفض الوصول. هذه اللوحة مخصصة فقط لمستخدمي الإدارة.',
+          error: {
+            code: 'ADMIN_PANEL_ACCESS_DENIED',
+            userRole: user.role,
+            requiredRoles: ['admin', 'superadmin'],
+            redirectUrl: 'https://bringus-main.onrender.com/'
+          }
+        });
+      }
+      
+      // Check client panel access (prevent admin/superadmin from logging in to client panel)
+      if (isClientUrl && (user.role === 'admin' || user.role === 'superadmin')) {
+        console.log(`❌ Access denied: ${user.role} tried to access client panel from ${url}`);
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. Admins should use the admin panel.',
+          messageAr: 'رفض الوصول. يجب على المسؤولين استخدام لوحة الإدارة.',
+          error: {
+            code: 'CLIENT_PANEL_ADMIN_DENIED',
+            userRole: user.role,
+            redirectUrl: 'https://bringus.onrender.com/'
+          }
+        });
+      }
+      
+      if (isAdminUrl) {
+        console.log(`✅ Admin panel access granted for ${user.role}`);
+      } else if (isClientUrl) {
+        console.log(`✅ Client panel access granted for ${user.role}`);
+      }
+    }
+
+    // Update last login information
     user.lastLogin = new Date();
+    if (url) {
+      user.lastLoginUrl = url;
+    }
     await user.save();
+    
+    console.log(`✅ Login successful for ${user.firstName} ${user.lastName} (${user.role})`);
 
     // Get store information for admin users
     let userStore = null;
@@ -583,7 +694,7 @@ router.post('/login', [
         // Don't fail login if store fetch fails
       } 
 
-    } else if (user.role === 'client' && user.store) {
+    } else if (user.role === 'client' || user.role === 'affiliate' || user.role === 'wholesaler') {
       try {
         const Store = require('../Models/Store');
         const store = await Store.findById(user.store);
@@ -604,7 +715,7 @@ router.post('/login', [
         //CONSOLE.error('Error fetching client store:', storeError);
         // Don't fail login if store fetch fails
       }
-    } else if (user.role === 'affiliate' || user.role === 'wholesaler'||user.role === 'admin') {
+    } else if (user.role === 'admin') {
       try {
         const Store = require('../Models/Store');
         const store = await Store.findById(user.store);
@@ -648,8 +759,8 @@ router.post('/login', [
       }
     }
 
-    // Generate JWT token with storeId if available
-    const token = user.getJwtToken(storeIdForToken);
+    // Generate JWT token with storeId and rememberMe if available
+    const token = user.getJwtToken(storeIdForToken, rememberMe);
 
     // Determine redirect URL based on role
     let redirectUrl;
@@ -690,6 +801,7 @@ router.post('/login', [
       message: 'Login successful',
       messageAr: 'تم تسجيل الدخول بنجاح',
       token,
+      tokenExpiresIn: rememberMe ? '30 days' : '7 days',
       redirectUrl, // Add redirect URL based on role
       user: {
         id: user._id,

@@ -1282,7 +1282,16 @@ exports.getByCategory = async (req, res) => {
       .populate('variants', '_id'); // Only populate variant IDs
     
     // تحويل الألوان من JSON string إلى array لكل منتج
-    const processedProducts = products.map(product => parseProductColors(product));
+    const processedProducts = await Promise.all(products.map(async (product) => {
+      const productObj = parseProductColors(product);
+      
+      // Enhance specification values with bilingual support
+      if (productObj.specificationValues && productObj.specificationValues.length > 0) {
+        productObj.specificationValues = await enrichSpecificationValues(productObj.specificationValues);
+      }
+      
+      return productObj;
+    }));
       
     res.json({
       success: true,
@@ -1360,7 +1369,16 @@ exports.getWithFilters = async (req, res) => {
       .limit(parseInt(limit));
     
     // تحويل الألوان من JSON string إلى array لكل منتج
-    const processedProducts = products.map(product => parseProductColors(product));
+    const processedProducts = await Promise.all(products.map(async (product) => {
+      const productObj = parseProductColors(product);
+      
+      // Enhance specification values with bilingual support
+      if (productObj.specificationValues && productObj.specificationValues.length > 0) {
+        productObj.specificationValues = await enrichSpecificationValues(productObj.specificationValues);
+      }
+      
+      return productObj;
+    }));
       
     const total = await Product.countDocuments(query);
     
@@ -1481,7 +1499,16 @@ exports.getVariantsOnly = async (req, res) => {
       .populate('store', 'name domain');
     
     // تحويل الألوان من JSON string إلى array لكل variant
-    const processedVariants = variants.map(variant => parseProductColors(variant));
+    const processedVariants = await Promise.all(variants.map(async (variant) => {
+      const variantObj = parseProductColors(variant);
+      
+      // Enhance specification values with bilingual support
+      if (variantObj.specificationValues && variantObj.specificationValues.length > 0) {
+        variantObj.specificationValues = await enrichSpecificationValues(variantObj.specificationValues);
+      }
+      
+      return variantObj;
+    }));
       
     res.json({
       success: true,
@@ -1532,10 +1559,11 @@ exports.getWithoutVariants = async (req, res) => {
       });
     }
 
-    const {
+    let {
       page = 1,
       limit = 10,
       category,
+      subcategoryId,
       minPrice,
       maxPrice,
       sort = 'newest',
@@ -1544,6 +1572,14 @@ exports.getWithoutVariants = async (req, res) => {
       productLabels,
       variant = 'false' // New parameter to include variants
     } = req.query;
+    
+    // Clean up variant parameter (trim spaces and convert to lowercase)
+    variant = String(variant).trim().toLowerCase();
+    
+    // Clean up search parameter (trim spaces)
+    if (search) {
+      search = String(search).trim();
+    }
 
     // Build filter object - exclude variant products
     const filter = { 
@@ -1553,35 +1589,83 @@ exports.getWithoutVariants = async (req, res) => {
 
     // تطبيق جميع الفلاتر معاً
     console.log('🔍 Building comprehensive filter with multiple criteria...');
+    console.log(`📝 Request params: page=${page}, limit=${limit}, search="${search}", variant="${variant}", sort="${sort}"`);
 
-    // 1. فلترة الفئات (دعم متعدد)
+    // 1. فلترة الفئات (دعم متعدد للـ categories array)
     if (category) {
       if (category.includes('||')) {
         const categoryIds = category.split('||').map(cat => cat.trim());
-        filter.category = { $in: categoryIds };
+        filter.categories = { $in: categoryIds }; // Changed from 'category' to 'categories' to support multi-category
         console.log('📂 Applied multi-category filter:', categoryIds);
       } else {
-        filter.category = category;
+        filter.categories = category; // Changed from 'category' to 'categories'
         console.log('📂 Applied single category filter:', category);
       }
     }
+    
+    // 1.1 فلترة subcategoryId (support for subcategories)
+    if (subcategoryId) {
+      filter.categories = subcategoryId; // Use categories field to filter subcategories too
+      console.log('📂 Applied subcategory filter:', subcategoryId);
+    }
 
-    // 2. فلترة السعر
+    // 2. فلترة السعر (use finalPrice which includes discount)
     if (minPrice || maxPrice) {
-      filter.price = {};
+      // We need to filter by finalPrice (price after discount) not original price
+      // Since finalPrice is a virtual field, we'll use aggregation or filter after query
+      // For now, let's create an $expr to calculate finalPrice on the fly
+      const priceConditions = [];
+      
       if (minPrice) {
-        filter.price.$gte = parseFloat(minPrice);
-        console.log('💰 Applied min price filter:', minPrice);
+        priceConditions.push({
+          $expr: {
+            $gte: [
+              {
+                $cond: {
+                  if: { $and: [{ $eq: ['$isOnSale', true] }, { $gt: ['$salePercentage', 0] }] },
+                  then: { $subtract: ['$price', { $multiply: ['$price', { $divide: ['$salePercentage', 100] }] }] },
+                  else: '$price'
+                }
+              },
+              parseFloat(minPrice)
+            ]
+          }
+        });
+        console.log('💰 Applied min price filter (after discount):', minPrice);
       }
+      
       if (maxPrice) {
-        filter.price.$lte = parseFloat(maxPrice);
-        console.log('💰 Applied max price filter:', maxPrice);
+        priceConditions.push({
+          $expr: {
+            $lte: [
+              {
+                $cond: {
+                  if: { $and: [{ $eq: ['$isOnSale', true] }, { $gt: ['$salePercentage', 0] }] },
+                  then: { $subtract: ['$price', { $multiply: ['$price', { $divide: ['$salePercentage', 100] }] }] },
+                  else: '$price'
+                }
+              },
+              parseFloat(maxPrice)
+            ]
+          }
+        });
+        console.log('💰 Applied max price filter (after discount):', maxPrice);
+      }
+      
+      if (priceConditions.length > 0) {
+        filter.$and = filter.$and ? [...filter.$and, ...priceConditions] : priceConditions;
       }
     }
 
-    // 3. فلترة البحث
+    // 3. فلترة البحث (search in nameAr, nameEn, descriptionAr, descriptionEn)
     if (search) {
-      filter.$text = { $search: search };
+      const searchRegex = new RegExp(search, 'i');
+      filter.$or = [
+        { nameAr: searchRegex },
+        { nameEn: searchRegex },
+        { descriptionAr: searchRegex },
+        { descriptionEn: searchRegex }
+      ];
       console.log('🔍 Applied search filter:', search);
     }
 
@@ -1609,17 +1693,20 @@ exports.getWithoutVariants = async (req, res) => {
         // Create color filter conditions
         const colorConditions = colorRegex.map(regex => ({ colors: { $regex: regex } }));
         
-        // If we already have $or conditions, combine them
+        // If we already have $or conditions (from search), combine them with $and
         if (filter.$or) {
-          // Combine existing $or with color conditions
+          // Combine existing $or (search) with color conditions using $and
           const existingOr = filter.$or;
           delete filter.$or;
-          filter.$and = [
+          filter.$and = filter.$and ? [...filter.$and, 
+            { $or: existingOr },
+            { $or: colorConditions }
+          ] : [
             { $or: existingOr },
             { $or: colorConditions }
           ];
         } else {
-          // Use $or for color conditions
+          // Use $or for color conditions only
           filter.$or = colorConditions;
         }
         
@@ -1652,13 +1739,19 @@ exports.getWithoutVariants = async (req, res) => {
     console.log('✅ Final filter object:', JSON.stringify(filter, null, 2));
 
     // Build sort object
+    // Note: For price sorting, we'll need to sort in memory after calculating finalPrice
+    // since finalPrice is a virtual field
     let sortObj = {};
+    let sortInMemory = null;
+    
     switch (sort) {
       case 'price_asc':
-        sortObj = { price: 1 };
+        sortInMemory = 'price_asc';
+        sortObj = { price: 1 }; // Fallback sort, will be overridden by in-memory sort
         break;
       case 'price_desc':
-        sortObj = { price: -1 };
+        sortInMemory = 'price_desc';
+        sortObj = { price: -1 }; // Fallback sort, will be overridden by in-memory sort
         break;
       case 'name_asc':
         sortObj = { nameEn: 1 };
@@ -1689,40 +1782,88 @@ exports.getWithoutVariants = async (req, res) => {
 
     // Add filter to exclude variant products (products that are variants of other products)
     // Only exclude variants if variant parameter is not 'true'
+    console.log(`🔧 Variant parameter value: "${variant}" (type: ${typeof variant})`);
+    
     if (variant !== 'true') {
-    // We'll use a more efficient approach by checking if the product ID exists in any other product's variants array
-    filter._id = { 
-      $nin: await Product.distinct('variants', { store: storeId }) 
-    };
+      // We'll use a more efficient approach by checking if the product ID exists in any other product's variants array
+      const variantIds = await Product.distinct('variants', { store: storeId });
+      filter._id = { 
+        $nin: variantIds
+      };
+      console.log(`🚫 Excluding ${variantIds.length} variant products`);
+    } else {
+      console.log(`✅ Including variant products in results`);
     }
 
-    // Execute query
-    const products = await Product.find(filter)
-      .populate('category', 'nameAr nameEn')
-      .populate('categories', 'nameAr nameEn')
-      .populate('productLabels', 'nameAr nameEn color')
-      .populate('specifications', 'descriptionAr descriptionEn')
-      .populate('unit', 'nameAr nameEn symbol')
-      .populate('store', 'name domain')
-      .populate('variants', '_id') // Only populate variant IDs
-      .sort(sortObj);
-
-    // تم دمج الفلاتر الإضافية في الفلتر الأساسي لتحسين الأداء
-    console.log('✅ All filters applied at database level for better performance');
-
-    // Get total count for pagination
+    // Get total count for pagination BEFORE applying skip/limit
     const total = await Product.countDocuments(filter);
-
-    // Apply pagination
-    const paginatedProducts = products.slice(skip, skip + parseInt(limit));
-
+    
     // Calculate pagination info
     const totalPages = Math.ceil(total / parseInt(limit));
     const hasNextPage = parseInt(page) < totalPages;
     const hasPrevPage = parseInt(page) > 1;
 
+    // If sorting by price, we need to fetch all matching products and sort in memory
+    // Otherwise, use database-level pagination
+    let products;
+    if (sortInMemory) {
+      // Fetch all products matching the filter (without pagination)
+      products = await Product.find(filter)
+        .populate('category', 'nameAr nameEn')
+        .populate('categories', 'nameAr nameEn')
+        .populate('productLabels', 'nameAr nameEn color')
+        .populate('specifications', 'descriptionAr descriptionEn')
+        .populate('unit', 'nameAr nameEn symbol')
+        .populate('store', 'name domain')
+        .populate('variants', '_id'); // Only populate variant IDs
+        
+      // Sort by finalPrice in memory
+      products.sort((a, b) => {
+        const aFinalPrice = a.isOnSale && a.salePercentage > 0 
+          ? a.price - (a.price * a.salePercentage / 100) 
+          : a.price;
+        const bFinalPrice = b.isOnSale && b.salePercentage > 0 
+          ? b.price - (b.price * b.salePercentage / 100) 
+          : b.price;
+        
+        return sortInMemory === 'price_asc' ? aFinalPrice - bFinalPrice : bFinalPrice - aFinalPrice;
+      });
+      
+      // Apply pagination in memory
+      products = products.slice(skip, skip + parseInt(limit));
+    } else {
+      // Execute query with proper pagination at database level
+      products = await Product.find(filter)
+        .populate('category', 'nameAr nameEn')
+        .populate('categories', 'nameAr nameEn')
+        .populate('productLabels', 'nameAr nameEn color')
+        .populate('specifications', 'descriptionAr descriptionEn')
+        .populate('unit', 'nameAr nameEn symbol')
+        .populate('store', 'name domain')
+        .populate('variants', '_id') // Only populate variant IDs
+        .sort(sortObj)
+        .skip(skip)
+        .limit(parseInt(limit));
+    }
+
+    console.log('✅ All filters applied at database level for better performance');
+    console.log(`📊 Found ${total} products, returning page ${page} of ${totalPages}`);
+    console.log(`📦 Retrieved ${products.length} products for current page`);
+
     // تحويل الألوان من JSON string إلى array لكل منتج
-    const processedProducts = paginatedProducts.map(product => parseProductColors(product));
+    const processedProducts = await Promise.all(products.map(async (product) => {
+      const productObj = parseProductColors(product);
+      
+      // Enhance specification values with bilingual support
+      if (productObj.specificationValues && productObj.specificationValues.length > 0) {
+        productObj.specificationValues = await enrichSpecificationValues(productObj.specificationValues);
+      }
+      
+      return productObj;
+    }));
+    
+    console.log(`✅ Processed ${processedProducts.length} products successfully`);
+    console.log(`🔍 Products include variants: ${variant === 'true'}`);
 
     res.status(200).json({
       success: true,
@@ -3951,13 +4092,43 @@ exports.getAlmostSoldProducts = async (req, res) => {
       });
     }
 
+    // Determine the threshold to use
+    const effectiveThreshold = threshold && !isNaN(parseInt(threshold)) 
+      ? parseInt(threshold) 
+      : null;
+    
     // Build filter for almost sold products
+    // We need to check:
+    // 1. Overall stock <= lowStockThreshold
+    // 2. Overall availableQuantity <= lowStockThreshold
+    // 3. Any specification quantity <= lowStockThreshold
     const filter = { 
       store: storeId,
       isActive: true,
       // Exclude sold out products (stock > 0)
-      stock: { $gt: 0 },
-      $or: [
+      stock: { $gt: 0 }
+    };
+    
+    // Build the $or conditions for almost sold products
+    const orConditions = [];
+    
+    if (effectiveThreshold) {
+      // Custom threshold provided
+      orConditions.push(
+        { stock: { $lte: effectiveThreshold } },
+        { availableQuantity: { $lte: effectiveThreshold } },
+        // Check if any specification has quantity <= threshold
+        {
+          specificationValues: {
+            $elemMatch: {
+              quantity: { $lte: effectiveThreshold }
+            }
+          }
+        }
+      );
+    } else {
+      // Use product's own lowStockThreshold
+      orConditions.push(
         // Products with stock <= lowStockThreshold
         { 
           $expr: { 
@@ -3969,18 +4140,28 @@ exports.getAlmostSoldProducts = async (req, res) => {
           $expr: { 
             $lte: ['$availableQuantity', '$lowStockThreshold'] 
           } 
+        },
+        // Products with any specification quantity <= lowStockThreshold
+        {
+          $expr: {
+            $gt: [
+              {
+                $size: {
+                  $filter: {
+                    input: '$specificationValues',
+                    as: 'spec',
+                    cond: { $lte: ['$$spec.quantity', '$lowStockThreshold'] }
+                  }
+                }
+              },
+              0
+            ]
+          }
         }
-      ]
-    };
-
-    // If custom threshold is provided, use it instead
-    if (threshold && !isNaN(parseInt(threshold))) {
-      const customThreshold = parseInt(threshold);
-      filter.$or = [
-        { stock: { $lte: customThreshold } },
-        { availableQuantity: { $lte: customThreshold } }
-      ];
+      );
     }
+    
+    filter.$or = orConditions;
 
     // Add specification filter if provided
     if (specification) {
@@ -4000,8 +4181,9 @@ exports.getAlmostSoldProducts = async (req, res) => {
       sortObj.availableQuantity = 1; // Default: lowest available quantity first
     }
 
-    console.log(`🔍 [getAlmostSoldProducts] Filter:`, JSON.stringify(filter));
+    console.log(`🔍 [getAlmostSoldProducts] Filter:`, JSON.stringify(filter, null, 2));
     console.log(`🔍 [getAlmostSoldProducts] Sort:`, sortObj);
+    console.log(`🔍 [getAlmostSoldProducts] Effective Threshold:`, effectiveThreshold || 'using product.lowStockThreshold');
 
     // Execute query
     const products = await Product.find(filter)
@@ -4022,15 +4204,49 @@ exports.getAlmostSoldProducts = async (req, res) => {
     const total = await Product.countDocuments(filter);
 
     // Process products to add stock status information
-    const processedProducts = products.map(product => {
+    const processedProducts = await Promise.all(products.map(async (product) => {
       const productObj = parseProductColors(product);
+      
+      // Enhance specification values with bilingual support
+      if (productObj.specificationValues && productObj.specificationValues.length > 0) {
+        productObj.specificationValues = await enrichSpecificationValues(productObj.specificationValues);
+      }
+      
+      // Determine which threshold to use for this product
+      const productThreshold = effectiveThreshold || product.lowStockThreshold || 10;
+      
+      // Check which specifications are almost sold out
+      const almostSoldSpecs = [];
+      if (productObj.specificationValues && productObj.specificationValues.length > 0) {
+        productObj.specificationValues.forEach(spec => {
+          if (spec.quantity <= productThreshold && spec.quantity > 0) {
+            almostSoldSpecs.push({
+              specificationId: spec.specificationId,
+              valueId: spec.valueId,
+              titleAr: spec.titleAr || spec.title,
+              titleEn: spec.titleEn || spec.title,
+              valueAr: spec.valueAr || spec.value,
+              valueEn: spec.valueEn || spec.value,
+              quantity: spec.quantity,
+              threshold: productThreshold,
+              urgency: spec.quantity <= 3 ? 'critical' : 
+                       spec.quantity <= 5 ? 'high' : 'medium',
+              urgencyAr: spec.quantity <= 3 ? 'حرج' : 
+                         spec.quantity <= 5 ? 'عالي' : 'متوسط'
+            });
+          }
+        });
+      }
       
       // Add stock status information
       productObj.stockStatus = product.stockStatus;
+      productObj.stockStatusAr = product.stockStatus === 'in_stock' ? 'متوفر' : 
+                                 product.stockStatus === 'out_of_stock' ? 'غير متوفر' : 
+                                 product.stockStatus === 'low_stock' ? 'كمية قليلة' : 'غير محدد';
       productObj.isAlmostSold = true;
       productObj.stockDifference = Math.min(
-        product.stock - product.lowStockThreshold,
-        product.availableQuantity - product.lowStockThreshold
+        product.stock - productThreshold,
+        product.availableQuantity - productThreshold
       );
       
       // Add availability info for frontend
@@ -4038,13 +4254,19 @@ exports.getAlmostSoldProducts = async (req, res) => {
         stock: product.stock,
         availableQuantity: product.availableQuantity,
         soldCount: product.soldCount,
-        lowStockThreshold: product.lowStockThreshold,
+        lowStockThreshold: productThreshold,
         urgency: product.availableQuantity <= 5 ? 'critical' : 
-                 product.availableQuantity <= 10 ? 'high' : 'medium'
+                 product.availableQuantity <= 10 ? 'high' : 'medium',
+        urgencyAr: product.availableQuantity <= 5 ? 'حرج' : 
+                   product.availableQuantity <= 10 ? 'عالي' : 'متوسط',
+        // Include specifications that are almost sold out
+        almostSoldSpecifications: almostSoldSpecs,
+        hasAlmostSoldSpecs: almostSoldSpecs.length > 0,
+        almostSoldSpecsCount: almostSoldSpecs.length
       };
       
       return productObj;
-    });
+    }));
 
     console.log(`✅ [getAlmostSoldProducts] Processed ${processedProducts.length} products`);
 
@@ -4053,7 +4275,13 @@ exports.getAlmostSoldProducts = async (req, res) => {
     const hasNextPage = parseInt(page) < totalPages;
     const hasPrevPage = parseInt(page) > 1;
 
+    // Calculate summary statistics
+    const totalWithAlmostSoldSpecs = processedProducts.filter(p => p.stockInfo.hasAlmostSoldSpecs).length;
+    const totalAlmostSoldSpecs = processedProducts.reduce((sum, p) => sum + p.stockInfo.almostSoldSpecsCount, 0);
+    
     console.log(`🔍 [getAlmostSoldProducts] Total: ${total}, Returning: ${processedProducts.length}`);
+    console.log(`📊 [getAlmostSoldProducts] Products with almost sold specs: ${totalWithAlmostSoldSpecs}`);
+    console.log(`📊 [getAlmostSoldProducts] Total almost sold specifications: ${totalAlmostSoldSpecs}`);
 
     res.json({
       success: true,
@@ -4073,8 +4301,12 @@ exports.getAlmostSoldProducts = async (req, res) => {
         totalAlmostSold: total,
         threshold: threshold || 'lowStockThreshold',
         thresholdValue: threshold ? parseInt(threshold) : null,
+        productsWithAlmostSoldSpecs: totalWithAlmostSoldSpecs,
+        totalAlmostSoldSpecifications: totalAlmostSoldSpecs,
         message: `Found ${total} product${total !== 1 ? 's' : ''} that ${total !== 1 ? 'are' : 'is'} almost sold out`,
-        messageAr: `تم العثور على ${total} منتج${total > 2 ? 'ات' : ''} توشك على النفاد`
+        messageAr: `تم العثور على ${total} منتج${total > 2 ? 'ات' : ''} توشك على النفاد`,
+        note: 'Includes products with low overall stock OR any specification with low stock',
+        noteAr: 'يتضمن المنتجات ذات المخزون الإجمالي المنخفض أو أي مواصفة بمخزون منخفض'
       }
     });
   } catch (error) {

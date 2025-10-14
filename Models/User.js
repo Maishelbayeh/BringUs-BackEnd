@@ -111,6 +111,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  lastLoginUrl: {
+    type: String,
+    default: null
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -142,9 +146,12 @@ userSchema.methods.comparePassword = async function(enteredPassword) {
 
 
 // Return JWT token
-userSchema.methods.getJwtToken = function(storeId) {
+userSchema.methods.getJwtToken = function(storeId, rememberMe = false) {
   const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
-  const jwtExpire = process.env.JWT_EXPIRE || '7d';
+  
+  // If rememberMe is true, token expires in 30 days, otherwise 7 days (or from env)
+  const jwtExpire = rememberMe ? '30d' : (process.env.JWT_EXPIRE || '7d');
+  
   const payload = { 
     id: this._id, 
     role: this.role,
@@ -152,7 +159,10 @@ userSchema.methods.getJwtToken = function(storeId) {
       ? 'https://bringus.onrender.com/' 
       : 'https://bringus-main.onrender.com/'
   };
+  
   if (storeId) payload.storeId = storeId;
+  if (rememberMe) payload.rememberMe = true;
+  
   return jwt.sign(payload, jwtSecret, {
     expiresIn: jwtExpire
   });
