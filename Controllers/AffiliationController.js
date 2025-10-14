@@ -1330,25 +1330,107 @@ const getAffiliateByCode = async (req, res) => {
     const { affiliateCode } = req.params;
     const { storeId } = req.query;
 
+    console.log(`🔍 [getAffiliateByCode] Searching for affiliate:`);
+    console.log(`   Code: ${affiliateCode} (will convert to: ${affiliateCode.toUpperCase()})`);
+    console.log(`   StoreId: ${storeId}`);
+
     if (!affiliateCode || !storeId) {
       return res.status(400).json({
         success: false,
-        message: 'Affiliate code and store ID are required'
+        message: 'Affiliate code and store ID are required',
+        messageAr: 'كود الشريك ومعرف المتجر مطلوبان'
       });
     }
 
-    const affiliate = await Affiliation.findOne({
-      affiliateCode: affiliateCode.toUpperCase(),
+    // First, try to find the affiliate with Active status
+    const normalizedCode = affiliateCode.trim().toUpperCase();
+    
+    let affiliate = await Affiliation.findOne({
+      affiliateCode: normalizedCode,
       store: storeId,
       status: 'Active'
     });
 
+    // If not found with Active status, check if affiliate exists with any status
     if (!affiliate) {
-      return res.status(404).json({
-        success: false,
-        message: 'Affiliate not found or inactive'
+      console.log(`⚠️ [getAffiliateByCode] Affiliate not found with status 'Active'`);
+      console.log(`   Checking if affiliate exists with any status...`);
+      
+      const anyAffiliate = await Affiliation.findOne({
+        affiliateCode: normalizedCode,
+        store: storeId
       });
+
+      if (anyAffiliate) {
+        console.log(`❌ [getAffiliateByCode] Affiliate found but status is: ${anyAffiliate.status}`);
+        return res.status(404).json({
+          success: false,
+          message: `Affiliate is not active. Current status: ${anyAffiliate.status}`,
+          messageAr: `الشريك غير نشط. الحالة الحالية: ${anyAffiliate.status}`,
+          error: {
+            code: 'AFFILIATE_NOT_ACTIVE',
+            currentStatus: anyAffiliate.status,
+            affiliateId: anyAffiliate._id
+          }
+        });
+      }
+
+      // Check if affiliate exists with different code format (case-insensitive)
+      const affiliateAnyCase = await Affiliation.findOne({
+        affiliateCode: { $regex: new RegExp(`^${affiliateCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+        store: storeId
+      });
+
+      if (affiliateAnyCase) {
+        console.log(`⚠️ [getAffiliateByCode] Found affiliate with different case: ${affiliateAnyCase.affiliateCode}`);
+        console.log(`   Status: ${affiliateAnyCase.status}`);
+        
+        if (affiliateAnyCase.status === 'Active') {
+          affiliate = affiliateAnyCase;
+        } else {
+          return res.status(404).json({
+            success: false,
+            message: `Affiliate is not active. Current status: ${affiliateAnyCase.status}`,
+            messageAr: `الشريك غير نشط. الحالة الحالية: ${affiliateAnyCase.status}`,
+            error: {
+              code: 'AFFILIATE_NOT_ACTIVE',
+              currentStatus: affiliateAnyCase.status,
+              affiliateCode: affiliateAnyCase.affiliateCode
+            }
+          });
+        }
+      } else {
+        // Get all affiliates in this store for debugging
+        const allAffiliates = await Affiliation.find({ store: storeId })
+          .select('affiliateCode status firstName lastName')
+          .limit(20);
+        
+        console.log(`❌ [getAffiliateByCode] Affiliate not found at all`);
+        console.log(`   Available affiliates in store (${allAffiliates.length}):`);
+        allAffiliates.forEach(a => {
+          console.log(`   - Code: "${a.affiliateCode}", Status: ${a.status}, Name: ${a.firstName} ${a.lastName}`);
+        });
+        
+        return res.status(404).json({
+          success: false,
+          message: 'Affiliate not found',
+          messageAr: 'الشريك غير موجود',
+          error: {
+            code: 'AFFILIATE_NOT_FOUND',
+            searchedCode: normalizedCode,
+            storeId: storeId,
+            availableAffiliates: allAffiliates.map(a => ({
+              code: a.affiliateCode,
+              status: a.status,
+              name: `${a.firstName} ${a.lastName}`
+            }))
+          }
+        });
+      }
     }
+
+    console.log(`✅ [getAffiliateByCode] Affiliate found: ${affiliate.firstName} ${affiliate.lastName}`);
+    console.log(`   Code: ${affiliate.affiliateCode}, Status: ${affiliate.status}`);
 
     // Return only necessary information for tracking
     const affiliateData = {
@@ -1365,12 +1447,15 @@ const getAffiliateByCode = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Affiliate found successfully',
+      messageAr: 'تم العثور على الشريك بنجاح',
       data: affiliateData
     });
   } catch (error) {
+    console.error('❌ [getAffiliateByCode] Error:', error);
     res.status(500).json({
       success: false,
       message: 'Error getting affiliate by code',
+      messageAr: 'خطأ في الحصول على الشريك',
       error: error.message
     });
   }
