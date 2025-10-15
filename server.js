@@ -170,6 +170,7 @@ app.use('/api/subscription-plans', subscriptionPlanRoutes);
 app.use('/api/store-info', storeInfoRoutes);
 app.use('/api/subscription-renewal', subscriptionRenewalRoutes);
 app.use('/api/email-verification', emailVerificationRoutes);
+app.use('/api/email-change', emailVerificationRoutes); // Email change uses same routes file
 app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/pos-cart', posCartRoutes);
 app.use('/api/lahza-payment', lahzaPaymentRoutes);
@@ -955,18 +956,28 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // 404 handler
 app.use('*', (req, res) => {
+  console.log(`❌ 404 - Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     success: false,
-    message: 'Route not found'
+    message: 'Route not found',
+    messageAr: 'المسار غير موجود',
+    error: {
+      code: 'ROUTE_NOT_FOUND',
+      method: req.method,
+      path: req.originalUrl,
+      suggestion: 'Please check the API documentation for available endpoints',
+      suggestionAr: 'يرجى التحقق من وثائق API للحصول على نقاط النهاية المتاحة'
+    }
   });
 });
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
+  console.error('❌ Global Error Handler:', err.stack);
+  res.status(err.statusCode || 500).json({
     success: false,
-    message: 'Something went wrong!',
+    message: err.message || 'Something went wrong!',
+    messageAr: err.messageAr || 'حدث خطأ ما!',
     error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
 });

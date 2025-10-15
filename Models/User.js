@@ -105,6 +105,10 @@ const userSchema = new mongoose.Schema({
   emailVerificationOTP: String,
   emailVerificationExpiry: Date,
   emailVerifiedAt: Date,
+  // Pending email change fields
+  pendingEmail: String,  // New email waiting for verification
+  pendingEmailOTP: String,  // OTP for new email verification
+  pendingEmailExpiry: Date,  // OTP expiry for new email
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   lastLogin: {

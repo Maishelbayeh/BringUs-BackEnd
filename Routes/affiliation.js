@@ -13,6 +13,7 @@ const {
   createAffiliatePayment,
   deleteAffiliate,
   getAffiliateByCode,
+  updateAffiliationById,
 } = require('../Controllers/AffiliationController');
 const { protect, authorize } = require('../middleware/auth');
 const { verifyStoreAccess } = require('../middleware/storeAuth');
@@ -272,6 +273,75 @@ router.get('/store/:storeId', getAffiliatesByStoreId);
  *         description: Internal server error
  */
 router.get('/code/:affiliateCode', getAffiliateByCode);
+
+/**
+ * @swagger
+ * /api/affiliations/public/{id}:
+ *   patch:
+ *     summary: Update affiliation by ID (Public API - No Auth Required)
+ *     description: Update specific fields of an affiliation by ID without authentication
+ *     tags: [Affiliation]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Affiliation ID
+ *       - in: query
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID for validation
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 example: "Omar"
+ *               lastName:
+ *                 type: string
+ *                 example: "Khaled"
+ *               mobile:
+ *                 type: string
+ *                 example: "+970599888888"
+ *               address:
+ *                 type: string
+ *                 example: "Hebron, Palestine"
+ *               bankInfo:
+ *                 type: object
+ *                 properties:
+ *                   bankName:
+ *                     type: string
+ *                     example: "Bank of Palestine"
+ *                   accountNumber:
+ *                     type: string
+ *                     example: "1234567890"
+ *                   iban:
+ *                     type: string
+ *                     example: "PS12PALS123456789012345678901"
+ *                   swiftCode:
+ *                     type: string
+ *                     example: "PALSPS22"
+ *               notes:
+ *                 type: string
+ *                 example: "Updated information"
+ *     responses:
+ *       200:
+ *         description: Affiliation updated successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Affiliation not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/public/:id', updateAffiliationById);
 
 /**
  * @swagger

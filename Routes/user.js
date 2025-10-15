@@ -394,4 +394,66 @@ router.get('/addresses', authenticateToken, async (req, res) => {
 });
 
 
+// Request email change - sends OTP to new email
+router.patch('/email/request-change', authenticateToken, async (req, res) => {
+  const UserController = require('../Controllers/UserController');
+  await UserController.requestEmailChange(req, res);
+});
+
+// Verify email change with OTP
+router.post('/email/verify-change', authenticateToken, async (req, res) => {
+  const UserController = require('../Controllers/UserController');
+  await UserController.verifyEmailChange(req, res);
+});
+
+/**
+ * @swagger
+ * /api/users/public/update-email/{userId}:
+ *   patch:
+ *     summary: Update user email by userId (Public API - No Auth Required)
+ *     description: Directly update user email by userId without authentication or OTP verification
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: query
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID for validation
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newEmail
+ *             properties:
+ *               newEmail:
+ *                 type: string
+ *                 format: email
+ *                 example: "newemail@example.com"
+ *     responses:
+ *       200:
+ *         description: Email updated successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: User not found
+ *       409:
+ *         description: Email already in use
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/public/update-email/:userId', async (req, res) => {
+  const UserController = require('../Controllers/UserController');
+  await UserController.updateUserEmailByUserId(req, res);
+});
+
 module.exports = router; 

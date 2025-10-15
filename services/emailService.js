@@ -94,6 +94,83 @@ class EmailService {
     }
   }
 
+  // Send email change verification OTP
+  async sendEmailChangeVerification(email, otp, storeName = 'Our Store', storeEmail = 'info@bringus.com', firstName = '', lastName = '') {
+    try {
+      const emailSubject = `Email Change Verification - ${storeName}`;
+      
+      const emailBody = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+          <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h2 style="color: #333; text-align: center; margin-bottom: 30px;">🔐 Email Change Verification</h2>
+            
+            <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              Hello ${firstName} ${lastName},
+            </p>
+            
+            <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              You requested to change your email address for your <strong>${storeName}</strong> account. To confirm this change, please use the verification code below:
+            </p>
+            
+            <div style="background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;">
+              <h1 style="color: #856404; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 0;">${otp}</h1>
+            </div>
+            
+            <p style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+              <strong>⚠️ Important Security Notice:</strong>
+            </p>
+            <ul style="color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+              <li><strong>This code will expire in 5 minutes</strong></li>
+              <li>Do not share this code with anyone</li>
+              <li>If you didn't request this change, someone may be trying to access your account</li>
+              <li>After verification, your email will be changed to: <strong>${email}</strong></li>
+            </ul>
+            
+            <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              If you didn't request this email change, please contact our support team immediately and change your password.
+            </p>
+            
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+              <p style="color: #999; font-size: 12px;">
+                Best regards,<br>
+                <strong>${storeName}</strong> Team
+              </p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const mailOptions = {
+        from: `"${storeName}" <${storeEmail}>`,
+        to: email,
+        subject: emailSubject,
+        html: emailBody
+      };
+
+      const result = await this.transport.sendMail(mailOptions);
+      
+      console.log(`✅ Email change verification sent successfully via Mailtrap to ${email}`);
+      console.log(`📧 Message ID: ${result.messageId}`);
+      console.log(`📧 OTP: ${otp}`);
+      
+      return {
+        success: true,
+        messageId: result.messageId,
+        otp: otp
+      };
+
+    } catch (error) {
+      console.error('❌ Failed to send email change verification via Mailtrap:', error.message);
+      console.log(`📧 OTP for ${email}: ${otp} (available in logs for testing)`);
+      
+      return {
+        success: false,
+        error: error.message,
+        otp: otp // Still return OTP for testing purposes
+      };
+    }
+  }
+
   // Send password reset email
   async sendPasswordResetEmail(email, resetToken, storeName = 'Our Store', storeEmail = 'info@bringus.com', baseUrl = null) {
     try {

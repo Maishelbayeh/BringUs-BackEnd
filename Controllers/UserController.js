@@ -1711,6 +1711,722 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// Request email change by userId (no auth required) - sends OTP to new email
+const requestEmailChangeByUserId = async (req, res) => {
+  try {
+    const { userId, newEmail } = req.body;
+
+    console.log(`📧 [requestEmailChangeByUserId] User ${userId} requesting email change to: ${newEmail}`);
+
+    // Validate userId
+    if (!userId || !userId.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required',
+        messageAr: 'معرف المستخدم مطلوب'
+      });
+    }
+
+    // Validate new email
+    if (!newEmail || !newEmail.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'New email is required',
+        messageAr: 'البريد الإلكتروني الجديد مطلوب'
+      });
+    }
+
+    // Normalize new email
+    const normalizedNewEmail = normalizeEmail(newEmail);
+
+    // Get user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        messageAr: 'المستخدم غير موجود'
+      });
+    }
+
+    // Check if new email is same as current email
+    if (normalizedNewEmail === user.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'New email is the same as current email',
+        messageAr: 'البريد الإلكتروني الجديد هو نفس البريد الحالي'
+      });
+    }
+
+    // Check if new email is already in use in the same store (CRITICAL SECURITY)
+    if (user.store) {
+      const existingUserInStore = await User.findOne({ 
+        email: normalizedNewEmail,
+        store: user.store
+      });
+      
+      if (existingUserInStore) {
+        return res.status(409).json({
+          success: false,
+          message: `This email is already registered in this store. Please use a different email.`,
+          messageAr: `هذا البريد الإلكتروني مسجل بالفعل في هذا المتجر. يرجى استخدام بريد إلكتروني مختلف.`,
+          error: {
+            code: 'DUPLICATE_EMAIL_IN_STORE'
+          }
+        });
+      }
+    } else {
+      // For users without store (superadmin), check globally
+      const existingUser = await User.findOne({ email: normalizedNewEmail });
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          message: 'This email is already in use',
+          messageAr: 'هذا البريد الإلكتروني مستخدم بالفعل'
+        });
+      }
+    }
+
+    // Generate 5-digit OTP
+    const otp = Math.floor(10000 + Math.random() * 90000).toString();
+    
+    // Store OTP in user document with expiration (5 minutes for email change)
+    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    
+    user.pendingEmail = normalizedNewEmail;
+    user.pendingEmailOTP = otp;
+    user.pendingEmailExpiry = otpExpiry;
+    await user.save();
+
+    console.log(`✅ [requestEmailChangeByUserId] OTP generated for new email: ${normalizedNewEmail.substring(0, 3)}***`);
+
+    // Get store information
+    let storeName = 'BringUs';
+    let storeEmail = 'info@bringus.com';
+    
+    if (user.store) {
+      const store = await Store.findById(user.store);
+      if (store) {
+        storeName = store.nameEn || store.nameAr || storeName;
+        storeEmail = store.contact?.email || storeEmail;
+      }
+    }
+
+    // Send OTP to NEW email
+    const emailService = require('../services/emailService');
+    const emailResult = await emailService.sendEmailChangeVerification(
+      normalizedNewEmail, 
+      otp, 
+      storeName, 
+      storeEmail,
+      user.firstName,
+      user.lastName
+    );
+    
+    if (!emailResult.success) {
+      console.error('❌ [requestEmailChangeByUserId] Failed to send email:', emailResult.error);
+      
+      // Clear pending email data if email failed to send
+      user.pendingEmail = undefined;
+      user.pendingEmailOTP = undefined;
+      user.pendingEmailExpiry = undefined;
+      await user.save();
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email. Please try again.',
+        messageAr: 'فشل إرسال البريد الإلكتروني للتحقق. يرجى المحاولة مرة أخرى.',
+        error: emailResult.error
+      });
+    }
+
+    console.log(`📧 [requestEmailChangeByUserId] Verification email sent to: ${normalizedNewEmail.substring(0, 3)}***`);
+
+    res.status(200).json({
+      success: true,
+      message: `Verification code has been sent to ${normalizedNewEmail}`,
+      messageAr: `تم إرسال رمز التحقق إلى ${normalizedNewEmail}`,
+      data: {
+        userId: user._id,
+        pendingEmail: normalizedNewEmail,
+        expiresAt: otpExpiry,
+        expiresInMinutes: 5
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [requestEmailChangeByUserId] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error requesting email change',
+      messageAr: 'خطأ في طلب تغيير البريد الإلكتروني',
+      error: error.message
+    });
+  }
+};
+
+// Request email change - sends OTP to new email (requires auth)
+const requestEmailChange = async (req, res) => {
+  try {
+    const { newEmail } = req.body;
+    const userId = req.user.id;
+
+    console.log(`📧 [requestEmailChange] User ${userId} requesting email change to: ${newEmail}`);
+
+    // Validate new email
+    if (!newEmail || !newEmail.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'New email is required',
+        messageAr: 'البريد الإلكتروني الجديد مطلوب'
+      });
+    }
+
+    // Normalize new email
+    const normalizedNewEmail = normalizeEmail(newEmail);
+
+    // Get current user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        messageAr: 'المستخدم غير موجود'
+      });
+    }
+
+    // Check if new email is same as current email
+    if (normalizedNewEmail === user.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'New email is the same as current email',
+        messageAr: 'البريد الإلكتروني الجديد هو نفس البريد الحالي'
+      });
+    }
+
+    // Check if new email is already in use in the same store (CRITICAL SECURITY)
+    if (user.store) {
+      const existingUserInStore = await User.findOne({ 
+        email: normalizedNewEmail,
+        store: user.store
+      });
+      
+      if (existingUserInStore) {
+        return res.status(409).json({
+          success: false,
+          message: `This email is already registered in this store. Please use a different email.`,
+          messageAr: `هذا البريد الإلكتروني مسجل بالفعل في هذا المتجر. يرجى استخدام بريد إلكتروني مختلف.`,
+          error: {
+            code: 'DUPLICATE_EMAIL_IN_STORE'
+          }
+        });
+      }
+    } else {
+      // For users without store (superadmin), check globally
+      const existingUser = await User.findOne({ email: normalizedNewEmail });
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          message: 'This email is already in use',
+          messageAr: 'هذا البريد الإلكتروني مستخدم بالفعل'
+        });
+      }
+    }
+
+    // Generate 5-digit OTP
+    const otp = Math.floor(10000 + Math.random() * 90000).toString();
+    
+    // Store OTP in user document with expiration (5 minutes for email change)
+    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    
+    user.pendingEmail = normalizedNewEmail;
+    user.pendingEmailOTP = otp;
+    user.pendingEmailExpiry = otpExpiry;
+    await user.save();
+
+    console.log(`✅ [requestEmailChange] OTP generated for new email: ${normalizedNewEmail.substring(0, 3)}***`);
+
+    // Get store information
+    let storeName = 'BringUs';
+    let storeEmail = 'info@bringus.com';
+    
+    if (user.store) {
+      const store = await Store.findById(user.store);
+      if (store) {
+        storeName = store.nameEn || store.nameAr || storeName;
+        storeEmail = store.contact?.email || storeEmail;
+      }
+    }
+
+    // Send OTP to NEW email
+    const emailService = require('../services/emailService');
+    const emailResult = await emailService.sendEmailChangeVerification(
+      normalizedNewEmail, 
+      otp, 
+      storeName, 
+      storeEmail,
+      user.firstName,
+      user.lastName
+    );
+    
+    if (!emailResult.success) {
+      console.error('❌ [requestEmailChange] Failed to send email:', emailResult.error);
+      
+      // Clear pending email data if email failed to send
+      user.pendingEmail = undefined;
+      user.pendingEmailOTP = undefined;
+      user.pendingEmailExpiry = undefined;
+      await user.save();
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email. Please try again.',
+        messageAr: 'فشل إرسال البريد الإلكتروني للتحقق. يرجى المحاولة مرة أخرى.',
+        error: emailResult.error
+      });
+    }
+
+    console.log(`📧 [requestEmailChange] Verification email sent to: ${normalizedNewEmail.substring(0, 3)}***`);
+
+    res.status(200).json({
+      success: true,
+      message: `Verification code has been sent to ${normalizedNewEmail}`,
+      messageAr: `تم إرسال رمز التحقق إلى ${normalizedNewEmail}`,
+      data: {
+        pendingEmail: normalizedNewEmail,
+        expiresAt: otpExpiry,
+        expiresInMinutes: 5
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [requestEmailChange] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error requesting email change',
+      messageAr: 'خطأ في طلب تغيير البريد الإلكتروني',
+      error: error.message
+    });
+  }
+};
+
+// Verify email change by userId (no auth required)
+const verifyEmailChangeByUserId = async (req, res) => {
+  try {
+    const { userId, otp } = req.body;
+
+    console.log(`🔍 [verifyEmailChangeByUserId] User ${userId} verifying email change with OTP`);
+
+    // Validate userId
+    if (!userId || !userId.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required',
+        messageAr: 'معرف المستخدم مطلوب'
+      });
+    }
+
+    // Validate OTP
+    if (!otp || !otp.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code is required',
+        messageAr: 'رمز التحقق مطلوب'
+      });
+    }
+
+    // Get user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        messageAr: 'المستخدم غير موجود'
+      });
+    }
+
+    // Check if there's a pending email change
+    if (!user.pendingEmail || !user.pendingEmailOTP || !user.pendingEmailExpiry) {
+      return res.status(400).json({
+        success: false,
+        message: 'No pending email change found. Please request email change first.',
+        messageAr: 'لم يتم العثور على طلب تغيير بريد إلكتروني. يرجى طلب تغيير البريد الإلكتروني أولاً.'
+      });
+    }
+
+    // Check if OTP is expired
+    if (new Date() > user.pendingEmailExpiry) {
+      console.log(`❌ [verifyEmailChangeByUserId] OTP expired for user ${userId}`);
+      
+      // Clear expired pending data
+      user.pendingEmail = undefined;
+      user.pendingEmailOTP = undefined;
+      user.pendingEmailExpiry = undefined;
+      await user.save();
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code has expired. Please request a new one.',
+        messageAr: 'انتهت صلاحية رمز التحقق. يرجى طلب رمز جديد.'
+      });
+    }
+
+    // Verify OTP
+    if (user.pendingEmailOTP !== otp.trim()) {
+      console.log(`❌ [verifyEmailChangeByUserId] Invalid OTP for user ${userId}`);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification code',
+        messageAr: 'رمز التحقق غير صحيح'
+      });
+    }
+
+    // Double-check email availability before updating
+    if (user.store) {
+      const existingUserInStore = await User.findOne({ 
+        email: user.pendingEmail,
+        store: user.store,
+        _id: { $ne: userId }
+      });
+      
+      if (existingUserInStore) {
+        // Clear pending data
+        user.pendingEmail = undefined;
+        user.pendingEmailOTP = undefined;
+        user.pendingEmailExpiry = undefined;
+        await user.save();
+        
+        return res.status(409).json({
+          success: false,
+          message: `This email is already registered in this store.`,
+          messageAr: `هذا البريد الإلكتروني مسجل بالفعل في هذا المتجر.`,
+          error: {
+            code: 'DUPLICATE_EMAIL_IN_STORE'
+          }
+        });
+      }
+    }
+
+    // All checks passed - update email
+    const oldEmail = user.email;
+    const newEmail = user.pendingEmail;
+    
+    user.email = newEmail;
+    user.isEmailVerified = true; // New email is verified
+    user.emailVerifiedAt = new Date();
+    user.pendingEmail = undefined;
+    user.pendingEmailOTP = undefined;
+    user.pendingEmailExpiry = undefined;
+    await user.save();
+
+    console.log(`✅ [verifyEmailChangeByUserId] Email updated successfully from ${oldEmail} to ${newEmail}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Email changed successfully',
+      messageAr: 'تم تغيير البريد الإلكتروني بنجاح',
+      data: {
+        userId: user._id,
+        oldEmail,
+        newEmail,
+        isEmailVerified: true,
+        emailVerifiedAt: user.emailVerifiedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [verifyEmailChangeByUserId] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error verifying email change',
+      messageAr: 'خطأ في التحقق من تغيير البريد الإلكتروني',
+      error: error.message
+    });
+  }
+};
+
+// Verify email change with OTP (requires auth)
+const verifyEmailChange = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    const userId = req.user.id;
+
+    console.log(`🔍 [verifyEmailChange] User ${userId} verifying email change with OTP`);
+
+    // Validate OTP
+    if (!otp || !otp.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code is required',
+        messageAr: 'رمز التحقق مطلوب'
+      });
+    }
+
+    // Get user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        messageAr: 'المستخدم غير موجود'
+      });
+    }
+
+    // Check if there's a pending email change
+    if (!user.pendingEmail || !user.pendingEmailOTP || !user.pendingEmailExpiry) {
+      return res.status(400).json({
+        success: false,
+        message: 'No pending email change found. Please request email change first.',
+        messageAr: 'لم يتم العثور على طلب تغيير بريد إلكتروني. يرجى طلب تغيير البريد الإلكتروني أولاً.'
+      });
+    }
+
+    // Check if OTP is expired
+    if (new Date() > user.pendingEmailExpiry) {
+      console.log(`❌ [verifyEmailChange] OTP expired for user ${userId}`);
+      
+      // Clear expired pending data
+      user.pendingEmail = undefined;
+      user.pendingEmailOTP = undefined;
+      user.pendingEmailExpiry = undefined;
+      await user.save();
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code has expired. Please request a new one.',
+        messageAr: 'انتهت صلاحية رمز التحقق. يرجى طلب رمز جديد.'
+      });
+    }
+
+    // Verify OTP
+    if (user.pendingEmailOTP !== otp.trim()) {
+      console.log(`❌ [verifyEmailChange] Invalid OTP for user ${userId}`);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification code',
+        messageAr: 'رمز التحقق غير صحيح'
+      });
+    }
+
+    // Double-check email availability before updating
+    if (user.store) {
+      const existingUserInStore = await User.findOne({ 
+        email: user.pendingEmail,
+        store: user.store,
+        _id: { $ne: userId }
+      });
+      
+      if (existingUserInStore) {
+        // Clear pending data
+        user.pendingEmail = undefined;
+        user.pendingEmailOTP = undefined;
+        user.pendingEmailExpiry = undefined;
+        await user.save();
+        
+        return res.status(409).json({
+          success: false,
+          message: `This email is already registered in this store.`,
+          messageAr: `هذا البريد الإلكتروني مسجل بالفعل في هذا المتجر.`,
+          error: {
+            code: 'DUPLICATE_EMAIL_IN_STORE'
+          }
+        });
+      }
+    }
+
+    // All checks passed - update email
+    const oldEmail = user.email;
+    const newEmail = user.pendingEmail;
+    
+    user.email = newEmail;
+    user.isEmailVerified = true; // New email is verified
+    user.emailVerifiedAt = new Date();
+    user.pendingEmail = undefined;
+    user.pendingEmailOTP = undefined;
+    user.pendingEmailExpiry = undefined;
+    await user.save();
+
+    console.log(`✅ [verifyEmailChange] Email updated successfully from ${oldEmail} to ${newEmail}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Email changed successfully',
+      messageAr: 'تم تغيير البريد الإلكتروني بنجاح',
+      data: {
+        oldEmail,
+        newEmail,
+        isEmailVerified: true,
+        emailVerifiedAt: user.emailVerifiedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [verifyEmailChange] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error verifying email change',
+      messageAr: 'خطأ في التحقق من تغيير البريد الإلكتروني',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/users/public/update-email/{userId}:
+ *   patch:
+ *     summary: Update user email by userId (Public API - No Auth Required)
+ *     description: Directly update user email by userId without authentication or OTP verification
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: query
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID for validation
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newEmail
+ *             properties:
+ *               newEmail:
+ *                 type: string
+ *                 format: email
+ *                 example: "newemail@example.com"
+ *     responses:
+ *       200:
+ *         description: Email updated successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: User not found
+ *       409:
+ *         description: Email already in use
+ *       500:
+ *         description: Internal server error
+ */
+const updateUserEmailByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { storeId } = req.query;
+    const { newEmail } = req.body;
+
+    console.log(`📧 [updateUserEmailByUserId] Updating email for user ${userId} in store ${storeId}`);
+
+    // Validate required fields
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required',
+        messageAr: 'معرف المتجر مطلوب'
+      });
+    }
+
+    if (!newEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'New email is required',
+        messageAr: 'البريد الإلكتروني الجديد مطلوب'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address',
+        messageAr: 'يرجى تقديم عنوان بريد إلكتروني صالح'
+      });
+    }
+
+    // Find user by ID and storeId
+    const user = await User.findOne({ _id: userId, store: storeId });
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found in this store',
+        messageAr: 'المستخدم غير موجود في هذا المتجر'
+      });
+    }
+
+    // Normalize the new email
+    const normalizedNewEmail = normalizeEmail(newEmail);
+    const oldEmail = user.email;
+
+    // Check if new email is the same as current email
+    if (normalizedNewEmail === normalizeEmail(oldEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'New email is the same as current email',
+        messageAr: 'البريد الإلكتروني الجديد هو نفس البريد الإلكتروني الحالي'
+      });
+    }
+
+    // Check if email is already in use by another user in the same store (any role)
+    const existingUserWithEmail = await User.findOne({
+      store: storeId,
+      _id: { $ne: userId },
+      $or: [
+        { email: normalizedNewEmail },
+        { email: newEmail.toLowerCase() }
+      ]
+    });
+
+    if (existingUserWithEmail) {
+      console.log(`⚠️ [updateUserEmailByUserId] Email ${normalizedNewEmail} already in use by user ${existingUserWithEmail._id}`);
+      return res.status(409).json({
+        success: false,
+        message: 'This email is already registered in this store',
+        messageAr: 'هذا البريد الإلكتروني مسجل بالفعل في هذا المتجر',
+        hint: 'Email must be unique across all users in the same store',
+        hintAr: 'يجب أن يكون البريد الإلكتروني فريدًا لجميع المستخدمين في نفس المتجر'
+      });
+    }
+
+    // Update user email
+    user.email = normalizedNewEmail;
+    user.isEmailVerified = false; // Reset email verification status
+    user.emailVerifiedAt = null;
+    await user.save();
+
+    console.log(`✅ [updateUserEmailByUserId] Email updated successfully from ${oldEmail} to ${normalizedNewEmail}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Email updated successfully',
+      messageAr: 'تم تحديث البريد الإلكتروني بنجاح',
+      data: {
+        userId: user._id,
+        oldEmail: oldEmail,
+        newEmail: normalizedNewEmail,
+        isEmailVerified: user.isEmailVerified,
+        updatedAt: user.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('❌ [updateUserEmailByUserId] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating email',
+      messageAr: 'خطأ في تحديث البريد الإلكتروني',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createUser,
   getAllUsers,
@@ -1725,5 +2441,10 @@ module.exports = {
   resendEmailVerification,
   checkEmailVerificationStatus,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  requestEmailChange,
+  verifyEmailChange,
+  requestEmailChangeByUserId,
+  verifyEmailChangeByUserId,
+  updateUserEmailByUserId
 }; 

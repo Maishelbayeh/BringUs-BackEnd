@@ -1463,6 +1463,152 @@ const getAffiliateByCode = async (req, res) => {
 
 /**
  * @swagger
+ * /api/affiliations/public/{id}:
+ *   patch:
+ *     summary: Update affiliation by ID (Public API - No Auth Required)
+ *     description: Update specific fields of an affiliation by ID without authentication
+ *     tags: [Affiliation]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Affiliation ID
+ *       - in: query
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Store ID for validation
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 example: "Omar"
+ *               lastName:
+ *                 type: string
+ *                 example: "Khaled"
+ *               mobile:
+ *                 type: string
+ *                 example: "+970599888888"
+ *               address:
+ *                 type: string
+ *                 example: "Hebron, Palestine"
+ *               bankInfo:
+ *                 type: object
+ *                 properties:
+ *                   bankName:
+ *                     type: string
+ *                     example: "Bank of Palestine"
+ *                   accountNumber:
+ *                     type: string
+ *                     example: "1234567890"
+ *                   iban:
+ *                     type: string
+ *                     example: "PS12PALS123456789012345678901"
+ *                   swiftCode:
+ *                     type: string
+ *                     example: "PALSPS22"
+ *               notes:
+ *                 type: string
+ *                 example: "Updated information"
+ *     responses:
+ *       200:
+ *         description: Affiliation updated successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Affiliation not found
+ *       500:
+ *         description: Internal server error
+ */
+const updateAffiliationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { storeId } = req.query;
+    const updateData = req.body;
+
+    console.log(`🔄 [updateAffiliationById] Updating affiliation ${id} for store ${storeId}`);
+
+    // Validate storeId is provided
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store ID is required',
+        messageAr: 'معرف المتجر مطلوب'
+      });
+    }
+
+    // Find affiliation by ID and storeId
+    const affiliation = await Affiliation.findOne({ _id: id, store: storeId });
+    
+    if (!affiliation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Affiliation not found in this store',
+        messageAr: 'الانتساب غير موجود في هذا المتجر'
+      });
+    }
+
+    // Define allowed fields to update (security: prevent updating sensitive fields)
+    const allowedFields = [
+      'firstName',
+      'lastName',
+      'mobile',
+      'address',
+      'bankInfo',
+      'notes'
+    ];
+
+    // Filter update data to only include allowed fields
+    const filteredUpdate = {};
+    Object.keys(updateData).forEach(key => {
+      if (allowedFields.includes(key)) {
+        filteredUpdate[key] = updateData[key];
+      }
+    });
+
+    // Update affiliation
+    Object.assign(affiliation, filteredUpdate);
+    await affiliation.save();
+
+    console.log(`✅ [updateAffiliationById] Affiliation ${id} updated successfully`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Affiliation updated successfully',
+      messageAr: 'تم تحديث الانتساب بنجاح',
+      data: {
+        id: affiliation._id,
+        firstName: affiliation.firstName,
+        lastName: affiliation.lastName,
+        email: affiliation.email,
+        mobile: affiliation.mobile,
+        address: affiliation.address,
+        affiliateCode: affiliation.affiliateCode,
+        bankInfo: affiliation.bankInfo,
+        updatedAt: affiliation.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('❌ [updateAffiliationById] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating affiliation',
+      messageAr: 'خطأ في تحديث الانتساب',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @swagger
  * /api/affiliations/{id}:
  *   delete:
  *     summary: Delete affiliate
@@ -1542,4 +1688,5 @@ module.exports = {
   createAffiliatePayment,
   deleteAffiliate,
   getAffiliateByCode,
+  updateAffiliationById,
 }; 

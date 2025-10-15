@@ -1,7 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const { body } = require('express-validator');
+const { body, validationResult } = require('express-validator');
 const UserController = require('../Controllers/UserController');
+
+// Validation middleware
+const validate = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      messageAr: 'خطأ في التحقق من البيانات',
+      errors: errors.array()
+    });
+  }
+  next();
+};
 
 /**
  * @swagger
@@ -280,6 +294,105 @@ router.post('/status', [
     .withMessage('Please enter a valid email address')
     .normalizeEmail()
 ], UserController.checkEmailVerificationStatus);
+
+/**
+ * @swagger
+ * /api/email-change/request:
+ *   post:
+ *     summary: Request email change by userId (no auth required)
+ *     description: Request to change user email - sends OTP to new email. Use this before login.
+ *     tags: [Email Change]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - newEmail
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: User ID
+ *                 example: "68de4e4e9d281851c29f1fc6"
+ *               newEmail:
+ *                 type: string
+ *                 format: email
+ *                 description: New email address
+ *                 example: "newemail@example.com"
+ *     responses:
+ *       200:
+ *         description: Verification code sent to new email
+ *       400:
+ *         description: Bad request - validation errors
+ *       404:
+ *         description: User not found
+ *       409:
+ *         description: Email already in use
+ *       500:
+ *         description: Internal server error
+ */
+const emailChangeValidation = [
+  body('userId')
+    .notEmpty()
+    .withMessage('User ID is required'),
+  body('newEmail')
+    .isEmail()
+    .withMessage('Please enter a valid email address')
+    .normalizeEmail()
+];
+
+// Support both POST and PATCH
+router.post('/request', emailChangeValidation, validate, UserController.requestEmailChangeByUserId);
+router.patch('/request', emailChangeValidation, validate, UserController.requestEmailChangeByUserId);
+
+/**
+ * @swagger
+ * /api/email-change/verify:
+ *   post:
+ *     summary: Verify email change by userId (no auth required)
+ *     description: Verify new email with OTP and complete email change. Use this before login.
+ *     tags: [Email Change]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - otp
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: User ID
+ *                 example: "68de4e4e9d281851c29f1fc6"
+ *               otp:
+ *                 type: string
+ *                 pattern: "^[0-9]{5}$"
+ *                 description: 5-digit verification code
+ *                 example: "12345"
+ *     responses:
+ *       200:
+ *         description: Email changed successfully
+ *       400:
+ *         description: Bad request - invalid or expired OTP
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/verify', [
+  body('userId')
+    .notEmpty()
+    .withMessage('User ID is required'),
+  body('otp')
+    .isLength({ min: 5, max: 5 })
+    .withMessage('OTP must be exactly 5 digits')
+    .isNumeric()
+    .withMessage('OTP must contain only numbers')
+], validate, UserController.verifyEmailChangeByUserId);
 
 module.exports = router;
 
