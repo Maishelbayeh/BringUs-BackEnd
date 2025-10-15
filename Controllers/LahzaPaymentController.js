@@ -276,3 +276,91 @@ exports.testConnection = async (req, res) => {
     });
   }
 };
+
+/**
+ * Handle Lahza webhook - Payment gateway will call this
+ * This ensures subscription is activated even if user doesn't return to site
+ */
+exports.handleWebhook = async (req, res) => {
+  try {
+    console.log('📨 Webhook received from Lahza');
+    console.log('Headers:', req.headers);
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+
+    const { storeId } = req.params;
+    const webhookData = req.body;
+
+    // Handle the webhook
+    const result = await LahzaPaymentService.handleWebhook(webhookData, storeId);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Webhook processing failed',
+        error: result.error
+      });
+    }
+
+    // If payment was successful, activate the subscription
+    if (result.paymentStatus === 'CAPTURED' || result.paymentStatus === 'SUCCESS' || result.paymentStatus === 'success') {
+      console.log('✅ Payment successful, processing subscription activation');
+      
+      // Extract metadata from payment data
+      const metadata = result.data.metadata ? JSON.parse(result.data.metadata) : {};
+      const userId = metadata.userId;
+      const planId = metadata.planId;
+      
+      if (planId && storeId) {
+        // Activate subscription using the SubscriptionController logic
+        const SubscriptionPlan = require('../Models/SubscriptionPlan');
+        const Store = require('../Models/Store');
+
+        const plan = await SubscriptionPlan.findById(planId);
+        if (plan && plan.isActive) {
+          const subscriptionStartDate = new Date();
+          const subscriptionEndDate = new Date();
+          subscriptionEndDate.setDate(subscriptionEndDate.getDate() + plan.duration);
+
+          await Store.findByIdAndUpdate(
+            storeId,
+            {
+              'subscription.isSubscribed': true,
+              'subscription.plan': plan.type,
+              'subscription.planId': planId,
+              'subscription.startDate': subscriptionStartDate,
+              'subscription.endDate': subscriptionEndDate,
+              'subscription.lastPaymentDate': subscriptionStartDate,
+              'subscription.nextPaymentDate': subscriptionEndDate,
+              'subscription.autoRenew': false,
+              'subscription.referenceId': result.reference,
+              'subscription.amount': plan.price,
+              'subscription.currency': plan.currency,
+              status: 'active'
+            },
+            { new: true, runValidators: true }
+          );
+
+          console.log('✅ Subscription activated via webhook for store:', storeId);
+        }
+      }
+    }
+
+    // Return 200 to acknowledge receipt
+    return res.status(200).json({
+      success: true,
+      message: 'Webhook processed successfully',
+      event: result.event,
+      status: result.paymentStatus
+    });
+
+  } catch (error) {
+    console.error('❌ Webhook error:', error);
+    
+    // Still return 200 to prevent retries, but log the error
+    return res.status(200).json({
+      success: false,
+      message: 'Webhook received but processing failed',
+      error: error.message
+    });
+  }
+};

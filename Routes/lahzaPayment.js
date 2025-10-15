@@ -377,4 +377,63 @@ router.get('/:storeId/test-connection', [
   param('storeId').isMongoId().withMessage('Invalid store ID')
 ], LahzaPaymentController.testConnection);
 
+/**
+ * @swagger
+ * /api/lahza-payment/{storeId}/webhook:
+ *   post:
+ *     summary: Handle Lahza payment webhook
+ *     description: Webhook endpoint for Lahza to send payment notifications. This ensures subscriptions are activated even if user doesn't return to the site.
+ *     tags: [Lahza Payment]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID (MongoDB ObjectId)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               event:
+ *                 type: string
+ *                 example: "charge.success"
+ *               data:
+ *                 type: object
+ *                 properties:
+ *                   reference:
+ *                     type: string
+ *                     example: "ref_987654321"
+ *                   status:
+ *                     type: string
+ *                     example: "success"
+ *     responses:
+ *       200:
+ *         description: Webhook received and processed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Webhook processed successfully"
+ *                 event:
+ *                   type: string
+ *                 status:
+ *                   type: string
+ *       400:
+ *         description: Invalid webhook data
+ */
+router.post('/:storeId/webhook', [
+  param('storeId').isMongoId().withMessage('Invalid store ID')
+], LahzaPaymentController.handleWebhook);
+
 module.exports = router;

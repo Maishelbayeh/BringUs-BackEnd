@@ -8,7 +8,7 @@ const Store = require('../Models/Store');
 class LahzaPaymentService {
   constructor() {
     this.baseUrl = 'https://api.lahza.io/transaction';
-    this.callbackUrl = 'http://localhost:5173/';
+    this.callbackUrl = 'http://localhost:5174/laya-store';
   }
 
   /**
@@ -61,10 +61,7 @@ class LahzaPaymentService {
    */
   async initializePayment(storeId, paymentData) {
     try {
-      const secretKey = await this.getStoreSecretKey(storeId);
-      if (!secretKey) {
-        throw new Error('Store does not have Lahza secret key configured');
-      }
+    
 
       const {
         amount,
@@ -107,7 +104,7 @@ class LahzaPaymentService {
         payload,
         {
           headers: {
-            'Authorization': `Bearer ${secretKey}`,
+            'Authorization': `Bearer sk_test_aJgxg75kYKtW6qVuTgijJyzpuhszRSvc4`,
             'Content-Type': 'application/json'
           }
         }
@@ -159,18 +156,14 @@ class LahzaPaymentService {
    */
   async verifyPayment(storeId, reference) {
     try {
-      const secretKey = await this.getStoreSecretKey(storeId);
-      if (!secretKey) {
-        throw new Error('Store does not have Lahza secret key configured');
-      }
-
+     
       console.log('🔍 Verifying Lahza payment:', { reference, storeId });
 
       const response = await axios.get(
         `${this.baseUrl}/verify/${reference}`,
         {
           headers: {
-            'Authorization': `Bearer ${secretKey}`,
+            'Authorization': `Bearer sk_test_aJgxg75kYKtW6qVuTgijJyzpuhszRSvc4`,
             'Content-Type': 'application/json'
           }
         }
@@ -289,33 +282,14 @@ class LahzaPaymentService {
    */
   async testConnection(storeId) {
     try {
-      const secretKey = await this.getStoreSecretKey(storeId);
-      if (!secretKey) {
-        throw new Error('Store does not have Lahza secret key configured');
-      }
 
-      console.log('🧪 Testing Lahza connection for store:', storeId);
-
-      // Test with a minimal amount
-      const testData = {
-        amount: '100', // 1 ILS in cents
-        email: 'test@example.com',
-        currency: 'ILS',
-        first_name: 'Test',
-        last_name: 'Customer',
-        callback_url: this.callbackUrl,
-        metadata: JSON.stringify({
-          storeId: storeId,
-          test: true
-        })
-      };
 
       const response = await axios.post(
         `${this.baseUrl}/initialize`,
         testData,
         {
           headers: {
-            'Authorization': `Bearer ${secretKey}`,
+            'Authorization': `Bearer sk_test_aJgxg75kYKtW6qVuTgijJyzpuhszRSvc4`,
             'Content-Type': 'application/json'
           }
         }
@@ -396,6 +370,57 @@ class LahzaPaymentService {
         success: false,
         error: error.response?.data?.message || error.message,
         details: error.response?.data || null
+      };
+    }
+  }
+
+  /**
+   * Handle webhook notification from Lahza
+   * This processes payment confirmations server-side
+   */
+  async handleWebhook(webhookData, storeId) {
+    try {
+      console.log('📨 Received Lahza webhook:', JSON.stringify(webhookData, null, 2));
+
+      const { event, data } = webhookData;
+      
+      if (!event || !data) {
+        return {
+          success: false,
+          error: 'Invalid webhook data format'
+        };
+      }
+
+      // Verify the payment status
+      const reference = data.reference;
+      const verificationResult = await this.verifyPayment(storeId, reference);
+
+      if (!verificationResult.success) {
+        console.error('❌ Webhook payment verification failed:', verificationResult.error);
+        return {
+          success: false,
+          error: 'Payment verification failed',
+          details: verificationResult
+        };
+      }
+
+      const paymentStatus = verificationResult.data.status;
+      console.log(`✅ Webhook payment verified with status: ${paymentStatus}`);
+
+      return {
+        success: true,
+        event: event,
+        paymentStatus: paymentStatus,
+        reference: reference,
+        data: verificationResult.data
+      };
+
+    } catch (error) {
+      console.error('❌ Webhook handler error:', error);
+      return {
+        success: false,
+        error: error.message,
+        details: error
       };
     }
   }

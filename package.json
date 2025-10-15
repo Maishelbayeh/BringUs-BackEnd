@@ -29,7 +29,7 @@
     "test-lahza-api": "node test/lahza-api-test.js"
   },
   "dependencies": {
-    "aws-sdk": "^2.1692.0",
+    "@aws-sdk/client-s3": "^3.679.0",
     "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",

@@ -1,4 +1,4 @@
-const AWS = require('aws-sdk');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const path = require('path');
 
 // إعدادات Cloudflare R2
@@ -12,11 +12,12 @@ const CLOUDFLARE_ENDPOINT = `https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestora
 const CLOUDFLARE_PUBLIC_BASE = 'https://pub-237eec0793554bacb7debfc287be3b32.r2.dev';
 
 // إعداد عميل S3
-const s3 = new AWS.S3({
+const s3Client = new S3Client({
   endpoint: CLOUDFLARE_ENDPOINT,
-  accessKeyId: CLOUDFLARE_ACCESS_KEY_ID,
-  secretAccessKey: CLOUDFLARE_SECRET_ACCESS_KEY,
-  signatureVersion: 'v4',
+  credentials: {
+    accessKeyId: CLOUDFLARE_ACCESS_KEY_ID,
+    secretAccessKey: CLOUDFLARE_SECRET_ACCESS_KEY,
+  },
   region: 'auto',
 });
 
@@ -32,15 +33,15 @@ async function uploadToCloudflare(buffer, originalName, folder = '') {
   const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
   const key = folder ? `${folder}/${fileName}` : fileName;
 
-  const params = {
+  const command = new PutObjectCommand({
     Bucket: CLOUDFLARE_BUCKET_NAME,
     Key: key,
     Body: buffer,
     ContentType: getContentType(ext),
     ACL: 'public-read',
-  };
+  });
 
-  await s3.putObject(params).promise();
+  await s3Client.send(command);
 
   // رابط الصورة
   const url = `${CLOUDFLARE_PUBLIC_BASE}/${key}`;
