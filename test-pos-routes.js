@@ -1,7 +1,7 @@
 // Test POS Cart Routes
 const axios = require('axios');
 
-const BASE_URL = 'http://localhost:5001/api';
+const BASE_URL = 'https://bringus-backend.onrender.com/api';
 const STORE_ID = '689cf88b3b39c7069a48cd0f';
 const ADMIN_TOKEN = 'YOUR_ADMIN_TOKEN';
 

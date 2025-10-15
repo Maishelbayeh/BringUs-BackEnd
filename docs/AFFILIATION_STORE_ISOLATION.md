@@ -61,7 +61,7 @@ if (storeSlug) {
 ### 1. **إنشاء Affiliate في متجر محدد**
 ```bash
 curl -X 'POST' \
-  'http://localhost:5001/api/affiliations' \
+  'https://bringus-backend.onrender.com/api/affiliations' \
   -H 'Authorization: Bearer STORE_1_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -78,7 +78,7 @@ curl -X 'POST' \
 ### 2. **إنشاء نفس البريد الإلكتروني في متجر آخر**
 ```bash
 curl -X 'POST' \
-  'http://localhost:5001/api/affiliations' \
+  'https://bringus-backend.onrender.com/api/affiliations' \
   -H 'Authorization: Bearer STORE_2_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -96,7 +96,7 @@ curl -X 'POST' \
 ```bash
 # تسجيل الدخول إلى المتجر الأول
 curl -X 'POST' \
-  'http://localhost:5001/api/auth/login' \
+  'https://bringus-backend.onrender.com/api/auth/login' \
   -H 'Content-Type: application/json' \
   -d '{
     "email": "ahmed@example.com",
@@ -106,7 +106,7 @@ curl -X 'POST' \
 
 # تسجيل الدخول إلى المتجر الثاني
 curl -X 'POST' \
-  'http://localhost:5001/api/auth/login' \
+  'https://bringus-backend.onrender.com/api/auth/login' \
   -H 'Content-Type: application/json' \
   -d '{
     "email": "ahmed@example.com",

@@ -25,7 +25,7 @@ const getConnectPlusToken = () => {
 ### 2. اختبار الاتصال
 ```bash
 curl -X 'GET' \
-  'http://localhost:5001/api/connect-plus/test-connection' \
+  'https://bringus-backend.onrender.com/api/connect-plus/test-connection' \
   -H 'accept: application/json'
 ```
 
@@ -134,7 +134,7 @@ GET /api/connect-plus/test-connection
 ## 📚 Swagger Documentation
 
 يمكنك الوصول إلى التوثيق الكامل في Swagger UI:
-- URL: `http://localhost:5001/api-docs`
+- URL: `https://bringus-backend.onrender.com/api-docs`
 - ابحث عن قسم "Connect Plus"
 
 ## 🧪 Testing
@@ -148,13 +148,13 @@ node test/connect-plus-test.js
 ### أمثلة للاختبار
 ```bash
 # اختبار الاتصال
-curl -X GET http://localhost:5001/api/connect-plus/test-connection
+curl -X GET https://bringus-backend.onrender.com/api/connect-plus/test-connection
 
 # الحصول على المناطق
-curl -X GET "http://localhost:5001/api/connect-plus/get-area-sub-area?code=PS"
+curl -X GET "https://bringus-backend.onrender.com/api/connect-plus/get-area-sub-area?code=PS"
 
 # الحصول على المنتجات
-curl -X POST http://localhost:5001/api/connect-plus/get-products \
+curl -X POST https://bringus-backend.onrender.com/api/connect-plus/get-products \
   -H "Content-Type: application/json" \
   -d '{"size": 10, "filters": []}'
 ```

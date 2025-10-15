@@ -4,7 +4,7 @@
  * Simple test script to verify Superadmin API endpoints are working
  */
 
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = 'https://bringus-backend.onrender.com/api';
 
 // Test function to check if server is running
 async function testServerHealth() {

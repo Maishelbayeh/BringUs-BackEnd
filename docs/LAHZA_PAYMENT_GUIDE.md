@@ -19,7 +19,7 @@
 ## 🚀 كيفية الاستخدام
 
 ### 1. من Swagger UI
-1. اذهب إلى: `http://localhost:5001/api-docs`
+1. اذهب إلى: `https://bringus-backend.onrender.com/api-docs`
 2. ابحث عن قسم "Lahza Payment"
 3. اختر `POST /api/lahza-payment/{storeId}/initialize`
 4. أدخل Store ID: `687c9bb0a7b3f2a0831c4675`

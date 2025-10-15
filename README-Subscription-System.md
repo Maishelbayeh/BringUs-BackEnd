@@ -256,11 +256,11 @@ console.log('التجريبيين:', stats.data.trial);
 node -e "const cron = require('node-cron'); console.log('Cron available:', !!cron);"
 
 # تشغيل فحص يدوي
-curl -X POST http://localhost:5001/api/subscription/trigger-check \
+curl -X POST https://bringus-backend.onrender.com/api/subscription/trigger-check \
   -H "Authorization: Bearer YOUR_TOKEN"
 
 # فحص إحصائيات
-curl http://localhost:5001/api/subscription/stats \
+curl https://bringus-backend.onrender.com/api/subscription/stats \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 

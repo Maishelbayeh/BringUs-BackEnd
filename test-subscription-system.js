@@ -4,7 +4,7 @@
  * Simple test script to verify subscription system functionality
  */
 
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = 'https://bringus-backend.onrender.com/api';
 
 // Test function to check if server is running
 async function testServerHealth() {
@@ -239,9 +239,9 @@ async function runTests() {
   console.log('4. Check Swagger UI for interactive documentation');
   console.log('5. Monitor cron job logs for daily subscription checks');
   console.log('\n🔗 Useful URLs:');
-  console.log('   - Swagger UI: http://localhost:5001/api-docs');
-  console.log('   - API Health: http://localhost:5001/api/health');
-  console.log('   - Subscription Stats: http://localhost:5001/api/subscription/stats (with auth)');
+  console.log('   - Swagger UI: https://bringus-backend.onrender.com/api-docs');
+  console.log('   - API Health: https://bringus-backend.onrender.com/api/health');
+  console.log('   - Subscription Stats: https://bringus-backend.onrender.com/api/subscription/stats (with auth)');
 }
 
 // Run tests if this file is executed directly
