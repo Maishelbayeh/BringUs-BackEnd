@@ -3,7 +3,15 @@
 const SocialComment = require('../Models/SocialComment');
 const response = require('../utils/response');
 const { uploadToCloudflare } = require('../utils/cloudflareUploader');
-const defaultImages = require('../config/default-images.json');
+const fs = require('fs');
+const path = require('path');
+
+// Function to get default images (reads fresh from file each time)
+function getDefaultImages() {
+  const filePath = path.join(__dirname, '../config/default-images.json');
+  const data = fs.readFileSync(filePath, 'utf8');
+  return JSON.parse(data);
+}
 
 /**
  * Get all social testimonials for the current store
@@ -14,6 +22,7 @@ exports.getSocialComments = async (req, res) => {
     const comments = await SocialComment.find({ store: storeId });
     
     // Add default image for testimonials without user image
+    const defaultImages = getDefaultImages();
     const commentsWithDefaultImage = comments.map(comment => {
       const commentObj = comment.toObject();
       if (!commentObj.image) {
@@ -44,17 +53,21 @@ exports.createSocialComment = async (req, res) => {
     const {
       store,
       platform,
-      image,
+      image, 
       personName,
       personTitle,
       comment,
       active,
     } = req.body;
 
+    // Use default image if no image is provided
+    const defaultImages = getDefaultImages();
+    const testimonialImage = image && image.trim() !== '' ? image : defaultImages.defaultProfileImage.url;
+
     const newComment = new SocialComment({
       store: store || req.store?._id || req.store,
       platform,
-      image,
+      image: testimonialImage,
       personName,
       personTitle,
       comment,
@@ -83,6 +96,13 @@ exports.updateSocialComment = async (req, res) => {
     const storeId = req.store?._id || req.store;
     const { id } = req.params;
     const update = req.body;
+    
+    // Use default image if image is being set to empty
+    if (update.hasOwnProperty('image') && (!update.image || update.image.trim() === '')) {
+      const defaultImages = getDefaultImages();
+      update.image = defaultImages.defaultProfileImage.url;
+    }
+    
     const updated = await SocialComment.findOneAndUpdate(
       { _id: id, store: storeId },
       update,
@@ -182,6 +202,7 @@ exports.getSocialCommentsByStoreId = async (req, res) => {
     const comments = await SocialComment.find({ store: storeId });
     
     // Add default image for testimonials without user image
+    const defaultImages = getDefaultImages();
     const commentsWithDefaultImage = comments.map(comment => {
       const commentObj = comment.toObject();
       if (!commentObj.image) {

@@ -26,7 +26,9 @@
     "create-superadmin": "node scripts/createSuperAdmin.js",
     "test-superadmin": "node scripts/test-superadmin-api.js",
     "test-subscription-renewal": "node test/subscription-renewal-test.js",
-    "test-lahza-api": "node test/lahza-api-test.js"
+    "test-lahza-api": "node test/lahza-api-test.js",
+    "upload-default-avatar": "node upload-default-avatar.js",
+    "create-user-icon": "node create-user-icon.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.679.0",
