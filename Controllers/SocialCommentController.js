@@ -3,6 +3,7 @@
 const SocialComment = require('../Models/SocialComment');
 const response = require('../utils/response');
 const { uploadToCloudflare } = require('../utils/cloudflareUploader');
+const defaultImages = require('../config/default-images.json');
 
 /**
  * Get all social testimonials for the current store
@@ -11,8 +12,18 @@ exports.getSocialComments = async (req, res) => {
   try {
     const storeId = req.store?._id || req.store;
     const comments = await SocialComment.find({ store: storeId });
+    
+    // Add default image for testimonials without user image
+    const commentsWithDefaultImage = comments.map(comment => {
+      const commentObj = comment.toObject();
+      if (!commentObj.image) {
+        commentObj.image = defaultImages.defaultProfileImage.url;
+      }
+      return commentObj;
+    });
+    
     return response.success(res, { 
-      data: comments,
+      data: commentsWithDefaultImage,
       message: 'Testimonials retrieved successfully',
       messageAr: 'تم جلب الشهادات بنجاح'
     });
@@ -169,8 +180,18 @@ exports.getSocialCommentsByStoreId = async (req, res) => {
       });
     }
     const comments = await SocialComment.find({ store: storeId });
+    
+    // Add default image for testimonials without user image
+    const commentsWithDefaultImage = comments.map(comment => {
+      const commentObj = comment.toObject();
+      if (!commentObj.image) {
+        commentObj.image = defaultImages.defaultProfileImage.url;
+      }
+      return commentObj;
+    });
+    
     return response.success(res, { 
-      data: comments,
+      data: commentsWithDefaultImage,
       message: 'Testimonials retrieved successfully',
       messageAr: 'تم جلب الشهادات بنجاح'
     });

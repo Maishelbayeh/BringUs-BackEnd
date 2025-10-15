@@ -1556,7 +1556,7 @@ const updateAffiliationById = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Affiliation not found in this store',
-        messageAr: 'الانتساب غير موجود في هذا المتجر'
+        messageAr: 'المسوق غير موجود في هذا المتجر'
       });
     }
 
@@ -1594,11 +1594,20 @@ const updateAffiliationById = async (req, res) => {
 
     console.log(`✅ [updateAffiliationById] Affiliation ${id} updated successfully`);
 
+    // Determine message based on what was updated
+    let message = 'Affiliation updated successfully';
+    let messageAr = 'تم تحديث بيانات المسوق بنجاح';
+    
+    if (filteredUpdate.totalPaid !== undefined) {
+      message = 'Affiliation payment updated successfully';
+      messageAr = 'تم تحديث دفعة المسوق بنجاح';
+    }
+
     // Build response
     const response = {
       success: true,
-      message: 'Affiliation updated successfully',
-      messageAr: 'تم تحديث الانتساب بنجاح',
+      message: message,
+      messageAr: messageAr,
       data: {
         id: affiliation._id,
         firstName: affiliation.firstName,
@@ -1632,7 +1641,7 @@ const updateAffiliationById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating affiliation',
-      messageAr: 'خطأ في تحديث الانتساب',
+      messageAr: 'خطأ في تحديث بيانات المسوق',
       error: error.message
     });
   }

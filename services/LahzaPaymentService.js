@@ -8,7 +8,8 @@ const Store = require('../Models/Store');
 class LahzaPaymentService {
   constructor() {
     this.baseUrl = 'https://api.lahza.io/transaction';
-    this.callbackUrl = 'http://localhost:5174/laya-store';
+    // Base URL for frontend - will be combined with store slug
+    this.frontendBaseUrl = 'https://bringus.onrender.com';
   }
 
   /**
@@ -22,6 +23,34 @@ class LahzaPaymentService {
       console.error('Error getting Lahza secret key:', error);
       return null;
     }
+  }
+
+  /**
+   * Get store slug for dynamic callback URL
+   */
+  async getStoreSlug(storeId) {
+    try {
+      const store = await Store.findById(storeId).select('slug');
+      return store?.slug || null;
+    } catch (error) {
+      console.error('Error getting store slug:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Build callback URL based on store slug
+   */
+  async getCallbackUrl(storeId) {
+    const slug = await this.getStoreSlug(storeId);
+    if (!slug) {
+      console.warn('⚠️ Store slug not found, using default callback URL');
+      return this.frontendBaseUrl;
+    }
+    
+    const callbackUrl = `${this.frontendBaseUrl}/${slug}`;
+    console.log('🔗 Generated callback URL:', callbackUrl);
+    return callbackUrl;
   }
 
   /**
@@ -61,8 +90,6 @@ class LahzaPaymentService {
    */
   async initializePayment(storeId, paymentData) {
     try {
-    
-
       const {
         amount,
         currency = 'ILS',
@@ -72,6 +99,9 @@ class LahzaPaymentService {
         description,
         metadata = {}
       } = paymentData;
+
+      // Get dynamic callback URL based on store slug
+      const callbackUrl = await this.getCallbackUrl(storeId);
 
       // Convert amount to smallest unit
       const convertedAmount = this.convertToSmallestUnit(amount, currency);
@@ -93,7 +123,7 @@ class LahzaPaymentService {
         currency: currency,
         first_name: firstName,
         last_name: lastName,
-        callback_url: this.callbackUrl,
+        callback_url: callbackUrl,
         metadata: metadataString
       };
 
