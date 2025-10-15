@@ -331,6 +331,10 @@ router.get('/code/:affiliateCode', getAffiliateByCode);
  *               notes:
  *                 type: string
  *                 example: "Updated information"
+ *               totalPaid:
+ *                 type: number
+ *                 example: 500.50
+ *                 description: Total amount paid to affiliate
  *     responses:
  *       200:
  *         description: Affiliation updated successfully

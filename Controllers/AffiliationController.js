@@ -1518,6 +1518,10 @@ const getAffiliateByCode = async (req, res) => {
  *               notes:
  *                 type: string
  *                 example: "Updated information"
+ *               totalPaid:
+ *                 type: number
+ *                 example: 500.50
+ *                 description: Total amount paid to affiliate
  *     responses:
  *       200:
  *         description: Affiliation updated successfully
@@ -1563,16 +1567,26 @@ const updateAffiliationById = async (req, res) => {
       'mobile',
       'address',
       'bankInfo',
-      'notes'
+      'notes',
+      'totalPaid'
     ];
 
     // Filter update data to only include allowed fields
     const filteredUpdate = {};
+    const ignoredFields = [];
+    
     Object.keys(updateData).forEach(key => {
       if (allowedFields.includes(key)) {
         filteredUpdate[key] = updateData[key];
+      } else {
+        ignoredFields.push(key);
       }
     });
+
+    // Log ignored fields for debugging
+    if (ignoredFields.length > 0) {
+      console.log(`⚠️ [updateAffiliationById] Ignored fields (not allowed): ${ignoredFields.join(', ')}`);
+    }
 
     // Update affiliation
     Object.assign(affiliation, filteredUpdate);
@@ -1580,7 +1594,8 @@ const updateAffiliationById = async (req, res) => {
 
     console.log(`✅ [updateAffiliationById] Affiliation ${id} updated successfully`);
 
-    res.status(200).json({
+    // Build response
+    const response = {
       success: true,
       message: 'Affiliation updated successfully',
       messageAr: 'تم تحديث الانتساب بنجاح',
@@ -1593,9 +1608,25 @@ const updateAffiliationById = async (req, res) => {
         address: affiliation.address,
         affiliateCode: affiliation.affiliateCode,
         bankInfo: affiliation.bankInfo,
+        totalPaid: affiliation.totalPaid,
+        totalEarned: affiliation.totalEarned,
         updatedAt: affiliation.updatedAt
       }
-    });
+    };
+
+    // Add warning if fields were ignored
+    if (ignoredFields.length > 0) {
+      response.warning = {
+        message: `The following fields were ignored (not allowed to update): ${ignoredFields.join(', ')}`,
+        messageAr: `تم تجاهل الحقول التالية (غير مسموح بتحديثها): ${ignoredFields.join(', ')}`,
+        ignoredFields: ignoredFields,
+        allowedFields: allowedFields,
+        hint: 'Only specific fields can be updated through this public API for security reasons',
+        hintAr: 'يمكن تحديث حقول محددة فقط من خلال هذا الـ API العام لأسباب أمنية'
+      };
+    }
+
+    res.status(200).json(response);
   } catch (error) {
     console.error('❌ [updateAffiliationById] Error:', error);
     res.status(500).json({
