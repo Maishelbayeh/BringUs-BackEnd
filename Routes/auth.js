@@ -611,6 +611,12 @@ router.post('/login', [
 
     // Panel type validation (already done during user lookup, but log for clarity)
     console.log(`✅ ${panelType} panel access granted for ${user.role}`);
+    
+    // Ensure store is set if user has a store
+    if (!store && user.store) {
+      store = user.store;
+      console.log(`✅ Store assigned from user: ${store.nameEn || store.nameAr || store._id}`);
+    }
 
     // Update last login information
     user.lastLogin = new Date();
@@ -785,7 +791,7 @@ router.post('/login', [
       tokenExpiresIn: rememberMe ? '30 days' : '7 days',
       redirectUrl, // Add redirect URL based on role
       panelType, // Panel type used for login
-      storeSlug: store ? store.slug : null, // Store slug (null for superadmin without store)
+      storeSlug: store?.slug || storeSlug || null, // Store slug (null for superadmin without store)
       user: {
         id: user._id,
         firstName: user.firstName,
