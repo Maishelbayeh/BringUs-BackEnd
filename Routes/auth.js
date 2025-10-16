@@ -294,6 +294,7 @@ router.post('/register', [
  *             required:
  *               - email
  *               - password
+ *               - panelType
  *             properties:
  *               email:
  *                 type: string
@@ -302,14 +303,21 @@ router.post('/register', [
  *               password:
  *                 type: string
  *                 example: "123123"
+ *               panelType:
+ *                 type: string
+ *                 enum: [admin, client]
+ *                 description: |
+ *                   Type of panel (admin or client).
+ *                   - admin: For admin/superadmin users (storeSlug is optional)
+ *                   - client: For client/wholesaler/affiliate users (storeSlug is required)
+ *                 example: "admin"
  *               storeSlug:
  *                 type: string
- *                 description: Optional store slug to specify which store to login to (prevents conflicts when user has multiple accounts)
+ *                 description: |
+ *                   Store slug to specify which store to login to.
+ *                   - Optional for admin panel (searches any admin/superadmin by email)
+ *                   - Required for client panel (to prevent conflicts when same email exists in multiple stores)
  *                 example: "my-store"
- *               url:
- *                 type: string
- *                 description: Optional URL from which the login request is made (used to auto-detect store)
- *                 example: "https://my-store.example.com/login"
  *               rememberMe:
  *                 type: boolean
  *                 description: If true, token expires in 30 days instead of 7 days
@@ -380,8 +388,12 @@ router.post('/register', [
 router.post('/login', [
   body('email').isEmail().normalizeEmail().withMessage('Please enter a valid email'),
   body('password').notEmpty().withMessage('Password is required'),
-  body('storeSlug').optional().isString().withMessage('Store slug must be a string'),
-  body('url').optional().isString().withMessage('URL must be a string'),
+  body('panelType')
+    .notEmpty().withMessage('Panel type is required')
+    .isIn(['admin', 'client']).withMessage('Panel type must be either "admin" or "client"'),
+  body('storeSlug')
+    .optional()
+    .isString().withMessage('Store slug must be a string'),
   body('rememberMe').optional().isBoolean().withMessage('Remember me must be a boolean')
 ], async (req, res) => {
   try {
@@ -390,12 +402,26 @@ router.post('/login', [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
+        message: 'Validation failed',
+        messageAr: 'فشل التحقق من صحة البيانات',
         errors: errors.array()
       });
     }
 
-    const { email, password, url, rememberMe = false } = req.body;
-    let { storeSlug } = req.body;
+    const { email, password, panelType, storeSlug, rememberMe = false } = req.body;
+    
+    // Validate storeSlug is required for client panel
+    if (panelType === 'client' && !storeSlug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store slug is required for client login',
+        messageAr: 'معرف المتجر مطلوب لتسجيل دخول العميل',
+        error: {
+          code: 'STORE_SLUG_REQUIRED',
+          panelType: 'client'
+        }
+      });
+    }
     
     // Normalize email for consistent lookup
     const normalizeEmail = (email) => {
@@ -411,42 +437,47 @@ router.post('/login', [
     
     const normalizedEmail = normalizeEmail(email);
     
-    // If URL is provided but storeSlug is not, try to extract storeSlug from URL
-    if (url && !storeSlug) {
-      try {
-        const urlObj = new URL(url);
-        
-        // Try to extract from subdomain (e.g., store1.example.com)
-        const subdomain = urlObj.hostname.split('.')[0];
-        if (subdomain && subdomain !== 'www' && subdomain !== 'bringus' && subdomain !== 'localhost') {
-          storeSlug = subdomain;
-          console.log(`📍 Extracted storeSlug from subdomain: ${storeSlug}`);
-        }
-        
-        // Try to extract from path (e.g., /store/store1)
-        if (!storeSlug) {
-          const pathMatch = urlObj.pathname.match(/\/store\/([^\/]+)/);
-          if (pathMatch && pathMatch[1]) {
-            storeSlug = pathMatch[1];
-            console.log(`📍 Extracted storeSlug from path: ${storeSlug}`);
-          }
-        }
-      } catch (err) {
-        console.log(`⚠️ Could not parse URL: ${url}`);
-      }
+    console.log(`🔍 Login attempt for email: ${normalizedEmail}`);
+    console.log(`   panelType: ${panelType}`);
+    console.log(`   storeSlug: ${storeSlug || 'not provided'}`);
+    console.log(`   rememberMe: ${rememberMe}`);
+    
+    // Determine allowed roles based on panelType
+    let allowedRoles = [];
+    if (panelType === 'admin') {
+      allowedRoles = ['admin', 'superadmin'];
+    } else if (panelType === 'client') {
+      allowedRoles = ['client', 'wholesaler', 'affiliate'];
     }
     
-    // Handle different login scenarios based on role and storeSlug
+    console.log(`🔐 Allowed roles for ${panelType} panel: ${allowedRoles.join(', ')}`);
+    
     let user = null;
     let store = null;
     
-    console.log(`🔍 Login attempt for email: ${normalizedEmail}`);
-    console.log(`   storeSlug: ${storeSlug || 'none'}`);
-    console.log(`   url: ${url || 'none'}`);
-    console.log(`   rememberMe: ${rememberMe}`);
-    
-    if (storeSlug) {
-      // Find store by slug
+    // For admin panel: if storeSlug not provided, search by email and role only
+    if (panelType === 'admin' && !storeSlug) {
+      console.log('🔍 Searching for admin/superadmin by email only (no store specified)');
+      
+      user = await User.findOne({ 
+        email: normalizedEmail,
+        role: { $in: allowedRoles }
+      }).select('+password').populate('store');
+      
+      if (user) {
+        console.log(`✅ User found: ${user.firstName} ${user.lastName} (${user.role})`);
+        if (user.store) {
+          store = user.store;
+          console.log(`   Store: ${store.nameEn || store.nameAr} (${store.slug})`);
+        } else {
+          console.log('   No store assigned (superadmin)');
+        }
+      } else {
+        console.log(`❌ No admin/superadmin found with email: ${normalizedEmail}`);
+      }
+    } 
+    // For client panel OR admin with storeSlug: search by email, store, and role
+    else {
       const Store = require('../Models/Store');
       store = await Store.findOne({ slug: storeSlug });
       
@@ -455,87 +486,92 @@ router.post('/login', [
         return res.status(400).json({
           success: false,
           message: 'Store not found',
-          messageAr: 'المتجر غير موجود'
+          messageAr: 'المتجر غير موجود',
+          error: {
+            code: 'STORE_NOT_FOUND',
+            storeSlug: storeSlug
+          }
         });
       }
       
       console.log(`✅ Store found: ${store.nameEn || store.nameAr} (${store.slug})`);
       
-      // Find user with email and store
-      user = await User.findOne({ email: normalizedEmail, store: store._id }).select('+password').populate('store');
-      
-      if (user) {
-        console.log(`✅ User found in store: ${user.firstName} ${user.lastName} (${user.role})`);
-      } else {
-        console.log(`❌ User not found with email: ${normalizedEmail} in store: ${store.slug}`);
-      }
-    } else {
-      // Check if multiple accounts exist with this email
-      const allUsers = await User.find({ email: normalizedEmail });
-      
-      if (allUsers.length > 1) {
-        // Multiple accounts exist - require storeSlug to disambiguate
-        console.log(`⚠️ Multiple accounts found for email: ${normalizedEmail} (${allUsers.length} accounts)`);
-        return res.status(400).json({
-          success: false,
-          message: 'Multiple accounts found. Please specify storeSlug to login.',
-          messageAr: 'تم العثور على حسابات متعددة. يرجى تحديد storeSlug لتسجيل الدخول.',
-          error: {
-            code: 'MULTIPLE_ACCOUNTS',
-            accountCount: allUsers.length,
-            availableAccounts: allUsers.map(u => ({
-              role: u.role,
-              storeId: u.store,
-              requiresStoreSlug: true
-            }))
-          }
-        });
-      }
-      
-      // For superadmin or single account users, find by email only
-      console.log('🔍 Searching for user by email only (superadmin or single account)');
-      user = await User.findOne({ email: normalizedEmail }).select('+password').populate('store');
+      // Find user with email, store, and appropriate role for panel type
+      user = await User.findOne({ 
+        email: normalizedEmail, 
+        store: store._id,
+        role: { $in: allowedRoles }
+      }).select('+password').populate('store');
       
       if (user) {
         console.log(`✅ User found: ${user.firstName} ${user.lastName} (${user.role})`);
-        if (user.store) {
-          console.log(`   Store: ${user.store.nameEn || user.store.nameAr}`);
-        } else {
-          console.log('   No store assigned');
-        }
       } else {
-        console.log(`❌ User not found with email: ${normalizedEmail}`);
+        console.log(`❌ User not found with email: ${normalizedEmail} in store: ${store.slug} for panel: ${panelType}`);
       }
     }
     
     if (!user) {
-      // If no user found and storeSlug was provided, check if user exists in other stores
-      if (storeSlug) {
-        const allUsers = await User.find({ email: normalizedEmail }).populate('store', 'nameAr nameEn slug status');
-        if (allUsers.length > 0) {
-          return res.status(400).json({
+      // Check if user exists with different panel type
+      if (storeSlug && store) {
+        const userInOtherPanel = await User.findOne({ 
+          email: normalizedEmail, 
+          store: store._id
+        }).select('role');
+        
+        if (userInOtherPanel) {
+          const correctPanelType = ['admin', 'superadmin'].includes(userInOtherPanel.role) ? 'admin' : 'client';
+          console.log(`⚠️ User exists but in ${correctPanelType} panel (current role: ${userInOtherPanel.role})`);
+          return res.status(403).json({
             success: false,
-            message: 'User not found in this store',
-            messageAr: 'المستخدم غير موجود في هذا المتجر',
-            availableAccounts: allUsers.map(u => ({
-              role: u.role,
-              storeId: u.store ? u.store._id : null,
-              storeName: u.store ? (u.store.nameEn || u.store.nameAr) : null,
-              storeSlug: u.store ? u.store.slug : null,
-              redirectUrl: u.role === 'admin' || u.role === 'superadmin' 
-                ? 'https://bringus.onrender.com/' 
-                : 'https://bringus-main.onrender.com/'
-            }))
+            message: `This email is registered as ${userInOtherPanel.role} in this store. Please use the ${correctPanelType} panel to login.`,
+            messageAr: `هذا البريد الإلكتروني مسجل كـ ${userInOtherPanel.role} في هذا المتجر. يرجى استخدام لوحة ${correctPanelType === 'admin' ? 'الإدارة' : 'العميل'} لتسجيل الدخول.`,
+            error: {
+              code: 'WRONG_PANEL_TYPE',
+              currentPanel: panelType,
+              correctPanel: correctPanelType,
+              userRole: userInOtherPanel.role
+            }
           });
         }
       }
       
+      // Check if user exists in other stores (for client panel)
+      if (panelType === 'client' && storeSlug) {
+        const usersInOtherStores = await User.find({ 
+          email: normalizedEmail,
+          role: { $in: allowedRoles }
+        }).populate('store', 'nameAr nameEn slug');
+        
+        if (usersInOtherStores.length > 0) {
+          console.log(`⚠️ User exists in ${usersInOtherStores.length} other store(s)`);
+          return res.status(400).json({
+            success: false,
+            message: 'User not found in this store',
+            messageAr: 'المستخدم غير موجود في هذا المتجر',
+            error: {
+              code: 'USER_NOT_IN_THIS_STORE',
+              currentStore: storeSlug,
+              availableStores: usersInOtherStores.map(u => ({
+                role: u.role,
+                storeName: u.store ? (u.store.nameEn || u.store.nameAr) : null,
+                storeSlug: u.store ? u.store.slug : null
+              }))
+            }
+          });
+        }
+      }
+      
+      // User doesn't exist at all
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password',
-        messageAr: 'بريد إلكتروني أو كلمة مرور غير صحيحة'
+        messageAr: 'بريد إلكتروني أو كلمة مرور غير صحيحة',
+        error: {
+          code: 'INVALID_CREDENTIALS'
+        }
       });
     }
+
        
 
 
@@ -555,7 +591,10 @@ router.post('/login', [
       return res.status(401).json({
         success: false,
         message: 'Account is deactivated',
-        messageAr: 'الحساب معطل'
+        messageAr: 'الحساب معطل',
+        error: {
+          code: 'ACCOUNT_DEACTIVATED'
+        }
       });
     }
 
@@ -563,77 +602,19 @@ router.post('/login', [
       return res.status(401).json({
         success: false,
         message: 'Email is not verified',
-        messageAr: 'البريد الإلكتروني غير مؤكد'
+        messageAr: 'البريد الإلكتروني غير مؤكد',
+        error: {
+          code: 'EMAIL_NOT_VERIFIED'
+        }
       });
     }
 
-    // Check if URL is admin panel and user has appropriate role
-    if (url) {
-      const adminUrls = [
-        'https://bringus.onrender.com',
-        'https://bringus.onrender.com/',
-        'http://localhost:3000',
-        'http://localhost:3000/'
-      ];
-      
-      const clientUrls = [
-        'https://bringus-main.onrender.com',
-        'https://bringus-main.onrender.com/',
-        'http://localhost:3001',
-        'http://localhost:3001/'
-      ];
-      
-      const isAdminUrl = adminUrls.some(adminUrl => 
-        url.toLowerCase().startsWith(adminUrl.toLowerCase())
-      );
-      
-      const isClientUrl = clientUrls.some(clientUrl => 
-        url.toLowerCase().startsWith(clientUrl.toLowerCase())
-      );
-      
-      // Check admin panel access
-      if (isAdminUrl && user.role !== 'admin' && user.role !== 'superadmin') {
-        console.log(`❌ Access denied: ${user.role} tried to access admin panel from ${url}`);
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied. This panel is only for admin and superadmin users.',
-          messageAr: 'رفض الوصول. هذه اللوحة مخصصة فقط لمستخدمي الإدارة.',
-          error: {
-            code: 'ADMIN_PANEL_ACCESS_DENIED',
-            userRole: user.role,
-            requiredRoles: ['admin', 'superadmin'],
-            redirectUrl: 'https://bringus-main.onrender.com/'
-          }
-        });
-      }
-      
-      // Check client panel access (prevent admin/superadmin from logging in to client panel)
-      if (isClientUrl && (user.role === 'admin' || user.role === 'superadmin')) {
-        console.log(`❌ Access denied: ${user.role} tried to access client panel from ${url}`);
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied. Admins should use the admin panel.',
-          messageAr: 'رفض الوصول. يجب على المسؤولين استخدام لوحة الإدارة.',
-          error: {
-            code: 'CLIENT_PANEL_ADMIN_DENIED',
-            userRole: user.role,
-            redirectUrl: 'https://bringus.onrender.com/'
-          }
-        });
-      }
-      
-      if (isAdminUrl) {
-        console.log(`✅ Admin panel access granted for ${user.role}`);
-      } else if (isClientUrl) {
-        console.log(`✅ Client panel access granted for ${user.role}`);
-      }
-    }
+    // Panel type validation (already done during user lookup, but log for clarity)
+    console.log(`✅ ${panelType} panel access granted for ${user.role}`);
 
     // Update last login information
     user.lastLogin = new Date();
-    if (url) {
-      user.lastLoginUrl = url;
-    }
+    user.lastLoginUrl = panelType; // Store panel type instead of URL
     await user.save();
     
     console.log(`✅ Login successful for ${user.firstName} ${user.lastName} (${user.role})`);
@@ -803,6 +784,8 @@ router.post('/login', [
       token,
       tokenExpiresIn: rememberMe ? '30 days' : '7 days',
       redirectUrl, // Add redirect URL based on role
+      panelType, // Panel type used for login
+      storeSlug: store ? store.slug : null, // Store slug (null for superadmin without store)
       user: {
         id: user._id,
         firstName: user.firstName,
@@ -818,7 +801,7 @@ router.post('/login', [
       },
       isEmailVerified: user.isEmailVerified,  
       isActive: user.isActive,
-      storeId: storeIdForToken, // أضف هذا الحقل لسهولة الوصول من الفرونت
+      storeId: storeIdForToken, // Store ID for easy access from frontend
       isOwner: isOwner, // Flag indicating if user is an owner
       userStatus: user.status
     });
