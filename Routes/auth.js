@@ -138,20 +138,29 @@ router.post('/register', [
       }
     }
 
-    // Check if user already exists with same email, store, and role
+    // CRITICAL SECURITY: Check if email already exists in the same store (ANY ROLE)
+    // This prevents duplicate emails in the same store regardless of role
     console.log('🔍 Checking for existing user with:', { email, store, role });
-    const existingUser = await User.findOne({ 
-      email: email, 
-      store: store, 
-      role: role 
-    });
     
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: 'User already exists with this email in this store with this role',
-        messageAr: 'المستخدم موجود بالفعل بهذا البريد الإلكتروني في هذا المتجر بهذا الدور'
+    if (store) {
+      const existingUserInStore = await User.findOne({ 
+        email: email, 
+        store: store
+        // ❌ DO NOT check role - email must be unique per store regardless of role
       });
+      
+      if (existingUserInStore) {
+        return res.status(409).json({
+          success: false,
+          message: `This email is already registered in this store as ${existingUserInStore.role}. Please use a different email.`,
+          messageAr: `هذا البريد الإلكتروني مسجل بالفعل في هذا المتجر بدور ${existingUserInStore.role}. يرجى استخدام بريد إلكتروني مختلف.`,
+          error: {
+            code: 'DUPLICATE_EMAIL_IN_STORE',
+            existingRole: existingUserInStore.role,
+            requestedRole: role
+          }
+        });
+      }
     }
 
     // For admin and superadmin roles, check if email already exists with these roles globally
