@@ -8,11 +8,36 @@ const createPlan = async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
+            // Map validation errors to include both English and Arabic messages
+            const formattedErrors = errors.array().map(err => {
+                const fieldMessages = {
+                    'name': { en: 'Plan name is required', ar: 'اسم الخطة مطلوب' },
+                    'nameAr': { en: 'Plan name in Arabic is required', ar: 'اسم الخطة بالعربية مطلوب' },
+                    'type': { en: 'Invalid plan type', ar: 'نوع الخطة غير صالح' },
+                    'duration': { en: 'Duration must be a positive integer', ar: 'المدة يجب أن تكون رقماً صحيحاً موجباً' },
+                    'price': { en: 'Price must be a non-negative number', ar: 'السعر يجب أن يكون رقماً موجباً أو صفر' },
+                    'currency': { en: 'Invalid currency', ar: 'العملة غير صالحة' }
+                };
+                
+                const field = err.path || err.param;
+                const messages = fieldMessages[field] || { 
+                    en: err.msg, 
+                    ar: 'خطأ في التحقق من الحقل' 
+                };
+                
+                return {
+                    field: field,
+                    message: messages.en,
+                    messageAr: messages.ar,
+                    value: err.value
+                };
+            });
+
             return res.status(400).json({
                 success: false,
-                message: 'Validation error',
-                messageAr: 'خطأ في التحقق من صحة البيانات',
-                errors: errors.array()
+                message: 'Validation failed. Please check the form fields.',
+                messageAr: 'فشل التحقق من الصحة. يرجى التحقق من حقول النموذج.',
+                errors: formattedErrors
             });
         }
 
@@ -75,6 +100,7 @@ const createPlan = async (req, res) => {
         res.status(201).json({
             success: true,
             message: 'Subscription plan created successfully',
+            messageAr: 'تم إنشاء خطة الاشتراك بنجاح',
             data: plan
         });
     } catch (error) {
@@ -215,11 +241,35 @@ const updatePlan = async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
+            // Map validation errors to include both English and Arabic messages
+            const formattedErrors = errors.array().map(err => {
+                const fieldMessages = {
+                    'planId': { en: 'Invalid plan ID', ar: 'معرف الخطة غير صالح' },
+                    'type': { en: 'Invalid plan type', ar: 'نوع الخطة غير صالح' },
+                    'duration': { en: 'Duration must be a positive integer', ar: 'المدة يجب أن تكون رقماً صحيحاً موجباً' },
+                    'price': { en: 'Price must be a non-negative number', ar: 'السعر يجب أن يكون رقماً موجباً أو صفر' },
+                    'currency': { en: 'Invalid currency', ar: 'العملة غير صالحة' }
+                };
+                
+                const field = err.path || err.param;
+                const messages = fieldMessages[field] || { 
+                    en: err.msg, 
+                    ar: 'خطأ في التحقق من الحقل' 
+                };
+                
+                return {
+                    field: field,
+                    message: messages.en,
+                    messageAr: messages.ar,
+                    value: err.value
+                };
+            });
+
             return res.status(400).json({
                 success: false,
-                message: 'Validation error',
-                messageAr: 'خطأ في التحقق من صحة البيانات',
-                errors: errors.array()
+                message: 'Validation failed. Please check the form fields.',
+                messageAr: 'فشل التحقق من الصحة. يرجى التحقق من حقول النموذج.',
+                errors: formattedErrors
             });
         }
 
@@ -252,6 +302,7 @@ const updatePlan = async (req, res) => {
         res.status(200).json({
             success: true,
             message: 'Subscription plan updated successfully',
+            messageAr: 'تم تحديث خطة الاشتراك بنجاح',
             data: plan
         });
     } catch (error) {
@@ -300,7 +351,8 @@ const deletePlan = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: 'Subscription plan deleted successfully'
+            message: 'Subscription plan deleted successfully',
+            messageAr: 'تم حذف خطة الاشتراك بنجاح'
         });
     } catch (error) {
         console.error('Error deleting subscription plan:', error);
@@ -337,6 +389,7 @@ const togglePlanStatus = async (req, res) => {
         res.status(200).json({
             success: true,
             message: `Plan ${plan.isActive ? 'activated' : 'deactivated'} successfully`,
+            messageAr: plan.isActive ? 'تم تفعيل الخطة بنجاح' : 'تم إلغاء تفعيل الخطة بنجاح',
             data: plan
         });
     } catch (error) {
@@ -375,6 +428,7 @@ const setPopularPlan = async (req, res) => {
         res.status(200).json({
             success: true,
             message: `Plan popularity ${isPopular ? 'set' : 'removed'} successfully`,
+            messageAr: isPopular ? 'تم تعيين الخطة كشائعة بنجاح' : 'تم إزالة الخطة من الشائعة بنجاح',
             data: plan
         });
     } catch (error) {

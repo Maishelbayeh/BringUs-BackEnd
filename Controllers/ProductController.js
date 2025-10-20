@@ -4115,48 +4115,95 @@ exports.getAlmostSoldProducts = async (req, res) => {
     if (effectiveThreshold) {
       // Custom threshold provided
       orConditions.push(
-        { stock: { $lte: effectiveThreshold } },
-        { availableQuantity: { $lte: effectiveThreshold } },
-        // Check if any specification has quantity <= threshold
+        // Products with NO specifications: check overall stock/availableQuantity
         {
-          specificationValues: {
-            $elemMatch: {
-              quantity: { $lte: effectiveThreshold }
+          $and: [
+            { $or: [
+              { specificationValues: { $exists: false } },
+              { specificationValues: { $size: 0 } }
+            ]},
+            {
+              $or: [
+                { stock: { $lte: effectiveThreshold, $gt: 0 } },
+                { availableQuantity: { $lte: effectiveThreshold, $gt: 0 } }
+              ]
             }
-          }
+          ]
+        },
+        // Products WITH specifications: only check if any specification is almost sold out
+        {
+          $and: [
+            { specificationValues: { $exists: true, $ne: [] } },
+            {
+              specificationValues: {
+                $elemMatch: {
+                  quantity: { $lte: effectiveThreshold, $gt: 0 }
+                }
+              }
+            }
+          ]
         }
       );
     } else {
       // Use product's own lowStockThreshold
       orConditions.push(
-        // Products with stock <= lowStockThreshold
-        { 
-          $expr: { 
-            $lte: ['$stock', '$lowStockThreshold'] 
-          } 
-        },
-        // Products with availableQuantity <= lowStockThreshold
-        { 
-          $expr: { 
-            $lte: ['$availableQuantity', '$lowStockThreshold'] 
-          } 
-        },
-        // Products with any specification quantity <= lowStockThreshold
+        // Products with NO specifications: check overall stock/availableQuantity
         {
-          $expr: {
-            $gt: [
-              {
-                $size: {
-                  $filter: {
-                    input: '$specificationValues',
-                    as: 'spec',
-                    cond: { $lte: ['$$spec.quantity', '$lowStockThreshold'] }
-                  }
+          $and: [
+            { $or: [
+              { specificationValues: { $exists: false } },
+              { specificationValues: { $size: 0 } }
+            ]},
+            {
+              $or: [
+                // Overall stock <= lowStockThreshold AND > 0
+                { 
+                  $expr: { 
+                    $and: [
+                      { $lte: ['$stock', '$lowStockThreshold'] },
+                      { $gt: ['$stock', 0] }
+                    ]
+                  } 
+                },
+                // Overall availableQuantity <= lowStockThreshold AND > 0
+                { 
+                  $expr: { 
+                    $and: [
+                      { $lte: ['$availableQuantity', '$lowStockThreshold'] },
+                      { $gt: ['$availableQuantity', 0] }
+                    ]
+                  } 
                 }
-              },
-              0
-            ]
-          }
+              ]
+            }
+          ]
+        },
+        // Products WITH specifications: only check if any specification is almost sold out
+        {
+          $and: [
+            { specificationValues: { $exists: true, $ne: [] } },
+            {
+              $expr: {
+                $gt: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: '$specificationValues',
+                        as: 'spec',
+                        cond: { 
+                          $and: [
+                            { $lte: ['$$spec.quantity', '$lowStockThreshold'] },
+                            { $gt: ['$$spec.quantity', 0] }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  0
+                ]
+              }
+            }
+          ]
         }
       );
     }
