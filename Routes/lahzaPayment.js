@@ -326,6 +326,134 @@ router.get('/:storeId/status/:reference', [
 
 /**
  * @swagger
+ * /api/lahza-payment/{storeId}/poll/:reference:
+ *   get:
+ *     summary: Poll payment status (for auto-checking every 10 seconds)
+ *     description: Poll payment status and automatically activate subscription if payment successful. Use this endpoint to check payment status every 10 seconds after initialization, even if user closes tab.
+ *     tags: [Lahza Payment]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Store ID (MongoDB ObjectId)
+ *       - in: path
+ *         name: reference
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment reference code
+ *       - in: query
+ *         name: planId
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-fA-F0-9]{24}$'
+ *         description: Subscription plan ID (optional, can be extracted from payment metadata)
+ *     responses:
+ *       200:
+ *         description: Poll status response
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Payment successful and subscription activated"
+ *                 messageAr:
+ *                   type: string
+ *                   example: "الدفع ناجح وتم تفعيل الاشتراك"
+ *                 status:
+ *                   type: string
+ *                   enum: [pending, success, failed, error]
+ *                   example: "success"
+ *                   description: "Current payment status - pending (continue polling), success (stop polling), failed (stop polling), error (continue polling)"
+ *                 shouldContinuePolling:
+ *                   type: boolean
+ *                   example: false
+ *                   description: "If true, frontend should continue polling. If false, stop polling."
+ *                 paymentStatus:
+ *                   type: string
+ *                   example: "CAPTURED"
+ *                 subscriptionActivated:
+ *                   type: boolean
+ *                   example: true
+ *                 alreadyActivated:
+ *                   type: boolean
+ *                   example: false
+ *                 subscription:
+ *                   type: object
+ *                   description: "Subscription details if activated"
+ *                 plan:
+ *                   type: object
+ *                   description: "Plan details if activated"
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:storeId/poll/:reference', [
+  param('storeId').isMongoId().withMessage('Invalid store ID'),
+  param('reference').isString().notEmpty().withMessage('Reference is required')
+], LahzaPaymentController.pollPaymentStatus);
+
+/**
+ * @swagger
+ * /api/lahza-payment/polling-status:
+ *   get:
+ *     summary: Get background polling service status
+ *     description: Check if background polling service is running and view pending/completed payments
+ *     tags: [Lahza Payment]
+ *     responses:
+ *       200:
+ *         description: Polling status retrieved successfully
+ */
+router.get('/polling-status', LahzaPaymentController.getPollingStatus);
+
+/**
+ * @swagger
+ * /api/lahza-payment/{storeId}/manual-activate:
+ *   post:
+ *     summary: Manually activate subscription if payment was successful
+ *     description: Force check payment and activate subscription - Use if automatic systems failed
+ *     tags: [Lahza Payment]
+ *     parameters:
+ *       - in: path
+ *         name: storeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reference
+ *               - planId
+ *             properties:
+ *               reference:
+ *                 type: string
+ *                 example: "T8546135774802741"
+ *               planId:
+ *                 type: string
+ *                 example: "689cb8e99cd52721fa18034e"
+ *     responses:
+ *       200:
+ *         description: Subscription activation result
+ */
+router.post('/:storeId/manual-activate', [
+  param('storeId').isMongoId().withMessage('Invalid store ID'),
+  body('reference').notEmpty().withMessage('Reference is required'),
+  body('planId').isMongoId().withMessage('Invalid plan ID')
+], LahzaPaymentController.manualActivate);
+
+/**
+ * @swagger
  * /api/lahza-payment/{storeId}/test-connection:
  *   get:
  *     summary: Test Lahza connection

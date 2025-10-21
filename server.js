@@ -1024,11 +1024,21 @@ const server = app.listen(PORT, () => {
   // Start subscription renewal service
   const SubscriptionRenewalService = require('./services/SubscriptionRenewalService');
   SubscriptionRenewalService.startMonthlyCronJob();
+  
+  // Start payment polling service (checks pending payments every 10 seconds)
+  const PaymentPollingService = require('./services/PaymentPollingService');
+  PaymentPollingService.start();
+  console.log('🔄 Payment polling service started - Checking pending payments every 10 seconds');
 });
 
 // Graceful shutdown handling
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, shutting down gracefully...');
+  
+  // Stop payment polling service
+  const PaymentPollingService = require('./services/PaymentPollingService');
+  PaymentPollingService.stop();
+  
   server.close(() => {
     console.log('✅ Server closed');
     process.exit(0);
@@ -1037,6 +1047,11 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('🛑 SIGINT received, shutting down gracefully...');
+  
+  // Stop payment polling service
+  const PaymentPollingService = require('./services/PaymentPollingService');
+  PaymentPollingService.stop();
+  
   server.close(() => {
     console.log('✅ Server closed');
     process.exit(0);
