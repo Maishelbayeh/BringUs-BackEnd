@@ -304,6 +304,7 @@ const createUser = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
+      messageAr: 'تم تسجيل المستخدم بنجاح',
       token,
       user: {
         id: user._id,

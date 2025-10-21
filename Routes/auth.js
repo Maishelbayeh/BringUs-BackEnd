@@ -928,14 +928,14 @@ router.post('/check-email', [
     // Find all users with this email
     const users = await User.find({ email }).populate('store', 'nameAr nameEn slug status');
     
+    // If no users found - email is available (SUCCESS for registration)
     if (users.length === 0) {
       return res.status(200).json({
         success: true,
-        message: 'Email check completed',
-      messageAr: 'تم التحقق من البريد الإلكتروني',
+        message: 'Email is available',
+        messageAr: 'البريد الإلكتروني متاح للاستخدام',
         email,
-        exists: false,
-        accounts: []
+        available: true
       });
     }
 
@@ -965,14 +965,27 @@ router.post('/check-email', [
       filteredAccounts = accounts.filter(account => 
         account.storeSlug === storeSlug
       );
+      
+      // If filtering by store and no accounts found for this store - email is available for this store
+      if (filteredAccounts.length === 0) {
+        return res.status(200).json({
+          success: true,
+          message: 'Email is available for this store',
+          messageAr: 'البريد الإلكتروني متاح للاستخدام في هذا المتجر',
+          email,
+          storeSlug,
+          available: true
+        });
+      }
     }
 
-    return res.status(200).json({
-      success: true,
-      message: 'Email check completed',
-      messageAr: 'تم التحقق من البريد الإلكتروني',
+    // Email exists - return error (for registration purposes)
+    return res.status(400).json({
+      success: false,
+      message: 'This email address is already registered',
+      messageAr: 'عنوان البريد الإلكتروني هذا مسجل بالفعل',
       email,
-      exists: filteredAccounts.length > 0,
+      available: false,
       accounts: filteredAccounts,
       totalAccounts: accounts.length
     });

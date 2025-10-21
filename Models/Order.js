@@ -11,8 +11,8 @@ const orderSchema = new mongoose.Schema({
   },
 
   user: {
-    type: Object, // نسخة من بيانات المستخدم وقت الطلب
-    required: true
+    type: Object, // نسخة من بيانات المستخدم وقت الطلب (أو { guest: true } للضيوف)
+    required: false // Optional to support guest checkout
   },
   guestId: {
     type: String, // للضيوف غير المسجلين
@@ -137,8 +137,8 @@ const orderSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ['pending', 'shipped', 'delivered', 'cancelled'],
-    enumAr:['قيد المراجعة','مؤكد','منتهي','ملغي'],
+    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+    enumAr:['قيد المراجعة', 'قيد التجهيز', 'مؤكد','منتهي','ملغي'],
     default: 'pending'
   },
   paymentStatus: {
@@ -146,6 +146,15 @@ const orderSchema = new mongoose.Schema({
     enum: ['unpaid', 'paid'],
     enumAr:['غير مدفوع','مدفوع'],
     default: 'unpaid'
+  },
+  paymentReference: {
+    type: String,
+    required: false,
+    index: true // للبحث السريع
+  },
+  paidAt: {
+    type: Date,
+    required: false
   },
   notes: {
     customer: String,

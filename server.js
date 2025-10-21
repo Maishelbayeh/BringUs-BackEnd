@@ -142,6 +142,7 @@ const emailVerificationRoutes = require('./Routes/emailVerification');
 const passwordResetRoutes = require('./Routes/passwordReset');
 const posCartRoutes = require('./Routes/posCart');
 const lahzaPaymentRoutes = require('./Routes/lahzaPayment');
+const customerPaymentRoutes = require('./Routes/customerPayment');
 const connectPlusRoutes = require('./Routes/connectPlus');
 
 // Route middleware
@@ -174,6 +175,7 @@ app.use('/api/email-change', emailVerificationRoutes); // Email change uses same
 app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/pos-cart', posCartRoutes);
 app.use('/api/lahza-payment', lahzaPaymentRoutes);
+app.use('/api/customer-payment', customerPaymentRoutes);
 app.use('/api/connect-plus', connectPlusRoutes);
 
 /**
@@ -1025,19 +1027,18 @@ const server = app.listen(PORT, () => {
   const SubscriptionRenewalService = require('./services/SubscriptionRenewalService');
   SubscriptionRenewalService.startMonthlyCronJob();
   
-  // Start payment polling service (checks pending payments every 10 seconds)
+  // Payment polling service is ready (starts automatically on payment initialization)
   const PaymentPollingService = require('./services/PaymentPollingService');
-  PaymentPollingService.start();
-  console.log('🔄 Payment polling service started - Checking pending payments every 10 seconds');
+  console.log('✅ Payment polling service loaded - Will start automatically on payment initialization');
 });
 
 // Graceful shutdown handling
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, shutting down gracefully...');
   
-  // Stop payment polling service
+  // Stop all active payment polling
   const PaymentPollingService = require('./services/PaymentPollingService');
-  PaymentPollingService.stop();
+  PaymentPollingService.stopAll();
   
   server.close(() => {
     console.log('✅ Server closed');
@@ -1048,9 +1049,9 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   console.log('🛑 SIGINT received, shutting down gracefully...');
   
-  // Stop payment polling service
+  // Stop all active payment polling
   const PaymentPollingService = require('./services/PaymentPollingService');
-  PaymentPollingService.stop();
+  PaymentPollingService.stopAll();
   
   server.close(() => {
     console.log('✅ Server closed');

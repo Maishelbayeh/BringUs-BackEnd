@@ -97,11 +97,13 @@ class LahzaPaymentService {
         customerName,
         customerPhone,
         description,
-        metadata = {}
+        metadata = {},
+        callbackUrl: providedCallbackUrl  // Accept callback URL from caller
       } = paymentData;
 
-      // Get dynamic callback URL based on store slug
-      const callbackUrl = await this.getCallbackUrl(storeId);
+      // Use provided callback URL if available, otherwise generate one
+      const callbackUrl = providedCallbackUrl || await this.getCallbackUrl(storeId);
+      console.log('🔗 Using callback URL:', callbackUrl);
 
       // Convert amount to smallest unit
       const convertedAmount = this.convertToSmallestUnit(amount, currency);
