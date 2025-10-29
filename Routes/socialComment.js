@@ -7,6 +7,7 @@ const multer = require('multer');
 const SocialCommentController = require('../Controllers/SocialCommentController');
 const { protect } = require('../middleware/auth');
 const { uploadToCloudflare } = require('../utils/cloudflareUploader');
+const { socialCommentValidation, createSocialCommentValidation } = require('../validators/socialComment.validator');
 
 // Configure multer for memory storage with file validation
 const upload = multer({
@@ -343,6 +344,7 @@ router.post(
   '/',
   protect,
   setCurrentStoreAndCheckPermissions,
+  createSocialCommentValidation,
   SocialCommentController.createSocialComment
 );
 
@@ -424,6 +426,7 @@ router.put(
   '/:id',
   protect,
   setCurrentStoreAndCheckPermissions,
+  socialCommentValidation,
   SocialCommentController.updateSocialComment
 );
 

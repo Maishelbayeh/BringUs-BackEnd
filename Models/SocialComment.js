@@ -15,7 +15,7 @@ const socialCommentSchema = new Schema(
     platform: {
       type: String,
       required: true,
-      enum: ['Facebook', 'Instagram', 'Twitter', 'LinkedIn', 'TikTok'],
+      enum: ['Facebook', 'Instagram', 'Twitter', 'LinkedIn', 'TikTok', 'YouTube', 'WhatsApp'],
     },
     image: {
       type: String,

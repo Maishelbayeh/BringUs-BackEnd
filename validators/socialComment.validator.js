@@ -3,7 +3,38 @@ const { body } = require('express-validator');
 
 const allowedPlatforms = ['Facebook', 'Instagram', 'Twitter', 'LinkedIn', 'TikTok', 'YouTube', 'WhatsApp'];
 
+// Validation for creating social comments (all fields required)
 exports.socialCommentValidation = [
+  body('platform')
+    .optional()
+    .isString().withMessage('Platform must be a string')
+    .isIn(allowedPlatforms).withMessage('Platform must be one of: ' + allowedPlatforms.join(', ')),
+  body('personName')
+    .optional()
+    .isString().withMessage('Person name must be a string')
+    .notEmpty().withMessage('Person name cannot be empty'),
+  body('comment')
+    .optional()
+    .isString().withMessage('Comment must be a string')
+    .custom((value) => {
+      if (value && value.trim().length < 10) {
+        throw new Error('Comment must be at least 10 characters');
+      }
+      return true;
+    }),
+  body('active')
+    .optional()
+    .isBoolean().withMessage('Active must be a boolean'),
+  body('image')
+    .optional()
+    .isString().withMessage('Image must be a string'),
+  body('personTitle')
+    .optional()
+    .isString().withMessage('Person title must be a string'),
+];
+
+// Validation for creating (stricter - requires all fields)
+exports.createSocialCommentValidation = [
   body('platform')
     .exists().withMessage('Platform is required')
     .isString().withMessage('Platform must be a string')
