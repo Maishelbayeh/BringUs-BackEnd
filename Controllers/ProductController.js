@@ -862,15 +862,20 @@ exports.update = async (req, res) => {
     }
 
     // Handle videoUrl/productVideo - allow empty/null values
-    if (req.body.videoUrl !== undefined || req.body.productVideo !== undefined) {
+    // Always process if videoUrl or productVideo is provided in the request
+    if ('videoUrl' in req.body || 'productVideo' in req.body) {
       const videoValue = req.body.videoUrl || req.body.productVideo;
+      console.log('🔍 Backend update - Processing videoUrl:', videoValue);
       if (videoValue === null || videoValue === undefined || videoValue === '' || videoValue === 'null' || videoValue === 'undefined') {
         updateData.videoUrl = null;
-      } else if (videoValue && videoValue.trim() !== '') {
-        updateData.videoUrl = videoValue;
+      } else if (videoValue && typeof videoValue === 'string' && videoValue.trim() !== '') {
+        updateData.videoUrl = videoValue.trim();
       } else {
         updateData.videoUrl = null;
       }
+      // Remove productVideo from updateData to avoid confusion
+      delete updateData.productVideo;
+      console.log('🔍 Backend update - Final videoUrl in updateData:', updateData.videoUrl);
     }
 
     // Handle specificationValues - ensure quantity and price are included

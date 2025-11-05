@@ -761,9 +761,9 @@ router.post('/login', [
     // Determine redirect URL based on role
     let redirectUrl;
     if (user.role === 'admin' || user.role === 'superadmin') {
-      redirectUrl = 'https://bringus.onrender.com/';
+      redirectUrl = 'https://admin.bring2.us/';
     } else {
-      redirectUrl = 'https://bringus-main.onrender.com/';
+      redirectUrl = 'https://bring2.us/';
     }
 
     // monjed update start
@@ -893,7 +893,7 @@ router.post('/login', [
  *                         example: "my-store"
  *                       redirectUrl:
  *                         type: string
- *                         example: "https://bringus.onrender.com/"
+ *                         example: "https://admin.bring2.us/"
  *       400:
  *         description: Validation error
  *         content:
@@ -943,9 +943,9 @@ router.post('/check-email', [
     const accounts = users.map(user => {
       let redirectUrl;
       if (user.role === 'admin' || user.role === 'superadmin') {
-        redirectUrl = 'https://bringus.onrender.com/';
+        redirectUrl = 'https://admin.bring2.us/';
       } else {
-        redirectUrl = 'https://bringus-main.onrender.com/';
+        redirectUrl = 'https://bring2.us/';
       }
 
       return {
@@ -1058,7 +1058,7 @@ router.post('/check-email', [
  *                         example: "my-store"
  *                       redirectUrl:
  *                         type: string
- *                         example: "https://bringus.onrender.com/"
+ *                         example: "https://admin.bring2.us/"
  *                       token:
  *                         type: string
  *                         example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -1143,9 +1143,9 @@ router.post('/login-any', [
     const accounts = activeUsers.map(user => {
       let redirectUrl;
       if (user.role === 'admin' || user.role === 'superadmin') {
-        redirectUrl = 'https://bringus.onrender.com/';
+        redirectUrl = 'https://admin.bring2.us/';
       } else {
-        redirectUrl = 'https://bringus-main.onrender.com/';
+        redirectUrl = 'https://bring2.us/';
       }
 
       const token = user.getJwtToken(user.store ? user.store._id : null);

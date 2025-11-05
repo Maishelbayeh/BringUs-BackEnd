@@ -661,7 +661,7 @@ const createAffiliate = async (req, res) => {
     }
     
     const domain = store.slug;
-    const baseDomain = 'https://bringus-main.onrender.com';
+    const baseDomain = 'https://bring2.us';
     console.log('domain', domain);
     
     // Normalize email for consistent storage and duplicate checking

@@ -160,8 +160,8 @@ userSchema.methods.getJwtToken = function(storeId, rememberMe = false) {
     id: this._id, 
     role: this.role,
     redirectUrl: this.role === 'admin' || this.role === 'superadmin' 
-      ? 'https://bringus.onrender.com/' 
-      : 'https://bringus-main.onrender.com/'
+      ? 'https://admin.bring2.us/' 
+      : 'https://bring2.us/'
   };
   
   if (storeId) payload.storeId = storeId;

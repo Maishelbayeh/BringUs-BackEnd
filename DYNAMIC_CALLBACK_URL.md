@@ -85,12 +85,12 @@ FRONTEND_URL=http://localhost:5174
 ### Production:
 ```bash
 # .env file
-FRONTEND_URL=https://bringus.onrender.com
+FRONTEND_URL=https://admin.bring2.us
 ```
 
 **Example callback URLs:**
 - Development: `http://localhost:5174/laya-store`
-- Production: `https://bringus.onrender.com/laya-store`
+- Production: `https://admin.bring2.us/laya-store`
 
 ---
 
@@ -158,7 +158,7 @@ No changes needed! Defaults to `http://localhost:5174`
 ### 2. For Production:
 Add to your `.env` file:
 ```bash
-FRONTEND_URL=https://bringus.onrender.com
+FRONTEND_URL=https://admin.bring2.us
 ```
 
 Or set environment variable in Render/Heroku:

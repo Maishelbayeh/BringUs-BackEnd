@@ -301,7 +301,7 @@ affiliationSchema.statics.generateUniqueAffiliateLink = async function(storeSlug
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let attempts = 0;
   const maxAttempts = 10;
-  const baseDomain = process.env.FRONTEND_URL || 'https://bringus-main.onrender.com';
+  const baseDomain = process.env.FRONTEND_URL || 'https://bring2.us';
   
   while (attempts < maxAttempts) {
     // Generate random 8-character code

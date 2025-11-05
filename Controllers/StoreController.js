@@ -113,7 +113,7 @@ class StoreController {
         'trial_started',
         '30-day free trial started for new store',
         {
-          trialDuration: 30,
+          trialDuration: 15,
           trialStartDate: new Date(),
           trialEndDate: store.subscription.trialEndDate
         }
@@ -139,7 +139,7 @@ class StoreController {
       await store.populate('contact');
       
       // Generate store URL after slug is created
-      const baseDomain = 'https://bringus-main.onrender.com';
+      const baseDomain = 'https://bring2.us';
       const storeUrl = `${baseDomain}/${store.slug}`;
       
       // Update the store with the generated URL

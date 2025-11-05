@@ -9,7 +9,7 @@ class LahzaPaymentService {
   constructor() {
     this.baseUrl = 'https://api.lahza.io/transaction';
     // Base URL for frontend - will be combined with store slug
-    this.frontendBaseUrl = 'https://bringus.onrender.com';
+    this.frontendBaseUrl = 'https://admin.bring2.us';
   }
 
   /**

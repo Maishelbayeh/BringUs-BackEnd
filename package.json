@@ -28,7 +28,8 @@
     "test-subscription-renewal": "node test/subscription-renewal-test.js",
     "test-lahza-api": "node test/lahza-api-test.js",
     "upload-default-avatar": "node upload-default-avatar.js",
-    "create-user-icon": "node create-user-icon.js"
+    "create-user-icon": "node create-user-icon.js",
+    "prepare-deploy": "node prepare-deployment.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.679.0",

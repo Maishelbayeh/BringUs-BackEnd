@@ -322,13 +322,13 @@ storeSchema.virtual('daysUntilSubscriptionExpires').get(function() {
 
 // Virtual for store URL
 storeSchema.virtual('storeUrl').get(function() {
-  const baseDomain = 'https://bringus-main.onrender.com';
+  const baseDomain = 'https://bring2.us';
   return `${baseDomain}/${this.slug}`;
 });
 
 // Method to generate store URL
 storeSchema.methods.generateStoreUrl = function() {
-  const baseDomain = 'https://bringus-main.onrender.com';
+  const baseDomain = 'https://bring2.us';
   return `${baseDomain}/${this.slug}`;
 };
 
